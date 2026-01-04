@@ -1,9 +1,12 @@
 "use client"
 
-import { Settings, User, Bell, Lock, CreditCard, Globe, Shield } from "lucide-react"
+import { Settings, User, Bell, Lock, CreditCard, Globe, Shield, MessageSquare, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 export default function SettingsPage() {
+  const router = useRouter()
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -19,6 +22,7 @@ export default function SettingsPage() {
             <nav className="space-y-1">
               {[
                 { name: "Profile", icon: User, active: true },
+                { name: "WhatsApp Setup", icon: MessageSquare, active: false, link: '/dashboard/settings/whatsapp-setup' },
                 { name: "Notifications", icon: Bell, active: false },
                 { name: "Security", icon: Lock, active: false },
                 { name: "Billing", icon: CreditCard, active: false },
@@ -27,6 +31,7 @@ export default function SettingsPage() {
               ].map((item) => (
                 <button
                   key={item.name}
+                  onClick={() => item.link && router.push(item.link)}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition ${
                     item.active
                       ? "bg-green-50 text-green-600"
