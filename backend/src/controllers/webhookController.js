@@ -133,10 +133,11 @@ export const handleWebhook = async (req, res) => {
               }
               
               // Find which account this phone belongs to
+              // CRITICAL: Must use .select('+accessToken') to retrieve encrypted field
               const phoneConfig = await PhoneNumber.findOne({ 
                 phoneNumberId,
                 isActive: true 
-              });
+              }).select('+accessToken');
               
               if (!phoneConfig) {
                 console.log('❌ Phone number not configured in system:', phoneNumberId);
@@ -145,6 +146,13 @@ export const handleWebhook = async (req, res) => {
               
               const accountId = phoneConfig.accountId;
               console.log('✅ Found account:', accountId);
+              
+              // Debug: Verify token is present (log length, not the actual token)
+              if (!phoneConfig.accessToken) {
+                console.error('❌ CRITICAL: accessToken is undefined! Cannot download media.');
+              } else {
+                console.log(`✅ Access token loaded (length: ${phoneConfig.accessToken.length} chars)`);
+              }
               
               // Get sender profile info from contacts (if available)
               const senderProfile = value.contacts?.[0];
