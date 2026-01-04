@@ -4,16 +4,30 @@ import { MessageSquare, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { authService } from "@/lib/auth"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const router = useRouter()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle login logic here
-    console.log("Login:", { email, password })
+    setIsLoading(true)
+    setError("")
+
+    const result = await authService.login(email, password)
+    
+    if (result.success) {
+      router.push("/dashboard")
+    } else {
+      setError(result.error || "Login failed")
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -54,6 +68,23 @@ export default function LoginPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Error Message */}
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
+
+              {/* Demo Info */}
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs text-blue-800 font-medium mb-1">Demo Accounts:</p>
+                <p className="text-xs text-blue-600">superadmin@test.com → SuperAdmin (Platform Owner)</p>
+                <p className="text-xs text-blue-600">admin@test.com → Admin (Client Owner)</p>
+                <p className="text-xs text-blue-600">manager@test.com → Manager (Team Lead)</p>
+                <p className="text-xs text-blue-600">agent@test.com → Agent (Support)</p>
+                <p className="text-xs text-blue-600 mt-1">Password: any</p>
+              </div>
+
               {/* Email Field */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -125,9 +156,9 @@ export default function LoginPage() {
               </div>
 
               {/* Submit Button */}
-              <Button type="submit" className="w-full" size="lg">
-                Sign In
-                <ArrowRight className="ml-2 h-5 w-5" />
+              <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                {isLoading ? "Signing In..." : "Sign In"}
+                {!isLoading && <ArrowRight className="ml-2 h-5 w-5" />}
               </Button>
             </form>
 

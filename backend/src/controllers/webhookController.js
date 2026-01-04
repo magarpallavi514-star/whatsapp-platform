@@ -3,6 +3,7 @@ import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 import Contact from '../models/Contact.js';
 import PhoneNumber from '../models/PhoneNumber.js';
+import { downloadAndUploadMedia, getMediaTypeFromMime } from '../services/s3Service.js';
 
 /**
  * Webhook Controller for WhatsApp Cloud API
@@ -173,6 +174,29 @@ export const handleWebhook = async (req, res) => {
                         caption: message.image.caption || null
                       };
                       console.log('Image ID:', message.image.id);
+                      
+                      // Download and upload to S3
+                      try {
+                        console.log('📥 Downloading image from WhatsApp and uploading to S3...');
+                        const mediaData = await downloadAndUploadMedia(
+                          message.image.id,
+                          phoneConfig.accessToken,
+                          accountId,
+                          'image'
+                        );
+                        
+                        content.mediaUrl = mediaData.s3Url;
+                        content.s3Key = mediaData.s3Key;
+                        content.filename = mediaData.filename;
+                        content.fileSize = mediaData.fileSize;
+                        content.sha256 = mediaData.sha256;
+                        content.mediaType = 'image';
+                        
+                        console.log('✅ Image saved to S3:', mediaData.s3Url);
+                      } catch (mediaError) {
+                        console.error('❌ Failed to download/upload image:', mediaError.message);
+                        // Continue processing even if media fails
+                      }
                       break;
                     case 'document':
                       content = {
@@ -182,6 +206,28 @@ export const handleWebhook = async (req, res) => {
                         caption: message.document.caption || null
                       };
                       console.log('Document:', message.document.filename);
+                      
+                      // Download and upload to S3
+                      try {
+                        console.log('📥 Downloading document from WhatsApp and uploading to S3...');
+                        const mediaData = await downloadAndUploadMedia(
+                          message.document.id,
+                          phoneConfig.accessToken,
+                          accountId,
+                          'document'
+                        );
+                        
+                        content.mediaUrl = mediaData.s3Url;
+                        content.s3Key = mediaData.s3Key;
+                        content.filename = mediaData.filename;
+                        content.fileSize = mediaData.fileSize;
+                        content.sha256 = mediaData.sha256;
+                        content.mediaType = 'document';
+                        
+                        console.log('✅ Document saved to S3:', mediaData.s3Url);
+                      } catch (mediaError) {
+                        console.error('❌ Failed to download/upload document:', mediaError.message);
+                      }
                       break;
                     case 'audio':
                       content = {
@@ -189,6 +235,28 @@ export const handleWebhook = async (req, res) => {
                         mimeType: message.audio.mime_type
                       };
                       console.log('Audio ID:', message.audio.id);
+                      
+                      // Download and upload to S3
+                      try {
+                        console.log('📥 Downloading audio from WhatsApp and uploading to S3...');
+                        const mediaData = await downloadAndUploadMedia(
+                          message.audio.id,
+                          phoneConfig.accessToken,
+                          accountId,
+                          'audio'
+                        );
+                        
+                        content.mediaUrl = mediaData.s3Url;
+                        content.s3Key = mediaData.s3Key;
+                        content.filename = mediaData.filename;
+                        content.fileSize = mediaData.fileSize;
+                        content.sha256 = mediaData.sha256;
+                        content.mediaType = 'audio';
+                        
+                        console.log('✅ Audio saved to S3:', mediaData.s3Url);
+                      } catch (mediaError) {
+                        console.error('❌ Failed to download/upload audio:', mediaError.message);
+                      }
                       break;
                     case 'video':
                       content = {
@@ -197,6 +265,28 @@ export const handleWebhook = async (req, res) => {
                         caption: message.video.caption || null
                       };
                       console.log('Video ID:', message.video.id);
+                      
+                      // Download and upload to S3
+                      try {
+                        console.log('📥 Downloading video from WhatsApp and uploading to S3...');
+                        const mediaData = await downloadAndUploadMedia(
+                          message.video.id,
+                          phoneConfig.accessToken,
+                          accountId,
+                          'video'
+                        );
+                        
+                        content.mediaUrl = mediaData.s3Url;
+                        content.s3Key = mediaData.s3Key;
+                        content.filename = mediaData.filename;
+                        content.fileSize = mediaData.fileSize;
+                        content.sha256 = mediaData.sha256;
+                        content.mediaType = 'video';
+                        
+                        console.log('✅ Video saved to S3:', mediaData.s3Url);
+                      } catch (mediaError) {
+                        console.error('❌ Failed to download/upload video:', mediaError.message);
+                      }
                       break;
                     case 'location':
                       content = {

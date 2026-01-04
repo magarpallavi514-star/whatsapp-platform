@@ -31,15 +31,28 @@ const messageSchema = new mongoose.Schema({
   // Message content
   messageType: {
     type: String,
-    enum: ['text', 'template', 'media', 'interactive'],
+    enum: ['text', 'template', 'media', 'interactive', 'image', 'video', 'audio', 'document'],
     default: 'text'
   },
   content: {
     text: String,
     templateName: String,
     templateParams: [String],
-    mediaUrl: String,
-    mediaType: String
+    
+    // Media fields (S3 storage)
+    mediaUrl: String,           // S3 public URL
+    mediaType: String,          // image/video/audio/document
+    mediaId: String,            // Original WhatsApp media ID
+    s3Key: String,              // S3 object key
+    filename: String,           // Original filename
+    mimeType: String,           // MIME type (image/jpeg, etc.)
+    fileSize: Number,           // File size in bytes
+    sha256: String,             // File hash from WhatsApp
+    
+    // Interactive message fields
+    caption: String,            // Media caption
+    buttonText: String,
+    listTitle: String
   },
   
   // Status tracking (matches Meta lifecycle)

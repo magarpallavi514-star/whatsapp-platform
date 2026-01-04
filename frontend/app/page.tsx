@@ -206,10 +206,10 @@ export default function LandingPage() {
               <Link href="#pricing" className="text-sm text-gray-600 hover:text-green-600 transition">Pricing</Link>
               <Link href="#faq" className="text-sm text-gray-600 hover:text-green-600 transition">FAQ</Link>
               <Link href="/login">
-                <Button variant="ghost" size="sm">Login</Button>
+                <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50">Login</Button>
               </Link>
               <Link href="/signup">
-                <Button size="sm">Start Free Trial</Button>
+                <Button size="sm" className="bg-green-600 hover:bg-green-700">Start Free Trial</Button>
               </Link>
             </div>
           </div>
