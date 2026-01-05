@@ -1217,10 +1217,27 @@ class WhatsAppService {
           responseText.toLowerCase().includes(btn.title.toLowerCase()) ||
           responseText === btn.id
         );
-        if (selectedButton && selectedButton.nextStepId) {
-          // Find the step index with this ID
-          nextStepIndex = session.workflowSteps.findIndex(s => s.id === selectedButton.nextStepId);
-          console.log(`🔀 Conditional branch: Going to step "${selectedButton.nextStepId}" (index: ${nextStepIndex})`);
+        if (selectedButton) {
+          console.log(`🔘 User clicked button: "${selectedButton.title}"`);
+          
+          // If button has URL, send it as clickable link
+          if (selectedButton.url) {
+            console.log(`🔗 Button has URL, sending clickable link: ${selectedButton.url}`);
+            await this.sendTextMessage(
+              session.accountId,
+              session.phoneNumberId,
+              session.recipientPhone,
+              `${selectedButton.url}`,
+              { campaign: 'workflow_button_url' }
+            );
+          }
+          
+          // Check for conditional branching
+          if (selectedButton.nextStepId) {
+            // Find the step index with this ID
+            nextStepIndex = session.workflowSteps.findIndex(s => s.id === selectedButton.nextStepId);
+            console.log(`🔀 Conditional branch: Going to step "${selectedButton.nextStepId}" (index: ${nextStepIndex})`);
+          }
         }
       }
       

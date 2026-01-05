@@ -760,28 +760,32 @@ export default function ChatbotPage() {
                                 </button>
                               </div>
                               {btn.url && (
-                                <a 
-                                  href={btn.url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-blue-600 hover:underline truncate block mb-1"
-                                >
-                                  🔗 {btn.url}
-                                </a>
+                                <div className="flex items-start gap-1">
+                                  <span className="text-xs text-green-700">🌐 Opens:</span>
+                                  <a 
+                                    href={btn.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:underline truncate flex-1"
+                                  >
+                                    {btn.url}
+                                  </a>
+                                </div>
                               )}
                             </div>
                           ))}
                           {(!currentWorkflowItem.buttons || currentWorkflowItem.buttons.length < 3) && (
                             <div className="space-y-3">
                               {/* WhatsApp Button Limitation Warning */}
-                              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                                <p className="text-xs font-medium text-amber-900 mb-1">
-                                  ⚠️ WhatsApp Button Limitations:
+                              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <p className="text-xs font-medium text-blue-900 mb-1">
+                                  💡 How URL Buttons Work:
                                 </p>
-                                <ul className="text-xs text-amber-800 space-y-1 ml-4 list-disc">
-                                  <li><strong>With URL:</strong> Only 1 button allowed</li>
-                                  <li><strong>Without URL (Reply buttons):</strong> Up to 3 buttons</li>
-                                  <li><strong>💡 Tip:</strong> For multiple buttons, leave URL blank and send link in next message</li>
+                                <ul className="text-xs text-blue-800 space-y-1 ml-4 list-disc">
+                                  <li>Create up to <strong>3 reply buttons</strong> with different URLs</li>
+                                  <li>When user clicks → Bot sends <strong>clickable link</strong></li>
+                                  <li>User taps link → <strong>Opens in browser</strong> directly</li>
+                                  <li>Each button can have its own unique URL!</li>
                                 </ul>
                               </div>
 
