@@ -828,33 +828,25 @@ class WhatsAppService {
     try {
       const config = await this.getPhoneConfig(accountId, phoneNumberId);
       
+      console.log('🔘 sendButtonMessage called with:', {
+        recipientPhone,
+        bodyText: bodyText.substring(0, 50),
+        buttonsCount: buttons.length,
+        buttons: buttons.map(b => ({ title: b.title, hasUrl: !!b.url }))
+      });
+      
       // Separate URL buttons from reply buttons
       const urlButtons = buttons.filter(btn => btn.url);
       const replyButtons = buttons.filter(btn => !btn.url);
       
+      console.log('🔘 Button types:', { urlButtons: urlButtons.length, replyButtons: replyButtons.length });
+      
       let payload;
       
-      // If we have URL buttons, use CTA button format (max 2 URL buttons)
-      if (urlButtons.length > 0) {
-        const formattedButtons = urlButtons.slice(0, 2).map((btn, index) => ({
-          type: 'url',
-          url: {
-            display_text: btn.title.substring(0, 20), // WhatsApp limit
-            url: btn.url
-          }
-        }));
-        
-        // If we also have reply buttons, add one (max 1 when combined with URLs)
-        if (replyButtons.length > 0) {
-          formattedButtons.push({
-            type: 'reply',
-            reply: {
-              id: replyButtons[0].id || 'btn_0',
-              title: replyButtons[0].title.substring(0, 20)
-            }
-          });
-        }
-        
+      // If we ONLY have URL buttons (no reply buttons), use CTA format
+      if (urlButtons.length > 0 && replyButtons.length === 0) {
+        console.log('⚠️ WhatsApp only supports 1 URL button in CTA format. Using first URL button only.');
+        // CTA URL format - supports only 1 URL button
         payload = {
           messaging_product: 'whatsapp',
           recipient_type: 'individual',
@@ -874,8 +866,35 @@ class WhatsAppService {
             }
           }
         };
+      } else if (replyButtons.length > 0 && urlButtons.length === 0) {
+        // Standard reply buttons only (max 3)
+        const formattedButtons = replyButtons.slice(0, 3).map((btn, index) => ({
+          type: 'reply',
+          reply: {
+            id: btn.id || `btn_${index}`,
+            title: btn.title.substring(0, 20) // WhatsApp limit
+          }
+        }));
+
+        payload = {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: recipientPhone,
+          type: 'interactive',
+          interactive: {
+            type: 'button',
+            body: {
+              text: bodyText
+            },
+            action: {
+              buttons: formattedButtons
+            }
+          }
+        };
       } else {
-        // Standard reply buttons (max 3)
+        // Mixed: both URL and reply buttons - use reply buttons format
+        // Note: WhatsApp doesn't support mixing URL and reply buttons
+        // So we'll send only reply buttons
         const formattedButtons = replyButtons.slice(0, 3).map((btn, index) => ({
           type: 'reply',
           reply: {
