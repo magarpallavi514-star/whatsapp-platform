@@ -1,8 +1,11 @@
 import PhoneNumber from '../models/PhoneNumber.js';
+import Account from '../models/Account.js';
+import ApiKey from '../models/ApiKey.js';
+import crypto from 'crypto';
 
 /**
- * Phone Number Settings Controller
- * Manages WhatsApp Business Account configurations
+ * Settings Controller
+ * Manages WhatsApp configurations, profile, API keys, and security
  */
 
 /**
@@ -248,10 +251,264 @@ export const testPhoneNumber = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/settings/profile - Get user profile
+ */
+export const getProfile = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    
+    const account = await Account.findOne({ accountId })
+      .select('name email company phone timezone')
+      .lean();
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      profile: account
+    });
+    
+  } catch (error) {
+    console.error('❌ Get profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * PUT /api/settings/profile - Update user profile
+ */
+export const updateProfile = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    const { name, email, company, phone, timezone } = req.body;
+    
+    const account = await Account.findOne({ accountId });
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found'
+      });
+    }
+    
+    // Update fields
+    if (name) account.name = name;
+    if (email) account.email = email;
+    if (company !== undefined) account.company = company;
+    if (phone !== undefined) account.phone = phone;
+    if (timezone) account.timezone = timezone;
+    
+    await account.save();
+    
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      profile: {
+        name: account.name,
+        email: account.email,
+        company: account.company,
+        phone: account.phone,
+        timezone: account.timezone
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * GET /api/settings/api-keys - Get all API keys
+ */
+export const getApiKeys = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    
+    const apiKeys = await ApiKey.find({ accountId })
+      .select('name keyPrefix lastUsedAt createdAt expiresAt')
+      .sort({ createdAt: -1 })
+      .lean();
+    
+    res.json({
+      success: true,
+      apiKeys
+    });
+    
+  } catch (error) {
+    console.error('❌ Get API keys error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * POST /api/settings/api-keys - Generate new API key
+ */
+export const generateApiKey = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    const { name } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'API key name is required'
+      });
+    }
+    
+    // Generate API key
+    const { apiKey, keyHash, keyPrefix } = ApiKey.generateApiKey();
+    
+    // Save to database
+    const newApiKey = await ApiKey.create({
+      accountId,
+      name: name.trim(),
+      keyHash,
+      keyPrefix
+    });
+    
+    res.json({
+      success: true,
+      message: 'API key generated successfully',
+      apiKey, // Return plaintext key (ONLY TIME IT'S VISIBLE)
+      keyData: {
+        _id: newApiKey._id,
+        name: newApiKey.name,
+        keyPrefix: newApiKey.keyPrefix,
+        createdAt: newApiKey.createdAt
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Generate API key error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * DELETE /api/settings/api-keys/:id - Delete API key
+ */
+export const deleteApiKey = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    const { id } = req.params;
+    
+    const apiKey = await ApiKey.findOne({ _id: id, accountId });
+    
+    if (!apiKey) {
+      return res.status(404).json({
+        success: false,
+        message: 'API key not found'
+      });
+    }
+    
+    await apiKey.deleteOne();
+    
+    res.json({
+      success: true,
+      message: 'API key deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Delete API key error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * POST /api/settings/change-password - Change password
+ */
+export const changePassword = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required'
+      });
+    }
+    
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 8 characters long'
+      });
+    }
+    
+    const account = await Account.findOne({ accountId }).select('+password');
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found'
+      });
+    }
+    
+    // Verify current password
+    if (account.password) {
+      const bcrypt = (await import('bcrypt')).default;
+      const isMatch = await bcrypt.compare(currentPassword, account.password);
+      
+      if (!isMatch) {
+        return res.status(401).json({
+          success: false,
+          message: 'Current password is incorrect'
+        });
+      }
+    }
+    
+    // Hash and save new password
+    const bcrypt = (await import('bcrypt')).default;
+    account.password = await bcrypt.hash(newPassword, 10);
+    await account.save();
+    
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 export default {
   getPhoneNumbers,
   addPhoneNumber,
   updatePhoneNumber,
   deletePhoneNumber,
-  testPhoneNumber
+  testPhoneNumber,
+  getProfile,
+  updateProfile,
+  getApiKeys,
+  generateApiKey,
+  deleteApiKey,
+  changePassword
 };

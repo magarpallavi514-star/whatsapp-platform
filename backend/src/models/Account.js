@@ -28,6 +28,22 @@ const accountSchema = new mongoose.Schema({
     // NOT unique - agencies may have multiple accounts
     // Uniqueness enforced at auth layer later
   },
+  company: {
+    type: String
+  },
+  phone: {
+    type: String
+  },
+  timezone: {
+    type: String,
+    default: 'America/New_York'
+  },
+  
+  // Password (hashed with bcrypt)
+  password: {
+    type: String,
+    select: false // Don't return in queries by default (security)
+  },
   
   // API Authentication (Phase 2B - Hashed)
   apiKeyHash: {
