@@ -531,7 +531,7 @@ export default function ChatbotPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g., Customer Support Bot"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder:text-gray-400"
                 />
               </div>
 
@@ -545,7 +545,7 @@ export default function ChatbotPage() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="What does this bot do?"
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder:text-gray-400"
                 />
               </div>
 
@@ -559,7 +559,7 @@ export default function ChatbotPage() {
                   value={formData.keywords}
                   onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
                   placeholder="e.g., hello, hi, hey, support, help"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder:text-gray-400"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   These keywords will trigger the bot response
@@ -574,7 +574,7 @@ export default function ChatbotPage() {
                 <select
                   value={formData.matchType}
                   onChange={(e) => setFormData({ ...formData, matchType: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="contains">Contains (most flexible)</option>
                   <option value="exact">Exact match</option>
@@ -590,7 +590,7 @@ export default function ChatbotPage() {
                 <select
                   value={formData.replyType}
                   onChange={(e) => setFormData({ ...formData, replyType: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="text">Text Message</option>
                   <option value="workflow">Workflow (Interactive)</option>
@@ -609,7 +609,7 @@ export default function ChatbotPage() {
                     onChange={(e) => setFormData({ ...formData, replyText: e.target.value })}
                     placeholder="The message to send when keywords match..."
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder:text-gray-400"
                   />
                 </div>
               ) : formData.replyType === 'workflow' ? (
@@ -680,7 +680,7 @@ export default function ChatbotPage() {
                         onChange={(e) => setCurrentWorkflowItem({ ...currentWorkflowItem, text: e.target.value })}
                         placeholder="Enter the message text..."
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                        className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 placeholder:text-gray-400"
                       />
                     </div>
 
@@ -727,14 +727,14 @@ export default function ChatbotPage() {
                                 value={newButtonTitle}
                                 onChange={(e) => setNewButtonTitle(e.target.value)}
                                 placeholder="Button text (e.g., Yes, No, More Info)"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400"
                               />
                               <input
                                 type="url"
                                 value={newButtonUrl}
                                 onChange={(e) => setNewButtonUrl(e.target.value)}
                                 placeholder="Link URL (optional, e.g., https://example.com)"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400"
                               />
                               <Button
                                 type="button"
@@ -803,14 +803,14 @@ export default function ChatbotPage() {
                                 value={newListItem.title}
                                 onChange={(e) => setNewListItem({ ...newListItem, title: e.target.value })}
                                 placeholder="List item title"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400"
                               />
                               <input
                                 type="text"
                                 value={newListItem.description}
                                 onChange={(e) => setNewListItem({ ...newListItem, description: e.target.value })}
                                 placeholder="Description (optional)"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400"
                               />
                               <Button
                                 type="button"
@@ -853,7 +853,7 @@ export default function ChatbotPage() {
                         onChange={(e) => setCurrentWorkflowItem({ ...currentWorkflowItem, delay: parseInt(e.target.value) || 0 })}
                         min="0"
                         max="30"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg text-sm"
                       />
                     </div>
 
@@ -959,7 +959,7 @@ export default function ChatbotPage() {
                     value={formData.templateName}
                     onChange={(e) => setFormData({ ...formData, templateName: e.target.value })}
                     placeholder="e.g., welcome_message"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder:text-gray-400"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Must be an approved WhatsApp template
