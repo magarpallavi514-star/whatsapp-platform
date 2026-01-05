@@ -17,6 +17,7 @@ import adminAccountRoutes from './routes/adminAccountRoutes.js';
 import accountRoutes from './routes/accountRoutes.js';
 import templateRoutes from './routes/templateRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
+import chatbotRoutes from './routes/chatbotRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -101,6 +102,7 @@ app.use('/api/contacts', authenticate, contactRoutes);
 app.use('/api/stats', authenticate, statsRoutes);
 app.use('/api/templates', authenticate, templateRoutes);
 app.use('/api/settings', authenticate, settingsRoutes);
+app.use('/api/chatbots', authenticate, chatbotRoutes);
 
 // 404 handler
 app.use((req, res) => {

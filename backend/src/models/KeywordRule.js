@@ -41,13 +41,32 @@ const keywordRuleSchema = new mongoose.Schema({
   // Action/Reply
   replyType: {
     type: String,
-    enum: ['text', 'template'],
+    enum: ['text', 'template', 'workflow'],
     default: 'text'
   },
   replyContent: {
     text: String,
     templateName: String,
-    templateParams: [String]
+    templateParams: [String],
+    // Workflow support - array of response steps
+    workflow: [{
+      id: String,
+      type: {
+        type: String,
+        enum: ['text', 'buttons', 'list']
+      },
+      text: String,
+      buttons: [{
+        id: String,
+        title: String
+      }],
+      listItems: [{
+        id: String,
+        title: String,
+        description: String
+      }],
+      delay: Number // seconds
+    }]
   },
   
   // Status

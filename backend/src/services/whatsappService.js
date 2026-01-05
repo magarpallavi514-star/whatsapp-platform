@@ -465,6 +465,14 @@ class WhatsAppService {
               rule.replyContent.templateParams || [],
               { campaign: 'keyword_auto_reply' }
             );
+          } else if (rule.replyType === 'workflow' && rule.replyContent.workflow) {
+            // Process workflow steps
+            await this.processWorkflow(
+              accountId,
+              phoneNumberId,
+              senderPhone,
+              rule.replyContent.workflow
+            );
           }
           
           // Only trigger first matching rule
@@ -698,6 +706,215 @@ class WhatsAppService {
       }
       
       throw new Error(error.response?.data?.error?.message || 'Failed to send media');
+    }
+  }
+
+  /**
+   * Process workflow - send multiple response steps
+   * @param {string} accountId 
+   * @param {string} phoneNumberId 
+   * @param {string} recipientPhone 
+   * @param {Array} workflowSteps 
+   */
+  async processWorkflow(accountId, phoneNumberId, recipientPhone, workflowSteps) {
+    try {
+      console.log('🔄 Processing workflow with', workflowSteps.length, 'steps');
+      
+      for (const step of workflowSteps) {
+        // Apply delay if specified
+        if (step.delay && step.delay > 0) {
+          console.log(`⏱️ Waiting ${step.delay} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, step.delay * 1000));
+        }
+
+        // Send based on step type
+        if (step.type === 'text') {
+          await this.sendTextMessage(
+            accountId,
+            phoneNumberId,
+            recipientPhone,
+            step.text || '',
+            { campaign: 'workflow_auto_reply' }
+          );
+        } else if (step.type === 'buttons' && step.buttons && step.buttons.length > 0) {
+          await this.sendButtonMessage(
+            accountId,
+            phoneNumberId,
+            recipientPhone,
+            step.text || '',
+            step.buttons
+          );
+        } else if (step.type === 'list' && step.listItems && step.listItems.length > 0) {
+          await this.sendListMessage(
+            accountId,
+            phoneNumberId,
+            recipientPhone,
+            step.text || '',
+            step.listItems
+          );
+        }
+      }
+      
+      console.log('✅ Workflow completed successfully');
+    } catch (error) {
+      console.error('❌ Error processing workflow:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Send interactive button message
+   * @param {string} accountId 
+   * @param {string} phoneNumberId 
+   * @param {string} recipientPhone 
+   * @param {string} bodyText 
+   * @param {Array} buttons - Array of {id, title}
+   */
+  async sendButtonMessage(accountId, phoneNumberId, recipientPhone, bodyText, buttons) {
+    try {
+      const config = await this.getConfig(accountId, phoneNumberId);
+      
+      // WhatsApp API format for buttons (max 3 buttons)
+      const formattedButtons = buttons.slice(0, 3).map((btn, index) => ({
+        type: 'reply',
+        reply: {
+          id: btn.id || `btn_${index}`,
+          title: btn.title.substring(0, 20) // WhatsApp limit
+        }
+      }));
+
+      const payload = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: recipientPhone,
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: {
+            text: bodyText
+          },
+          action: {
+            buttons: formattedButtons
+          }
+        }
+      };
+
+      const response = await axios.post(
+        `${GRAPH_API_URL}/${phoneNumberId}/messages`,
+        payload,
+        {
+          headers: {
+            'Authorization': `Bearer ${config.accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('✅ Button message sent:', response.data.messages[0].id);
+      
+      // Save to database
+      const message = new Message({
+        accountId,
+        phoneNumberId,
+        conversationId: null, // Will be set by webhook
+        direction: 'outbound',
+        from: phoneNumberId,
+        to: recipientPhone,
+        type: 'interactive',
+        content: bodyText,
+        waMessageId: response.data.messages[0].id,
+        status: 'sent',
+        sentAt: new Date(),
+        metadata: {
+          campaign: 'workflow_button',
+          buttons: formattedButtons
+        }
+      });
+      await message.save();
+
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error sending button message:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Send interactive list message
+   * @param {string} accountId 
+   * @param {string} phoneNumberId 
+   * @param {string} recipientPhone 
+   * @param {string} bodyText 
+   * @param {Array} listItems - Array of {id, title, description}
+   */
+  async sendListMessage(accountId, phoneNumberId, recipientPhone, bodyText, listItems) {
+    try {
+      const config = await this.getConfig(accountId, phoneNumberId);
+      
+      // WhatsApp API format for list (max 10 items)
+      const formattedRows = listItems.slice(0, 10).map((item, index) => ({
+        id: item.id || `item_${index}`,
+        title: item.title.substring(0, 24), // WhatsApp limit
+        description: item.description ? item.description.substring(0, 72) : undefined
+      }));
+
+      const payload = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: recipientPhone,
+        type: 'interactive',
+        interactive: {
+          type: 'list',
+          body: {
+            text: bodyText
+          },
+          action: {
+            button: 'View Options',
+            sections: [{
+              title: 'Options',
+              rows: formattedRows
+            }]
+          }
+        }
+      };
+
+      const response = await axios.post(
+        `${GRAPH_API_URL}/${phoneNumberId}/messages`,
+        payload,
+        {
+          headers: {
+            'Authorization': `Bearer ${config.accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('✅ List message sent:', response.data.messages[0].id);
+      
+      // Save to database
+      const message = new Message({
+        accountId,
+        phoneNumberId,
+        conversationId: null,
+        direction: 'outbound',
+        from: phoneNumberId,
+        to: recipientPhone,
+        type: 'interactive',
+        content: bodyText,
+        waMessageId: response.data.messages[0].id,
+        status: 'sent',
+        sentAt: new Date(),
+        metadata: {
+          campaign: 'workflow_list',
+          listItems: formattedRows
+        }
+      });
+      await message.save();
+
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error sending list message:', error.response?.data || error.message);
+      throw error;
     }
   }
 }
