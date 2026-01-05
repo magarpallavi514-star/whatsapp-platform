@@ -521,6 +521,185 @@ class WhatsAppService {
       throw error;
     }
   }
+
+  /**
+   * Upload media to WhatsApp servers and get media ID
+   * @param {Buffer} fileBuffer 
+   * @param {string} phoneNumberId 
+   * @param {string} accessToken 
+   * @param {string} mimeType 
+   * @param {string} filename 
+   */
+  async uploadMediaToWhatsApp(fileBuffer, phoneNumberId, accessToken, mimeType, filename) {
+    try {
+      const FormData = (await import('form-data')).default;
+      const formData = new FormData();
+      
+      formData.append('file', fileBuffer, {
+        filename: filename,
+        contentType: mimeType
+      });
+      formData.append('messaging_product', 'whatsapp');
+      formData.append('type', mimeType);
+      
+      console.log('⬆️ Uploading to WhatsApp Media API...');
+      console.log('  Phone Number ID:', phoneNumberId);
+      console.log('  Filename:', filename);
+      console.log('  Type:', mimeType);
+      
+      const response = await axios.post(
+        `${GRAPH_API_URL}/${phoneNumberId}/media`,
+        formData,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            ...formData.getHeaders()
+          }
+        }
+      );
+      
+      console.log('✅ Media uploaded to WhatsApp:', response.data);
+      return response.data.id; // Returns media ID
+      
+    } catch (error) {
+      console.error('❌ WhatsApp media upload error:', error.response?.data || error.message);
+      throw new Error(error.response?.data?.error?.message || 'Failed to upload media to WhatsApp');
+    }
+  }
+
+  /**
+   * Send media message (image, video, document)
+   * @param {string} accountId 
+   * @param {string} phoneNumberId 
+   * @param {string} recipientPhone 
+   * @param {string} mediaUrl - S3 URL (stored for reference)
+   * @param {string} mediaType - image, video, or document
+   * @param {string} caption - Optional caption for media
+   * @param {object} metadata - Must include fileBuffer, mimeType, filename
+   */
+  async sendMediaMessage(accountId, phoneNumberId, recipientPhone, mediaUrl, mediaType, caption = '', metadata = {}) {
+    let message;
+    
+    try {
+      const config = await this.getPhoneConfig(accountId, phoneNumberId);
+      const cleanPhone = recipientPhone.replace(/[\s+()-]/g, '');
+      
+      console.log('📤 Sending media message:');
+      console.log('  Account ID:', accountId);
+      console.log('  Phone Number ID:', phoneNumberId);
+      console.log('  Recipient:', cleanPhone);
+      console.log('  Media Type:', mediaType);
+      console.log('  Caption:', caption);
+      
+      // Create message record
+      message = new Message({
+        accountId,
+        phoneNumberId,
+        recipientPhone: cleanPhone,
+        messageType: mediaType,
+        content: { 
+          url: mediaUrl,
+          caption: caption 
+        },
+        status: 'queued',
+        campaign: metadata.campaign || 'manual',
+        direction: 'outbound'
+      });
+      
+      await message.save();
+      console.log('✅ Message saved to DB');
+
+      // Upload media to WhatsApp and get media ID
+      const mediaId = await this.uploadMediaToWhatsApp(
+        metadata.fileBuffer,
+        phoneNumberId,
+        config.accessToken,
+        metadata.mimeType,
+        metadata.filename
+      );
+
+      // Prepare WhatsApp API payload with media ID
+      const mediaPayload = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: cleanPhone,
+        type: mediaType,
+        [mediaType]: {
+          id: mediaId  // Use media ID instead of link
+        }
+      };
+
+      // Add caption if provided (for image and video)
+      if (caption && (mediaType === 'image' || mediaType === 'video')) {
+        mediaPayload[mediaType].caption = caption;
+      }
+
+      // Add filename for documents
+      if (mediaType === 'document' && metadata.filename) {
+        mediaPayload[mediaType].filename = metadata.filename;
+      }
+
+      console.log('🚀 Sending media message to Meta API...');
+      const response = await axios.post(
+        `${GRAPH_API_URL}/${phoneNumberId}/messages`,
+        mediaPayload,
+        {
+          headers: {
+            'Authorization': `Bearer ${config.accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('✅ Meta API Response:', response.data);
+
+      // Update message with WhatsApp message ID
+      message.waMessageId = response.data.messages[0].id;
+      message.status = 'sent';
+      message.sentAt = new Date();
+      message.statusUpdates.push({
+        status: 'sent',
+        timestamp: new Date()
+      });
+      await message.save();
+
+      // Update phone number stats
+      await PhoneNumber.updateOne(
+        { accountId, phoneNumberId },
+        { 
+          $inc: { 
+            'messageCount.total': 1, 
+            'messageCount.sent': 1 
+          } 
+        }
+      );
+
+      return {
+        success: true,
+        messageId: message._id,
+        waMessageId: message.waMessageId
+      };
+
+    } catch (error) {
+      console.error('❌ Send media error:', error.response?.data || error.message);
+      
+      if (message) {
+        message.status = 'failed';
+        message.failedAt = new Date();
+        message.errorMessage = error.response?.data?.error?.message || error.message;
+        message.errorCode = error.response?.data?.error?.code;
+        message.statusUpdates.push({
+          status: 'failed',
+          timestamp: new Date(),
+          errorMessage: error.response?.data?.error?.message || error.message,
+          errorCode: error.response?.data?.error?.code
+        });
+        await message.save();
+      }
+      
+      throw new Error(error.response?.data?.error?.message || 'Failed to send media');
+    }
+  }
 }
 
 export default new WhatsAppService();

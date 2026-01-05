@@ -1,5 +1,6 @@
 import whatsappService from '../services/whatsappService.js';
 import Message from '../models/Message.js';
+import { uploadMediaToS3 } from '../services/s3Service.js';
 
 /**
  * Message Controller
@@ -168,9 +169,100 @@ export const getMessage = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/messages/send-media - Send media message with file upload
+ */
+export const sendMediaMessage = async (req, res) => {
+  try {
+    const accountId = req.accountId; // From auth middleware
+    const { phoneNumberId, recipientPhone, caption, campaign } = req.body;
+    
+    // Check if file was uploaded
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+    
+    if (!phoneNumberId || !recipientPhone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: phoneNumberId, recipientPhone'
+      });
+    }
+    
+    const file = req.file;
+    
+    // Determine media type from MIME type
+    let mediaType = 'document';
+    if (file.mimetype.startsWith('image/')) {
+      mediaType = 'image';
+    } else if (file.mimetype.startsWith('video/')) {
+      mediaType = 'video';
+    }
+    
+    console.log('📤 Sending media message:', {
+      accountId,
+      phoneNumberId,
+      recipientPhone,
+      mediaType,
+      filename: file.originalname,
+      size: file.size
+    });
+    
+    // Upload file to S3
+    console.log('⬆️ Uploading to S3...');
+    const s3Result = await uploadMediaToS3(
+      file.buffer,
+      accountId,
+      mediaType,
+      file.mimetype,
+      file.originalname
+    );
+    
+    console.log('✅ S3 upload complete:', s3Result.url);
+    
+    // Send via WhatsApp - pass file buffer for WhatsApp upload
+    const result = await whatsappService.sendMediaMessage(
+      accountId,
+      phoneNumberId,
+      recipientPhone,
+      s3Result.url,
+      mediaType,
+      caption || '',
+      { 
+        campaign: campaign || 'manual',
+        filename: file.originalname,
+        fileBuffer: file.buffer,  // Pass buffer for WhatsApp upload
+        mimeType: file.mimetype
+      }
+    );
+    
+    res.json({
+      success: true,
+      message: 'Media message sent successfully',
+      data: {
+        ...result,
+        mediaUrl: s3Result.url,
+        mediaType,
+        filename: file.originalname
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Send media message error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 export default {
   sendTextMessage,
   sendTemplateMessage,
   getMessages,
-  getMessage
+  getMessage,
+  sendMediaMessage
 };

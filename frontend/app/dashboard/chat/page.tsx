@@ -55,8 +55,10 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const selectedContactIdRef = useRef<string | null>(null)
   const isFetchingRef = useRef(false)
   const shouldScrollRef = useRef(false) // Track when to scroll
@@ -88,34 +90,58 @@ export default function ChatPage() {
           profilePic: conv.userProfilePic
         }))
         
-        // Smart update: only change conversations if there are actual differences
+        // Smart update: merge backend data with local state but keep local order
+        // when local timestamps are newer. Build a map from existing conversations
+        // then merge transformed results into it, prefer newer timestamps from
+        // the client, and finally sort by the merged lastMessageTime.
         setConversations(prev => {
-          // If no previous conversations, just set the new ones
-          if (prev.length === 0) return transformed
-          
-          // Check if there are any actual changes (new messages, different counts, etc.)
-          const hasChanges = transformed.some((newConv: Contact) => {
-            const oldConv = prev.find(c => c.id === newConv.id)
-            if (!oldConv) return true // New conversation
-            
-            // Check for meaningful changes
-            return oldConv.lastMessage !== newConv.lastMessage ||
-                   oldConv.unreadCount !== newConv.unreadCount ||
-                   oldConv.lastMessageTime !== newConv.lastMessageTime
-          })
-          
-          // Also check if a conversation was removed
-          const conversationRemoved = prev.some(oldConv => 
-            !transformed.find((c: Contact) => c.id === oldConv.id)
-          )
-          
-          // Only update if there are actual changes
-          if (hasChanges || conversationRemoved || prev.length !== transformed.length) {
-            return transformed
+          // If no previous conversations, just return transformed sorted by time
+          if (prev.length === 0) {
+            return transformed.sort((a: Contact, b: Contact) => {
+              return new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime()
+            })
           }
-          
-          // No changes, keep current order
-          return prev
+
+          const byId = new Map<string, Contact>()
+          // Seed map with existing conversations to preserve local fields
+          prev.forEach(c => byId.set(c.id, { ...c }))
+
+          // Merge transformed data in (overwrite fields but keep newer timestamps/messages)
+          transformed.forEach((newConv: Contact) => {
+            const existing = byId.get(newConv.id)
+            if (!existing) {
+              byId.set(newConv.id, { ...newConv })
+              return
+            }
+
+            const oldTime = new Date(existing.lastMessageTime || 0).getTime()
+            const newTime = new Date(newConv.lastMessageTime || 0).getTime()
+            const finalTime = oldTime > newTime ? existing.lastMessageTime : newConv.lastMessageTime
+            const finalLastMessage = existing.lastMessage || newConv.lastMessage
+
+            byId.set(newConv.id, {
+              ...existing,
+              ...newConv,
+              lastMessageTime: finalTime,
+              lastMessage: finalLastMessage
+            })
+          })
+
+          // Build merged array and sort by lastMessageTime descending
+          const mergedArr = Array.from(byId.values()).sort((a: Contact, b: Contact) => {
+            return new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime()
+          })
+
+          // Quick equality check: same order and same key fields => no update
+          const isSame = mergedArr.length === prev.length && mergedArr.every((c, i) => (
+            c.id === prev[i].id &&
+            c.lastMessage === prev[i].lastMessage &&
+            c.lastMessageTime === prev[i].lastMessageTime &&
+            (c.unreadCount || 0) === (prev[i].unreadCount || 0)
+          ))
+
+          if (isSame) return prev
+          return mergedArr
         })
       } else {
         console.error("Failed to fetch conversations:", response.status, response.statusText)
@@ -277,6 +303,104 @@ export default function ChatPage() {
     }
   }, [newMessage, selectedContact, isSending, API_URL, API_KEY])
 
+  // Handle file selection and upload
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !selectedContact) return
+    
+    // Check file size (max 16MB for WhatsApp)
+    if (file.size > 16 * 1024 * 1024) {
+      alert("File size must be less than 16MB")
+      return
+    }
+    
+    setIsSending(true)
+    
+    try {
+      // Create FormData for file upload
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('phoneNumberId', selectedContact.phoneNumberId)
+      formData.append('recipientPhone', selectedContact.phone)
+      formData.append('campaign', 'manual')
+      
+      console.log('📤 Uploading media:', {
+        filename: file.name,
+        size: file.size,
+        type: file.type
+      })
+      
+      const response = await fetch(`${API_URL}/api/messages/send-media`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+        },
+        body: formData
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        console.log('✅ Media sent successfully:', result)
+        
+        // Add media message to chat
+        const mediaType = file.type.startsWith('image/') ? 'image' :
+                         file.type.startsWith('video/') ? 'video' : 'document'
+        
+        const newMediaMessage: Message = {
+          _id: result.data.messageId,
+          content: {
+            url: result.data.mediaUrl,
+            caption: ''
+          },
+          direction: 'outbound',
+          status: 'sent',
+          createdAt: new Date().toISOString(),
+          messageType: mediaType
+        }
+        
+        setMessages((prev: Message[]) => [...prev, newMediaMessage])
+        
+        // Update conversation timestamp with media indicator
+        const mediaLabel = mediaType === 'image' ? '🖼️ Photo' :
+                          mediaType === 'video' ? '🎥 Video' :
+                          '📄 ' + file.name
+        
+        setConversations((prevContacts: Contact[]) => {
+          return prevContacts.map((c: Contact) => {
+            if (c.phone === selectedContact.phone) {
+              return {
+                ...c,
+                lastMessage: mediaLabel,
+                lastMessageTime: new Date().toISOString()
+              }
+            }
+            return c
+          }).sort((a: Contact, b: Contact) => {
+            const timeA = new Date(a.lastMessageTime || 0).getTime()
+            const timeB = new Date(b.lastMessageTime || 0).getTime()
+            return timeB - timeA
+          })
+        })
+        
+      } else {
+        console.error('❌ Failed to send media:', result.message)
+        alert(`Failed to send media: ${result.message}`)
+      }
+      
+    } catch (error) {
+      console.error('❌ Media upload error:', error)
+      alert('Failed to send media. Please try again.')
+    } finally {
+      setIsSending(false)
+      setSelectedFile(null)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
   // Handle Enter key to send
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -362,12 +486,25 @@ export default function ChatPage() {
               if (trulyNewMessages.length > 0 && trulyNewMessages[0].direction === "inbound") {
                 // New inbound message - add it and update conversation
                 const lastNew = trulyNewMessages[trulyNewMessages.length - 1]
+                
+                // Generate preview based on message type
+                let messagePreview = '[Media]'
+                if (lastNew.messageType === 'text') {
+                  messagePreview = lastNew.content?.text?.substring(0, 50) || ''
+                } else if (lastNew.messageType === 'image') {
+                  messagePreview = '🖼️ Photo'
+                } else if (lastNew.messageType === 'video') {
+                  messagePreview = '🎥 Video'
+                } else if (lastNew.messageType === 'document') {
+                  messagePreview = '📄 Document'
+                }
+                
                 setConversations(convs => {
                   const updated = convs.map(conv => 
                     conv.id === currentId 
                       ? { 
                           ...conv, 
-                          lastMessage: lastNew.content?.text?.substring(0, 50) || '[Media]',
+                          lastMessage: messagePreview,
                           lastMessageTime: lastNew.createdAt,
                           unreadCount: (conv.unreadCount || 0) + trulyNewMessages.length
                         }
@@ -455,6 +592,7 @@ export default function ChatPage() {
   // Render message content based on type
   const renderMessageContent = (message: Message) => {
     const content = message.content
+    const mediaUrl = content.url || content.mediaUrl || content.link // Support multiple field names
 
     switch (message.messageType) {
       case "text":
@@ -463,12 +601,12 @@ export default function ChatPage() {
       case "image":
         return (
           <div>
-            {content.mediaUrl ? (
+            {mediaUrl ? (
               <img
-                src={content.mediaUrl}
+                src={mediaUrl}
                 alt="Image"
                 className="max-w-xs rounded-lg cursor-pointer hover:opacity-95 transition"
-                onClick={() => window.open(content.mediaUrl, "_blank")}
+                onClick={() => window.open(mediaUrl, "_blank")}
               />
             ) : (
               <div className="flex items-center gap-2 text-[#667781] py-2">
@@ -483,10 +621,10 @@ export default function ChatPage() {
       case "video":
         return (
           <div>
-            {content.mediaUrl ? (
+            {mediaUrl ? (
               <div className="relative max-w-xs">
                 <video
-                  src={content.mediaUrl}
+                  src={mediaUrl}
                   controls
                   className="rounded-lg w-full"
                 />
@@ -513,9 +651,9 @@ export default function ChatPage() {
                 </p>
               )}
             </div>
-            {content.mediaUrl && (
+            {mediaUrl && (
               <a
-                href={content.mediaUrl}
+                href={mediaUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-green-600 hover:text-green-700 text-sm font-medium"
@@ -586,17 +724,24 @@ export default function ChatPage() {
                 }`}
               >
                 {/* Avatar */}
-                <div className="h-12 w-12 bg-[#dfe5e7] rounded-full flex items-center justify-center flex-shrink-0">
-                  {contact.profilePic ? (
-                    <img
-                      src={contact.profilePic}
-                      alt={contact.name}
-                      className="h-12 w-12 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-[#54656f] font-medium text-lg">
-                      {contact.name?.[0]?.toUpperCase() || contact.phone[0]}
-                    </span>
+                <div className="relative h-12 w-12 flex-shrink-0">
+                  <div className="h-12 w-12 bg-[#dfe5e7] rounded-full flex items-center justify-center">
+                    {contact.profilePic ? (
+                      <img
+                        src={contact.profilePic}
+                        alt={contact.name}
+                        className="h-12 w-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-[#54656f] font-medium text-lg">
+                        {contact.name?.[0]?.toUpperCase() || contact.phone[0]}
+                      </span>
+                    )}
+                  </div>
+                  {/* Online status indicator - show green dot if last message was recent (within 5 min) */}
+                  {contact.lastMessageTime && 
+                   new Date().getTime() - new Date(contact.lastMessageTime).getTime() < 5 * 60 * 1000 && (
+                    <div className="absolute bottom-0 right-0 h-3 w-3 bg-[#25d366] border-2 border-white rounded-full"></div>
                   )}
                 </div>
 
@@ -613,14 +758,37 @@ export default function ChatPage() {
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                    <p className="text-sm text-[#667781] truncate max-w-[200px]">
-                      {contact.lastMessage || "No messages yet"}
-                    </p>
+                    <div className="flex items-center gap-1 text-sm text-[#667781] truncate max-w-[200px]">
+                      {/* Show icon for media messages in conversation preview */}
+                      {contact.lastMessage?.startsWith('[Media]') || contact.lastMessage?.startsWith('📎') ? (
+                        <>
+                          <Paperclip className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate">{contact.lastMessage.replace('[Media]', '').replace('📎', '') || 'Media'}</span>
+                        </>
+                      ) : contact.lastMessage?.includes('🖼️') || contact.lastMessage?.toLowerCase().includes('image') ? (
+                        <>
+                          <ImageIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate">Photo</span>
+                        </>
+                      ) : contact.lastMessage?.includes('🎥') || contact.lastMessage?.toLowerCase().includes('video') ? (
+                        <>
+                          <Play className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate">Video</span>
+                        </>
+                      ) : contact.lastMessage?.includes('📄') || contact.lastMessage?.toLowerCase().includes('document') ? (
+                        <>
+                          <FileText className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate">Document</span>
+                        </>
+                      ) : (
+                        <span className="truncate">{contact.lastMessage || "No messages yet"}</span>
+                      )}
+                    </div>
                     {/* Unread Badge */}
-                    {contact.unreadCount && contact.unreadCount > 0 && (
+                    {(contact.unreadCount ?? 0) > 0 && (
                       <div className="h-5 min-w-[20px] bg-[#25d366] rounded-full flex items-center justify-center px-1.5 ml-2">
                         <span className="text-xs font-semibold text-white">
-                          {contact.unreadCount > 99 ? '99+' : contact.unreadCount}
+                          {(contact.unreadCount ?? 0) > 99 ? '99+' : (contact.unreadCount ?? 0)}
                         </span>
                       </div>
                     )}
@@ -657,9 +825,15 @@ export default function ChatPage() {
                   <h2 className="font-medium text-[#111b21] text-[17px]">
                     {selectedContact.name || selectedContact.phone}
                   </h2>
-                  <p className="text-xs text-[#667781]">
-                    {selectedContact.phone !== selectedContact.name ? selectedContact.phone : 'Click here for contact info'}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    {isTyping ? (
+                      <p className="text-xs text-[#25d366]">typing...</p>
+                    ) : (
+                      <p className="text-xs text-[#667781]">
+                        {selectedContact.phone !== selectedContact.name ? selectedContact.phone : 'Click here for contact info'}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -749,7 +923,18 @@ export default function ChatPage() {
                   <Smile className="h-6 w-6 text-[#54656f]" />
                 </button>
                 
-                <button className="p-2 hover:bg-[#e9edef] rounded-full transition flex-shrink-0">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*,.pdf,.doc,.docx"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 hover:bg-[#e9edef] rounded-full transition flex-shrink-0"
+                  title="Attach file (images, videos, documents)"
+                >
                   <Paperclip className="h-6 w-6 text-[#54656f]" />
                 </button>
 
