@@ -9,13 +9,34 @@ const API_KEY = "wpk_live_f0b8a01652eb0b9950484f3b4674bd800e9e3e9a216f200f34b050
 
 interface ReplyOption {
   id: string;
-  type: 'text' | 'buttons' | 'list' | 'question';
+  type: 'text' | 'buttons' | 'list' | 'question' | 'condition' | 'calendar' | 'form';
   text?: string;
-  buttons?: Array<{ id: string; title: string; url?: string; }>;
-  listItems?: Array<{ id: string; title: string; description?: string; }>;
+  buttons?: Array<{ 
+    id: string; 
+    title: string; 
+    url?: string;
+    nextStepId?: string; // For conditional branching
+  }>;
+  listItems?: Array<{ 
+    id: string; 
+    title: string; 
+    description?: string;
+    nextStepId?: string; // For conditional branching
+  }>;
   delay?: number;
   saveAs?: string; // Variable name to save response
   waitForResponse?: boolean; // Whether to wait for user response
+  condition?: {
+    variable: string;
+    branches: Array<{ value: string; nextStepId: string; }>;
+    defaultNextStepId?: string;
+  };
+  calendarConfig?: {
+    enabled: boolean;
+    availableDays: string[];
+    timeSlots: string[];
+    duration: number;
+  };
 }
 
 interface ReplyContent {
@@ -90,7 +111,9 @@ export default function ChatbotPage() {
   });
   const [newButtonTitle, setNewButtonTitle] = useState('');
   const [newButtonUrl, setNewButtonUrl] = useState('');
+  const [newButtonNextStep, setNewButtonNextStep] = useState('');
   const [newListItem, setNewListItem] = useState({ title: '', description: '' });
+  const [enableConditionalBranching, setEnableConditionalBranching] = useState(false);
 
   useEffect(() => {
     fetchBots();
@@ -722,9 +745,9 @@ export default function ChatbotPage() {
                         </label>
                         <div className="space-y-2">
                           {currentWorkflowItem.buttons?.map((btn) => (
-                            <div key={btn.id} className="bg-white px-3 py-2 rounded border">
+                            <div key={btn.id} className="bg-white px-3 py-2 rounded border border-gray-300">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="flex-1 text-sm font-medium">{btn.title}</span>
+                                <span className="flex-1 text-sm font-medium text-gray-900">{btn.title}</span>
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -743,15 +766,22 @@ export default function ChatbotPage() {
                                   href={btn.url} 
                                   target="_blank" 
                                   rel="noopener noreferrer"
-                                  className="text-xs text-blue-600 hover:underline truncate block"
+                                  className="text-xs text-blue-600 hover:underline truncate block mb-1"
                                 >
-                                  {btn.url}
+                                  🔗 {btn.url}
                                 </a>
+                              )}
+                              {btn.nextStepId && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">
+                                    🔀 Jumps to: {btn.nextStepId}
+                                  </span>
+                                </div>
                               )}
                             </div>
                           ))}
                           {(!currentWorkflowItem.buttons || currentWorkflowItem.buttons.length < 3) && (
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                               <input
                                 type="text"
                                 value={newButtonTitle}
@@ -766,6 +796,44 @@ export default function ChatbotPage() {
                                 placeholder="Link URL (optional, e.g., https://example.com)"
                                 className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400"
                               />
+                              
+                              {/* Conditional Branching Toggle */}
+                              <div className="flex items-center gap-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                <input
+                                  type="checkbox"
+                                  id="enableBranching"
+                                  checked={enableConditionalBranching}
+                                  onChange={(e) => {
+                                    setEnableConditionalBranching(e.target.checked);
+                                    if (!e.target.checked) setNewButtonNextStep('');
+                                  }}
+                                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                />
+                                <label htmlFor="enableBranching" className="flex-1 cursor-pointer">
+                                  <span className="text-sm font-medium text-purple-900">🔀 Enable Conditional Branching</span>
+                                  <p className="text-xs text-purple-700 mt-0.5">Go to different step based on this button click</p>
+                                </label>
+                              </div>
+
+                              {/* Next Step Selection */}
+                              {enableConditionalBranching && (
+                                <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                  <label className="block text-xs font-medium text-purple-900 mb-2">
+                                    Jump to Step (Enter Step ID)
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={newButtonNextStep}
+                                    onChange={(e) => setNewButtonNextStep(e.target.value)}
+                                    placeholder="e.g., step_5, pricing_flow, contact_form"
+                                    className="w-full px-3 py-2 bg-white text-gray-900 border border-purple-300 rounded-lg text-sm placeholder:text-gray-400"
+                                  />
+                                  <p className="text-xs text-purple-700 mt-1">
+                                    💡 Enter the ID of the step you want to jump to when this button is clicked
+                                  </p>
+                                </div>
+                              )}
+                              
                               <Button
                                 type="button"
                                 onClick={() => {
@@ -777,12 +845,15 @@ export default function ChatbotPage() {
                                         { 
                                           id: Date.now().toString(), 
                                           title: newButtonTitle.trim(),
-                                          url: newButtonUrl.trim() || undefined
+                                          url: newButtonUrl.trim() || undefined,
+                                          nextStepId: enableConditionalBranching && newButtonNextStep.trim() ? newButtonNextStep.trim() : undefined
                                         }
                                       ]
                                     });
                                     setNewButtonTitle('');
                                     setNewButtonUrl('');
+                                    setNewButtonNextStep('');
+                                    setEnableConditionalBranching(false);
                                   }
                                 }}
                                 size="sm"

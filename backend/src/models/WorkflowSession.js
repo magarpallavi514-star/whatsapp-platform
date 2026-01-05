@@ -6,8 +6,7 @@ import mongoose from 'mongoose';
  */
 const workflowSessionSchema = new mongoose.Schema({
   accountId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Account',
+    type: String,
     required: true,
     index: true
   },
@@ -22,27 +21,47 @@ const workflowSessionSchema = new mongoose.Schema({
     index: true
   },
   ruleId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'KeywordRule',
+    type: String,
     required: true
   },
   workflowSteps: [{
     id: String,
-    type: { type: String, enum: ['text', 'buttons', 'list', 'question'] },
+    type: { 
+      type: String, 
+      enum: ['text', 'buttons', 'list', 'question', 'condition', 'calendar', 'form'] 
+    },
     text: String,
     buttons: [{
       id: String,
       title: String,
-      url: String
+      url: String,
+      nextStepId: String // For conditional branching
     }],
     listItems: [{
       id: String,
       title: String,
-      description: String
+      description: String,
+      nextStepId: String // For conditional branching
     }],
     delay: { type: Number, default: 0 },
     saveAs: String, // Variable name to save response as
-    waitForResponse: { type: Boolean, default: false }
+    waitForResponse: { type: Boolean, default: false },
+    // Conditional branching
+    condition: {
+      variable: String, // Which response to check
+      branches: [{
+        value: String, // If response equals this
+        nextStepId: String // Go to this step
+      }],
+      defaultNextStepId: String // Default if no match
+    },
+    // Calendar booking
+    calendarConfig: {
+      enabled: Boolean,
+      availableDays: [String], // ['monday', 'tuesday', etc.]
+      timeSlots: [String], // ['09:00', '10:00', '14:00', etc.]
+      duration: Number // minutes
+    }
   }],
   currentStepIndex: {
     type: Number,

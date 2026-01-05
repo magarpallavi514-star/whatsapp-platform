@@ -53,22 +53,40 @@ const keywordRuleSchema = new mongoose.Schema({
       id: String,
       type: {
         type: String,
-        enum: ['text', 'buttons', 'list', 'question']
+        enum: ['text', 'buttons', 'list', 'question', 'condition', 'calendar', 'form']
       },
       text: String,
       buttons: [{
         id: String,
         title: String,
-        url: String  // Optional link URL for buttons
+        url: String,  // Optional link URL for buttons
+        nextStepId: String // For conditional branching
       }],
       listItems: [{
         id: String,
         title: String,
-        description: String
+        description: String,
+        nextStepId: String // For conditional branching
       }],
       delay: Number, // seconds
       saveAs: String, // Variable name to save response
-      waitForResponse: Boolean // Whether to wait for user response
+      waitForResponse: Boolean, // Whether to wait for user response
+      // Conditional branching
+      condition: {
+        variable: String, // Which response to check
+        branches: [{
+          value: String, // If response equals this
+          nextStepId: String // Go to this step
+        }],
+        defaultNextStepId: String // Default if no match
+      },
+      // Calendar booking
+      calendarConfig: {
+        enabled: Boolean,
+        availableDays: [String],
+        timeSlots: [String],
+        duration: Number
+      }
     }]
   },
   

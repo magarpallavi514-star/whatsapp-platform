@@ -1181,9 +1181,58 @@ class WhatsAppService {
         console.log(`✅ Saved response as: ${step.saveAs} = "${responseText}"`);
       }
 
-      // Advance to next step
-      const hasMore = session.advanceStep();
+      // Check if next step should be determined by conditional branching
+      let nextStepIndex = null;
+      
+      // Check if current step has buttons/list items with nextStepId (conditional branching)
+      if (step.buttons && step.buttons.length > 0) {
+        const selectedButton = step.buttons.find(btn => 
+          responseText.toLowerCase().includes(btn.title.toLowerCase()) ||
+          responseText === btn.id
+        );
+        if (selectedButton && selectedButton.nextStepId) {
+          // Find the step index with this ID
+          nextStepIndex = session.workflowSteps.findIndex(s => s.id === selectedButton.nextStepId);
+          console.log(`🔀 Conditional branch: Going to step "${selectedButton.nextStepId}" (index: ${nextStepIndex})`);
+        }
+      }
+      
+      if (step.listItems && step.listItems.length > 0) {
+        const selectedItem = step.listItems.find(item => 
+          responseText.toLowerCase().includes(item.title.toLowerCase()) ||
+          responseText === item.id
+        );
+        if (selectedItem && selectedItem.nextStepId) {
+          nextStepIndex = session.workflowSteps.findIndex(s => s.id === selectedItem.nextStepId);
+          console.log(`🔀 Conditional branch: Going to step "${selectedItem.nextStepId}" (index: ${nextStepIndex})`);
+        }
+      }
+
+      // If conditional step, check condition
+      if (step.type === 'condition' && step.condition) {
+        const variable = step.condition.variable;
+        const value = session.responses.get(variable);
+        
+        const branch = step.condition.branches.find(b => b.value === value);
+        if (branch && branch.nextStepId) {
+          nextStepIndex = session.workflowSteps.findIndex(s => s.id === branch.nextStepId);
+          console.log(`🔀 Condition: ${variable}=${value}, Going to step "${branch.nextStepId}"`);
+        } else if (step.condition.defaultNextStepId) {
+          nextStepIndex = session.workflowSteps.findIndex(s => s.id === step.condition.defaultNextStepId);
+          console.log(`🔀 Condition: Using default branch to step "${step.condition.defaultNextStepId}"`);
+        }
+      }
+
+      // Advance to next step (either conditional or sequential)
+      if (nextStepIndex !== null && nextStepIndex >= 0) {
+        session.currentStepIndex = nextStepIndex;
+      } else {
+        session.advanceStep();
+      }
+      
       await session.save();
+
+      const hasMore = session.currentStepIndex < session.workflowSteps.length;
 
       if (hasMore) {
         // Send next step
