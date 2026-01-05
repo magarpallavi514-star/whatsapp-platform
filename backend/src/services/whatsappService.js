@@ -790,6 +790,11 @@ class WhatsAppService {
             { campaign: 'workflow_auto_reply', ruleId }
           );
         } else if (step.type === 'buttons' && step.buttons && step.buttons.length > 0) {
+          console.log('🔘 Sending button step:', {
+            text: step.text,
+            buttonsCount: step.buttons.length,
+            buttons: step.buttons.map(b => ({ id: b.id, title: b.title, url: b.url }))
+          });
           await this.sendButtonMessage(
             accountId,
             phoneNumberId,
@@ -842,10 +847,12 @@ class WhatsAppService {
       console.log('🔘 Button types:', { urlButtons: urlButtons.length, replyButtons: replyButtons.length });
       
       let payload;
+      let formattedButtons = []; // Store formatted buttons for metadata
       
       // If we ONLY have URL buttons (no reply buttons), use CTA format
       if (urlButtons.length > 0 && replyButtons.length === 0) {
         console.log('⚠️ WhatsApp only supports 1 URL button in CTA format. Using first URL button only.');
+        formattedButtons = [{ type: 'url', title: urlButtons[0].title, url: urlButtons[0].url }];
         // CTA URL format - supports only 1 URL button
         payload = {
           messaging_product: 'whatsapp',
@@ -868,7 +875,7 @@ class WhatsAppService {
         };
       } else if (replyButtons.length > 0 && urlButtons.length === 0) {
         // Standard reply buttons only (max 3)
-        const formattedButtons = replyButtons.slice(0, 3).map((btn, index) => ({
+        formattedButtons = replyButtons.slice(0, 3).map((btn, index) => ({
           type: 'reply',
           reply: {
             id: btn.id || `btn_${index}`,
@@ -895,7 +902,7 @@ class WhatsAppService {
         // Mixed: both URL and reply buttons - use reply buttons format
         // Note: WhatsApp doesn't support mixing URL and reply buttons
         // So we'll send only reply buttons
-        const formattedButtons = replyButtons.slice(0, 3).map((btn, index) => ({
+        formattedButtons = replyButtons.slice(0, 3).map((btn, index) => ({
           type: 'reply',
           reply: {
             id: btn.id || `btn_${index}`,
