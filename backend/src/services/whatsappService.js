@@ -883,6 +883,8 @@ class WhatsAppService {
           }
         }));
 
+        console.log(`✅ Sending ${formattedButtons.length} reply buttons:`, formattedButtons.map(b => b.reply.title));
+
         payload = {
           messaging_product: 'whatsapp',
           recipient_type: 'individual',
@@ -944,12 +946,11 @@ class WhatsAppService {
       const message = new Message({
         accountId,
         phoneNumberId,
+        recipientPhone: recipientPhone,
         conversationId: null, // Will be set by webhook
         direction: 'outbound',
-        from: phoneNumberId,
-        to: recipientPhone,
-        type: 'interactive',
-        content: bodyText,
+        messageType: 'interactive',
+        content: { text: bodyText },
         waMessageId: response.data.messages[0].id,
         status: 'sent',
         sentAt: new Date(),
