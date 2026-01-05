@@ -811,7 +811,7 @@ class WhatsAppService {
    */
   async sendButtonMessage(accountId, phoneNumberId, recipientPhone, bodyText, buttons) {
     try {
-      const config = await this.getConfig(accountId, phoneNumberId);
+      const config = await this.getPhoneConfig(accountId, phoneNumberId);
       
       // Separate URL buttons from reply buttons
       const urlButtons = buttons.filter(btn => btn.url);
@@ -936,7 +936,7 @@ class WhatsAppService {
    */
   async sendListMessage(accountId, phoneNumberId, recipientPhone, bodyText, listItems) {
     try {
-      const config = await this.getConfig(accountId, phoneNumberId);
+      const config = await this.getPhoneConfig(accountId, phoneNumberId);
       
       // WhatsApp API format for list (max 10 items)
       const formattedRows = listItems.slice(0, 10).map((item, index) => ({
