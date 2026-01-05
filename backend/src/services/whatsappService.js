@@ -5,6 +5,7 @@ import Template from '../models/Template.js';
 import Contact from '../models/Contact.js';
 import Conversation from '../models/Conversation.js';
 import KeywordRule from '../models/KeywordRule.js';
+import WorkflowSession from '../models/WorkflowSession.js';
 
 const GRAPH_API_URL = 'https://graph.facebook.com/v21.0';
 
@@ -427,6 +428,19 @@ class WhatsAppService {
       console.log('🏢 Account ID:', accountId);
       console.log('📞 Phone Number ID:', phoneNumberId);
       
+      // FIRST: Check if user has an active workflow session
+      const activeSession = await WorkflowSession.findOne({
+        accountId,
+        contactPhone: senderPhone,
+        status: 'active'
+      });
+
+      if (activeSession) {
+        console.log('🔄 User has active workflow session, processing response...');
+        await this.handleWorkflowResponse(activeSession, messageText);
+        return; // Don't check keyword rules when in a workflow
+      }
+      
       // Check for matching keyword rules
       const rules = await KeywordRule.find({ 
         accountId,
@@ -496,14 +510,15 @@ class WhatsAppService {
               { campaign: 'keyword_auto_reply', ruleId: rule._id.toString() }
             );
           } else if (rule.replyType === 'workflow' && rule.replyContent.workflow) {
-            console.log('🔄 Processing workflow with', rule.replyContent.workflow.length, 'steps');
-            // Process workflow steps
-            await this.processWorkflow(
+            console.log('🔄 Starting conversational workflow with', rule.replyContent.workflow.length, 'steps');
+            // Start a new workflow session
+            await this.startWorkflowSession(
               accountId,
               phoneNumberId,
               senderPhone,
+              rule._id,
               rule.replyContent.workflow,
-              rule._id.toString()
+              rule.timeoutMinutes || 1
             );
           }
           
@@ -1002,6 +1017,295 @@ class WhatsAppService {
     } catch (error) {
       console.error('❌ Error sending list message:', error.response?.data || error.message);
       throw error;
+    }
+  }
+
+  /**
+   * Start a new conversational workflow session
+   * @param {string} accountId 
+   * @param {string} phoneNumberId 
+   * @param {string} contactPhone 
+   * @param {string} ruleId 
+   * @param {Array} workflowSteps 
+   * @param {number} timeoutMinutes - Timeout in minutes for user response
+   */
+  async startWorkflowSession(accountId, phoneNumberId, contactPhone, ruleId, workflowSteps, timeoutMinutes = 1) {
+    try {
+      console.log('🆕 Starting new workflow session for:', contactPhone);
+      console.log('⏰ Timeout set to:', timeoutMinutes, 'minutes');
+      
+      // Cancel any existing active sessions for this contact
+      await WorkflowSession.updateMany(
+        { accountId, contactPhone, status: 'active' },
+        { status: 'cancelled', completedAt: new Date() }
+      );
+
+      // Create new session
+      const session = await WorkflowSession.create({
+        accountId,
+        phoneNumberId,
+        contactPhone,
+        ruleId,
+        workflowSteps,
+        currentStepIndex: 0,
+        status: 'active',
+        timeoutMinutes
+      });
+
+      console.log('✅ Workflow session created:', session._id);
+
+      // Send the first step
+      await this.sendWorkflowStep(session);
+      
+    } catch (error) {
+      console.error('❌ Error starting workflow session:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send current workflow step
+   * @param {Object} session - WorkflowSession document
+   */
+  async sendWorkflowStep(session) {
+    try {
+      const step = session.getCurrentStep();
+      
+      if (!step) {
+        console.log('✅ Workflow completed');
+        session.status = 'completed';
+        session.completedAt = new Date();
+        await session.save();
+        
+        // Send completion message with collected data
+        await this.sendWorkflowCompletionMessage(session);
+        return;
+      }
+
+      console.log(`📤 Sending step ${session.currentStepIndex + 1}/${session.workflowSteps.length}: ${step.type}`);
+
+      // Apply delay if specified
+      if (step.delay && step.delay > 0) {
+        console.log(`⏱️ Waiting ${step.delay} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, step.delay * 1000));
+      }
+
+      // Send based on step type
+      if (step.type === 'text' || step.type === 'question') {
+        await this.sendTextMessage(
+          session.accountId,
+          session.phoneNumberId,
+          session.contactPhone,
+          step.text || '',
+          { campaign: 'workflow_conversation', sessionId: session._id.toString() }
+        );
+      } else if (step.type === 'buttons' && step.buttons && step.buttons.length > 0) {
+        await this.sendButtonMessage(
+          session.accountId,
+          session.phoneNumberId,
+          session.contactPhone,
+          step.text || '',
+          step.buttons
+        );
+      } else if (step.type === 'list' && step.listItems && step.listItems.length > 0) {
+        await this.sendListMessage(
+          session.accountId,
+          session.phoneNumberId,
+          session.contactPhone,
+          step.text || '',
+          step.listItems
+        );
+      }
+
+      // If this step doesn't wait for response, automatically advance
+      if (!step.waitForResponse && !step.saveAs) {
+        const hasMore = session.advanceStep();
+        await session.save();
+        
+        if (hasMore) {
+          // Send next step immediately
+          await this.sendWorkflowStep(session);
+        } else {
+          // Workflow complete
+          session.status = 'completed';
+          session.completedAt = new Date();
+          await session.save();
+          await this.sendWorkflowCompletionMessage(session);
+        }
+      } else {
+        // Wait for user response - set timeout timer
+        session.awaitingResponseSince = new Date();
+        await session.save();
+        console.log('⏳ Waiting for user response...');
+        
+        // Schedule timeout check after specified minutes
+        setTimeout(async () => {
+          await this.checkWorkflowTimeout(session._id);
+        }, session.timeoutMinutes * 60 * 1000);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error sending workflow step:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle user response in active workflow
+   * @param {Object} session - WorkflowSession document
+   * @param {string} responseText - User's response text
+   */
+  async handleWorkflowResponse(session, responseText) {
+    try {
+      const step = session.getCurrentStep();
+      
+      if (!step) {
+        console.log('⚠️ No current step in session');
+        return;
+      }
+
+      // Check if session has already timed out
+      if (session.hasTimedOut) {
+        console.log('⏰ Session has already timed out, ignoring response');
+        return;
+      }
+
+      console.log(`💾 Received response for step ${session.currentStepIndex + 1}: "${responseText}"`);
+
+      // Clear timeout timer
+      session.awaitingResponseSince = null;
+
+      // Save response if step has saveAs field
+      if (step.saveAs) {
+        session.saveResponse(step.saveAs, responseText);
+        console.log(`✅ Saved response as: ${step.saveAs} = "${responseText}"`);
+      }
+
+      // Advance to next step
+      const hasMore = session.advanceStep();
+      await session.save();
+
+      if (hasMore) {
+        // Send next step
+        await this.sendWorkflowStep(session);
+      } else {
+        // Workflow complete
+        console.log('🎉 Workflow completed! All responses collected.');
+        session.status = 'completed';
+        session.completedAt = new Date();
+        await session.save();
+        
+        await this.sendWorkflowCompletionMessage(session);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error handling workflow response:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if workflow session has timed out (user not responding)
+   * @param {string} sessionId - WorkflowSession ID
+   */
+  async checkWorkflowTimeout(sessionId) {
+    try {
+      const session = await WorkflowSession.findById(sessionId);
+      
+      if (!session || session.status !== 'active') {
+        console.log('⚠️ Session not found or not active, skipping timeout check');
+        return;
+      }
+
+      // Check if user has responded (awaitingResponseSince should be null if they replied)
+      if (!session.awaitingResponseSince) {
+        console.log('✅ User responded in time, no timeout needed');
+        return;
+      }
+
+      // Check if timeout has occurred
+      if (session.checkTimeout()) {
+        console.log('⏰ User did not respond within timeout period, ending workflow');
+        
+        session.hasTimedOut = true;
+        session.status = 'expired';
+        session.completedAt = new Date();
+        await session.save();
+
+        // Send timeout message
+        await this.sendTimeoutMessage(session);
+        
+        // Save partial lead data (whatever was collected so far)
+        console.log('💾 Saved partial lead data:', Object.fromEntries(session.responses));
+      }
+      
+    } catch (error) {
+      console.error('❌ Error checking workflow timeout:', error);
+    }
+  }
+
+  /**
+   * Send timeout message when user doesn't respond
+   * @param {Object} session - WorkflowSession document
+   */
+  async sendTimeoutMessage(session) {
+    try {
+      const message = `Thank you for your time! 🙏\n\nWe noticed you might be busy right now. No worries!\n\nIf you'd like to continue later, just send us a message anytime. We're here to help! 😊`;
+
+      await this.sendTextMessage(
+        session.accountId,
+        session.phoneNumberId,
+        session.contactPhone,
+        message,
+        { 
+          campaign: 'workflow_timeout', 
+          sessionId: session._id.toString(),
+          partialResponses: Object.fromEntries(session.responses)
+        }
+      );
+      
+      console.log('✅ Timeout message sent');
+      
+    } catch (error) {
+      console.error('❌ Error sending timeout message:', error);
+    }
+  }
+
+  /**
+   * Send workflow completion message with collected data
+   * @param {Object} session - WorkflowSession document
+   */
+  async sendWorkflowCompletionMessage(session) {
+    try {
+      console.log('📊 Workflow completed. Collected data:', Object.fromEntries(session.responses));
+      
+      // Build summary message
+      let summaryText = '✅ *Thank you for completing the form!*\n\n';
+      summaryText += '*Your responses:*\n';
+      
+      for (const [key, value] of session.responses) {
+        summaryText += `\n• *${key}*: ${value}`;
+      }
+      
+      summaryText += '\n\nWe have saved your information. Our team will get back to you soon! 🙌';
+
+      // Send summary
+      await this.sendTextMessage(
+        session.accountId,
+        session.phoneNumberId,
+        session.contactPhone,
+        summaryText,
+        { 
+          campaign: 'workflow_completed', 
+          sessionId: session._id.toString(),
+          responses: Object.fromEntries(session.responses)
+        }
+      );
+      
+      console.log('✅ Completion message sent');
+      
+    } catch (error) {
+      console.error('❌ Error sending completion message:', error);
     }
   }
 }

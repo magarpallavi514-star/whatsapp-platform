@@ -53,7 +53,7 @@ const keywordRuleSchema = new mongoose.Schema({
       id: String,
       type: {
         type: String,
-        enum: ['text', 'buttons', 'list']
+        enum: ['text', 'buttons', 'list', 'question']
       },
       text: String,
       buttons: [{
@@ -66,8 +66,16 @@ const keywordRuleSchema = new mongoose.Schema({
         title: String,
         description: String
       }],
-      delay: Number // seconds
+      delay: Number, // seconds
+      saveAs: String, // Variable name to save response
+      waitForResponse: Boolean // Whether to wait for user response
     }]
+  },
+  
+  // Workflow timeout settings
+  timeoutMinutes: {
+    type: Number,
+    default: 1 // Default 1 minute timeout
   },
   
   // Status

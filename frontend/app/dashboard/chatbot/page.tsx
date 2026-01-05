@@ -9,11 +9,13 @@ const API_KEY = "wpk_live_f0b8a01652eb0b9950484f3b4674bd800e9e3e9a216f200f34b050
 
 interface ReplyOption {
   id: string;
-  type: 'text' | 'buttons' | 'list';
+  type: 'text' | 'buttons' | 'list' | 'question';
   text?: string;
   buttons?: Array<{ id: string; title: string; url?: string; }>;
   listItems?: Array<{ id: string; title: string; description?: string; }>;
   delay?: number;
+  saveAs?: string; // Variable name to save response
+  waitForResponse?: boolean; // Whether to wait for user response
 }
 
 interface ReplyContent {
@@ -71,7 +73,8 @@ export default function ChatbotPage() {
     replyType: 'text',
     replyText: '',
     templateName: '',
-    workflow: [] as ReplyOption[]
+    workflow: [] as ReplyOption[],
+    timeoutMinutes: 1
   });
 
   // Workflow state
@@ -81,7 +84,9 @@ export default function ChatbotPage() {
     text: '',
     buttons: [],
     listItems: [],
-    delay: 0
+    delay: 0,
+    saveAs: '',
+    waitForResponse: false
   });
   const [newButtonTitle, setNewButtonTitle] = useState('');
   const [newButtonUrl, setNewButtonUrl] = useState('');
@@ -257,7 +262,8 @@ export default function ChatbotPage() {
       replyType: 'text',
       replyText: '',
       templateName: '',
-      workflow: []
+      workflow: [],
+      timeoutMinutes: 1
     });
     setCurrentWorkflowItem({
       id: Date.now().toString(),
@@ -282,7 +288,8 @@ export default function ChatbotPage() {
       replyType: bot.replyType,
       replyText: bot.replyContent.text || '',
       templateName: bot.replyContent.templateName || '',
-      workflow: bot.replyContent.workflow || []
+      workflow: bot.replyContent.workflow || [],
+      timeoutMinutes: 1
     });
     setShowModal(true);
   };
@@ -614,9 +621,32 @@ export default function ChatbotPage() {
                 </div>
               ) : formData.replyType === 'workflow' ? (
                 <div className="space-y-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Workflow Builder
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Workflow Builder
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-600">Response Timeout:</label>
+                      <select
+                        value={formData.timeoutMinutes}
+                        onChange={(e) => setFormData({ ...formData, timeoutMinutes: parseInt(e.target.value) })}
+                        className="px-2 py-1 bg-white text-gray-900 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-green-500"
+                      >
+                        <option value={1}>1 minute</option>
+                        <option value={2}>2 minutes</option>
+                        <option value={3}>3 minutes</option>
+                        <option value={5}>5 minutes</option>
+                        <option value={10}>10 minutes</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                    <p className="text-blue-800">
+                      ⏰ <strong>Auto-timeout:</strong> If user doesn't reply within <strong>{formData.timeoutMinutes} minute{formData.timeoutMinutes > 1 ? 's' : ''}</strong>, 
+                      bot will send a thank you message and save partial data.
+                    </p>
+                  </div>
                   
                   {/* Current Workflow Item */}
                   <div className="border border-gray-200 rounded-lg p-4 space-y-4 bg-gray-50">
@@ -857,6 +887,42 @@ export default function ChatbotPage() {
                       />
                     </div>
 
+                    {/* Wait for Response */}
+                    <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <input
+                        type="checkbox"
+                        id="waitForResponse"
+                        checked={currentWorkflowItem.waitForResponse || false}
+                        onChange={(e) => setCurrentWorkflowItem({ 
+                          ...currentWorkflowItem, 
+                          waitForResponse: e.target.checked,
+                          type: e.target.checked ? 'question' : 'text'
+                        })}
+                        className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                      />
+                      <label htmlFor="waitForResponse" className="flex-1 cursor-pointer">
+                        <span className="text-sm font-medium text-gray-900">Wait for user response</span>
+                        <p className="text-xs text-gray-600 mt-1">Bot will pause and wait for the user to reply before continuing</p>
+                      </label>
+                    </div>
+
+                    {/* Save Response As */}
+                    {currentWorkflowItem.waitForResponse && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Save Response As (Variable Name)
+                        </label>
+                        <input
+                          type="text"
+                          value={currentWorkflowItem.saveAs || ''}
+                          onChange={(e) => setCurrentWorkflowItem({ ...currentWorkflowItem, saveAs: e.target.value })}
+                          placeholder="e.g., name, email, phone, etc."
+                          className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 placeholder:text-gray-400"
+                        />
+                        <p className="text-xs text-gray-600 mt-1">💡 This will save the user's response for later use</p>
+                      </div>
+                    )}
+
                     {/* Add to Workflow */}
                     <Button
                       type="button"
@@ -872,7 +938,9 @@ export default function ChatbotPage() {
                             text: '',
                             buttons: [],
                             listItems: [],
-                            delay: 0
+                            delay: 0,
+                            saveAs: '',
+                            waitForResponse: false
                           });
                           setNewButtonTitle('');
                           setNewButtonUrl('');
@@ -901,14 +969,27 @@ export default function ChatbotPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 {item.type === 'text' && <MessageSquare className="h-4 w-4 text-gray-500" />}
+                                {item.type === 'question' && <MessageSquare className="h-4 w-4 text-blue-600" />}
                                 {item.type === 'buttons' && <Zap className="h-4 w-4 text-green-600" />}
                                 {item.type === 'list' && <List className="h-4 w-4 text-blue-600" />}
                                 <span className="text-xs font-medium text-gray-600 uppercase">{item.type}</span>
                                 {item.delay && item.delay > 0 && (
                                   <span className="text-xs text-gray-500">• {item.delay}s delay</span>
                                 )}
+                                {item.waitForResponse && (
+                                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                    ⏳ Waits
+                                  </span>
+                                )}
                               </div>
                               <p className="text-sm text-gray-900 line-clamp-2">{item.text}</p>
+                              {item.saveAs && (
+                                <div className="mt-1">
+                                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                                    💾 Saves as: {item.saveAs}
+                                  </span>
+                                </div>
+                              )}
                               {item.buttons && item.buttons.length > 0 && (
                                 <div className="space-y-1 mt-2">
                                   {item.buttons.map(btn => (
