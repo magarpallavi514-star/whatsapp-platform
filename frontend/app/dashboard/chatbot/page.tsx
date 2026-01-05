@@ -4,13 +4,14 @@ import { useState, useEffect } from "react"
 import { Bot, Plus, Play, Pause, Edit, Trash2, X, Search, MessageSquare, Zap, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050';
+const API_KEY = "wpk_live_f0b8a01652eb0b9950484f3b4674bd800e9e3e9a216f200f34b0502a0591ac5d";
 
 interface ReplyOption {
   id: string;
   type: 'text' | 'buttons' | 'list';
   text?: string;
-  buttons?: Array<{ id: string; title: string; }>;
+  buttons?: Array<{ id: string; title: string; url?: string; }>;
   listItems?: Array<{ id: string; title: string; description?: string; }>;
   delay?: number;
 }
@@ -83,6 +84,7 @@ export default function ChatbotPage() {
     delay: 0
   });
   const [newButtonTitle, setNewButtonTitle] = useState('');
+  const [newButtonUrl, setNewButtonUrl] = useState('');
   const [newListItem, setNewListItem] = useState({ title: '', description: '' });
 
   useEffect(() => {
@@ -91,17 +93,28 @@ export default function ChatbotPage() {
 
   const fetchBots = async () => {
     try {
-      const apiKey = localStorage.getItem('apiKey');
       const response = await fetch(`${API_URL}/api/chatbots`, {
         headers: {
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${API_KEY}`
         }
       });
       
+      console.log('📡 Fetch response status:', response.status);
+      
+      if (response.status === 401) {
+        console.error('❌ Authentication failed - API key may be invalid');
+        alert('Authentication failed. Please check your API key.');
+        setLoading(false);
+        return;
+      }
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Fetched bots:', data.bots?.length || 0);
         setBots(data.bots || []);
         setStats(data.stats || stats);
+      } else {
+        console.error('❌ Failed to fetch bots:', response.status);
       }
     } catch (error) {
       console.error('Failed to fetch chatbots:', error);
@@ -112,11 +125,26 @@ export default function ChatbotPage() {
 
   const handleCreateOrUpdate = async () => {
     try {
-      const apiKey = localStorage.getItem('apiKey');
       const keywords = formData.keywords.split(',').map(k => k.trim()).filter(k => k);
       
       if (!formData.name || keywords.length === 0) {
         alert('Please provide a name and at least one keyword');
+        return;
+      }
+
+      // Validate reply content based on type
+      if (formData.replyType === 'text' && !formData.replyText.trim()) {
+        alert('Please provide a reply message');
+        return;
+      }
+
+      if (formData.replyType === 'template' && !formData.templateName.trim()) {
+        alert('Please provide a template name');
+        return;
+      }
+
+      if (formData.replyType === 'workflow' && formData.workflow.length === 0) {
+        alert('Please add at least one workflow step');
         return;
       }
 
@@ -135,41 +163,60 @@ export default function ChatbotPage() {
         replyContent
       };
 
+      console.log('💾 Saving chatbot:', payload);
+      console.log('📍 API URL:', API_URL);
+
       const url = editingBot 
         ? `${API_URL}/api/chatbots/${editingBot._id}`
         : `${API_URL}/api/chatbots`;
+      
+      console.log('📡 Request URL:', url);
+      console.log('🔧 Method:', editingBot ? 'PUT' : 'POST');
       
       const method = editingBot ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method,
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${API_KEY}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });
 
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response ok:', response.ok);
+
       if (response.ok) {
+        console.log('✅ Chatbot saved successfully');
         await fetchBots();
         closeModal();
       } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to save chatbot');
+        console.error('❌ Save failed with status:', response.status);
+        let errorMessage = 'Failed to save chatbot';
+        try {
+          const error = await response.json();
+          console.error('❌ Save error:', error);
+          errorMessage = error.error || error.message || errorMessage;
+        } catch (parseError) {
+          console.error('❌ Could not parse error response:', parseError);
+          const textError = await response.text();
+          console.error('❌ Response text:', textError);
+        }
+        alert(errorMessage);
       }
     } catch (error) {
-      console.error('Failed to save chatbot:', error);
-      alert('Failed to save chatbot');
+      console.error('❌ Failed to save chatbot:', error);
+      alert('Failed to save chatbot: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
   const toggleBot = async (id: string) => {
     try {
-      const apiKey = localStorage.getItem('apiKey');
       const response = await fetch(`${API_URL}/api/chatbots/${id}/toggle`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${API_KEY}`
         }
       });
 
@@ -185,11 +232,10 @@ export default function ChatbotPage() {
     if (!confirm('Are you sure you want to delete this chatbot?')) return;
 
     try {
-      const apiKey = localStorage.getItem('apiKey');
       const response = await fetch(`${API_URL}/api/chatbots/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${API_KEY}`
         }
       });
 
@@ -221,6 +267,8 @@ export default function ChatbotPage() {
       listItems: [],
       delay: 0
     });
+    setNewButtonTitle('');
+    setNewButtonUrl('');
     setShowModal(true);
   };
 
@@ -644,42 +692,49 @@ export default function ChatbotPage() {
                         </label>
                         <div className="space-y-2">
                           {currentWorkflowItem.buttons?.map((btn) => (
-                            <div key={btn.id} className="flex items-center gap-2 bg-white px-3 py-2 rounded border">
-                              <span className="flex-1 text-sm">{btn.title}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setCurrentWorkflowItem({
-                                    ...currentWorkflowItem,
-                                    buttons: currentWorkflowItem.buttons?.filter(b => b.id !== btn.id)
-                                  });
-                                }}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
+                            <div key={btn.id} className="bg-white px-3 py-2 rounded border">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="flex-1 text-sm font-medium">{btn.title}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCurrentWorkflowItem({
+                                      ...currentWorkflowItem,
+                                      buttons: currentWorkflowItem.buttons?.filter(b => b.id !== btn.id)
+                                    });
+                                  }}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                              {btn.url && (
+                                <a 
+                                  href={btn.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-blue-600 hover:underline truncate block"
+                                >
+                                  {btn.url}
+                                </a>
+                              )}
                             </div>
                           ))}
                           {(!currentWorkflowItem.buttons || currentWorkflowItem.buttons.length < 3) && (
-                            <div className="flex gap-2">
+                            <div className="space-y-2">
                               <input
                                 type="text"
                                 value={newButtonTitle}
                                 onChange={(e) => setNewButtonTitle(e.target.value)}
                                 placeholder="Button text (e.g., Yes, No, More Info)"
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                                onKeyPress={(e) => {
-                                  if (e.key === 'Enter' && newButtonTitle.trim()) {
-                                    setCurrentWorkflowItem({
-                                      ...currentWorkflowItem,
-                                      buttons: [
-                                        ...(currentWorkflowItem.buttons || []),
-                                        { id: Date.now().toString(), title: newButtonTitle.trim() }
-                                      ]
-                                    });
-                                    setNewButtonTitle('');
-                                  }
-                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                              />
+                              <input
+                                type="url"
+                                value={newButtonUrl}
+                                onChange={(e) => setNewButtonUrl(e.target.value)}
+                                placeholder="Link URL (optional, e.g., https://example.com)"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                               />
                               <Button
                                 type="button"
@@ -689,15 +744,22 @@ export default function ChatbotPage() {
                                       ...currentWorkflowItem,
                                       buttons: [
                                         ...(currentWorkflowItem.buttons || []),
-                                        { id: Date.now().toString(), title: newButtonTitle.trim() }
+                                        { 
+                                          id: Date.now().toString(), 
+                                          title: newButtonTitle.trim(),
+                                          url: newButtonUrl.trim() || undefined
+                                        }
                                       ]
                                     });
                                     setNewButtonTitle('');
+                                    setNewButtonUrl('');
                                   }
                                 }}
                                 size="sm"
+                                className="w-full"
                               >
-                                <Plus className="h-4 w-4" />
+                                <Plus className="h-4 w-4 mr-1" />
+                                Add Button
                               </Button>
                             </div>
                           )}
@@ -813,6 +875,7 @@ export default function ChatbotPage() {
                             delay: 0
                           });
                           setNewButtonTitle('');
+                          setNewButtonUrl('');
                           setNewListItem({ title: '', description: '' });
                         }
                       }}
@@ -847,11 +910,18 @@ export default function ChatbotPage() {
                               </div>
                               <p className="text-sm text-gray-900 line-clamp-2">{item.text}</p>
                               {item.buttons && item.buttons.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
+                                <div className="space-y-1 mt-2">
                                   {item.buttons.map(btn => (
-                                    <span key={btn.id} className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
-                                      {btn.title}
-                                    </span>
+                                    <div key={btn.id} className="flex items-center gap-2">
+                                      <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
+                                        {btn.title}
+                                      </span>
+                                      {btn.url && (
+                                        <span className="text-xs text-blue-600 truncate">
+                                          → {btn.url}
+                                        </span>
+                                      )}
+                                    </div>
                                   ))}
                                 </div>
                               )}

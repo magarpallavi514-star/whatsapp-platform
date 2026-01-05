@@ -423,6 +423,9 @@ class WhatsAppService {
   async processIncomingMessage(accountId, phoneNumberId, senderPhone, messageText) {
     try {
       console.log('📥 Processing incoming message from:', senderPhone);
+      console.log('📝 Message text:', messageText);
+      console.log('🏢 Account ID:', accountId);
+      console.log('📞 Phone Number ID:', phoneNumberId);
       
       // Check for matching keyword rules
       const rules = await KeywordRule.find({ 
@@ -434,9 +437,34 @@ class WhatsAppService {
         isActive: true 
       });
 
+      console.log(`🔍 Found ${rules.length} active rules to check`);
+
       for (const rule of rules) {
+        console.log(`🔎 Checking rule: ${rule.name} (Keywords: ${rule.keywords.join(', ')})`);
+        
         if (rule.matches(messageText)) {
           console.log('✅ Matched keyword rule:', rule.name);
+          
+          // Check if we already triggered this rule for this contact recently (cooldown)
+          const cooldownMinutes = 60; // Don't trigger same rule within 60 minutes
+          const recentMessage = await Message.findOne({
+            accountId,
+            to: senderPhone,
+            direction: 'outbound',
+            'metadata.campaign': 'keyword_auto_reply',
+            'metadata.ruleId': rule._id.toString(),
+            createdAt: { 
+              $gte: new Date(Date.now() - cooldownMinutes * 60 * 1000) 
+            }
+          });
+
+          if (recentMessage) {
+            const minutesAgo = Math.floor((Date.now() - recentMessage.createdAt.getTime()) / 60000);
+            console.log(`⏱️ Cooldown active - already triggered ${minutesAgo} minutes ago. Skipping.`);
+            continue; // Skip this rule, check next one
+          }
+
+          console.log('🎯 Reply type:', rule.replyType);
           
           // Update rule stats
           await KeywordRule.updateOne(
@@ -449,39 +477,48 @@ class WhatsAppService {
 
           // Send auto-reply
           if (rule.replyType === 'text' && rule.replyContent.text) {
+            console.log('💬 Sending text reply:', rule.replyContent.text);
             await this.sendTextMessage(
               accountId,
               phoneNumberId,
               senderPhone,
               rule.replyContent.text,
-              { campaign: 'keyword_auto_reply' }
+              { campaign: 'keyword_auto_reply', ruleId: rule._id.toString() }
             );
           } else if (rule.replyType === 'template' && rule.replyContent.templateName) {
+            console.log('📋 Sending template reply:', rule.replyContent.templateName);
             await this.sendTemplateMessage(
               accountId,
               phoneNumberId,
               senderPhone,
               rule.replyContent.templateName,
               rule.replyContent.templateParams || [],
-              { campaign: 'keyword_auto_reply' }
+              { campaign: 'keyword_auto_reply', ruleId: rule._id.toString() }
             );
           } else if (rule.replyType === 'workflow' && rule.replyContent.workflow) {
+            console.log('🔄 Processing workflow with', rule.replyContent.workflow.length, 'steps');
             // Process workflow steps
             await this.processWorkflow(
               accountId,
               phoneNumberId,
               senderPhone,
-              rule.replyContent.workflow
+              rule.replyContent.workflow,
+              rule._id.toString()
             );
           }
           
           // Only trigger first matching rule
           break;
+        } else {
+          console.log('❌ Rule did not match');
         }
       }
       
+      if (rules.length === 0) {
+        console.log('⚠️ No active rules found for this account');
+      }
     } catch (error) {
-      console.error('❌ Error processing incoming message:', error.message);
+      console.error('❌ Error in processIncomingMessage:', error);
     }
   }
 
@@ -715,8 +752,9 @@ class WhatsAppService {
    * @param {string} phoneNumberId 
    * @param {string} recipientPhone 
    * @param {Array} workflowSteps 
+   * @param {string} ruleId - Optional rule ID for tracking
    */
-  async processWorkflow(accountId, phoneNumberId, recipientPhone, workflowSteps) {
+  async processWorkflow(accountId, phoneNumberId, recipientPhone, workflowSteps, ruleId = null) {
     try {
       console.log('🔄 Processing workflow with', workflowSteps.length, 'steps');
       
@@ -734,7 +772,7 @@ class WhatsAppService {
             phoneNumberId,
             recipientPhone,
             step.text || '',
-            { campaign: 'workflow_auto_reply' }
+            { campaign: 'workflow_auto_reply', ruleId }
           );
         } else if (step.type === 'buttons' && step.buttons && step.buttons.length > 0) {
           await this.sendButtonMessage(
@@ -764,40 +802,89 @@ class WhatsAppService {
 
   /**
    * Send interactive button message
+   * Supports both reply buttons and URL buttons (CTA)
    * @param {string} accountId 
    * @param {string} phoneNumberId 
    * @param {string} recipientPhone 
    * @param {string} bodyText 
-   * @param {Array} buttons - Array of {id, title}
+   * @param {Array} buttons - Array of {id, title, url}
    */
   async sendButtonMessage(accountId, phoneNumberId, recipientPhone, bodyText, buttons) {
     try {
       const config = await this.getConfig(accountId, phoneNumberId);
       
-      // WhatsApp API format for buttons (max 3 buttons)
-      const formattedButtons = buttons.slice(0, 3).map((btn, index) => ({
-        type: 'reply',
-        reply: {
-          id: btn.id || `btn_${index}`,
-          title: btn.title.substring(0, 20) // WhatsApp limit
-        }
-      }));
-
-      const payload = {
-        messaging_product: 'whatsapp',
-        recipient_type: 'individual',
-        to: recipientPhone,
-        type: 'interactive',
-        interactive: {
-          type: 'button',
-          body: {
-            text: bodyText
-          },
-          action: {
-            buttons: formattedButtons
+      // Separate URL buttons from reply buttons
+      const urlButtons = buttons.filter(btn => btn.url);
+      const replyButtons = buttons.filter(btn => !btn.url);
+      
+      let payload;
+      
+      // If we have URL buttons, use CTA button format (max 2 URL buttons)
+      if (urlButtons.length > 0) {
+        const formattedButtons = urlButtons.slice(0, 2).map((btn, index) => ({
+          type: 'url',
+          url: {
+            display_text: btn.title.substring(0, 20), // WhatsApp limit
+            url: btn.url
           }
+        }));
+        
+        // If we also have reply buttons, add one (max 1 when combined with URLs)
+        if (replyButtons.length > 0) {
+          formattedButtons.push({
+            type: 'reply',
+            reply: {
+              id: replyButtons[0].id || 'btn_0',
+              title: replyButtons[0].title.substring(0, 20)
+            }
+          });
         }
-      };
+        
+        payload = {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: recipientPhone,
+          type: 'interactive',
+          interactive: {
+            type: 'cta_url',
+            body: {
+              text: bodyText
+            },
+            action: {
+              name: 'cta_url',
+              parameters: {
+                display_text: urlButtons[0].title.substring(0, 20),
+                url: urlButtons[0].url
+              }
+            }
+          }
+        };
+      } else {
+        // Standard reply buttons (max 3)
+        const formattedButtons = replyButtons.slice(0, 3).map((btn, index) => ({
+          type: 'reply',
+          reply: {
+            id: btn.id || `btn_${index}`,
+            title: btn.title.substring(0, 20) // WhatsApp limit
+          }
+        }));
+
+        payload = {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: recipientPhone,
+          type: 'interactive',
+          interactive: {
+            type: 'button',
+            body: {
+              text: bodyText
+            },
+            action: {
+              buttons: formattedButtons
+            }
+          }
+        };
+      }
 
       const response = await axios.post(
         `${GRAPH_API_URL}/${phoneNumberId}/messages`,

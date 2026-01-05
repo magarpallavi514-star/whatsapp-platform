@@ -148,6 +148,14 @@ export const createChatbot = async (req, res) => {
         error: 'Template name is required' 
       });
     }
+
+    if (replyType === 'workflow' && (!replyContent.workflow || replyContent.workflow.length === 0)) {
+      return res.status(400).json({ 
+        error: 'At least one workflow step is required' 
+      });
+    }
+    
+    console.log('📥 Creating chatbot with data:', { name, replyType, keywords });
     
     // Create rule
     const rule = await KeywordRule.create({
@@ -162,7 +170,7 @@ export const createChatbot = async (req, res) => {
       isActive: true
     });
     
-    console.log('✅ Created chatbot:', rule.name);
+    console.log('✅ Created chatbot:', rule.name, 'ID:', rule._id);
     
     res.status(201).json({
       message: 'Chatbot created successfully',
@@ -205,6 +213,27 @@ export const updateChatbot = async (req, res) => {
         error: 'Chatbot not found' 
       });
     }
+
+    // Validate reply content based on type
+    if (replyType === 'text' && replyContent && !replyContent.text) {
+      return res.status(400).json({ 
+        error: 'Text reply content is required' 
+      });
+    }
+    
+    if (replyType === 'template' && replyContent && !replyContent.templateName) {
+      return res.status(400).json({ 
+        error: 'Template name is required' 
+      });
+    }
+
+    if (replyType === 'workflow' && replyContent && (!replyContent.workflow || replyContent.workflow.length === 0)) {
+      return res.status(400).json({ 
+        error: 'At least one workflow step is required' 
+      });
+    }
+
+    console.log('📝 Updating chatbot:', id, 'with type:', replyType);
     
     // Update fields
     if (name !== undefined) rule.name = name;
@@ -218,7 +247,7 @@ export const updateChatbot = async (req, res) => {
     
     await rule.save();
     
-    console.log('✅ Updated chatbot:', rule.name);
+    console.log('✅ Updated chatbot:', rule.name, 'Type:', rule.replyType);
     
     res.json({
       message: 'Chatbot updated successfully',

@@ -58,7 +58,8 @@ const keywordRuleSchema = new mongoose.Schema({
       text: String,
       buttons: [{
         id: String,
-        title: String
+        title: String,
+        url: String  // Optional link URL for buttons
       }],
       listItems: [{
         id: String,
