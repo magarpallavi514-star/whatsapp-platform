@@ -773,6 +773,18 @@ export default function ChatbotPage() {
                           ))}
                           {(!currentWorkflowItem.buttons || currentWorkflowItem.buttons.length < 3) && (
                             <div className="space-y-3">
+                              {/* WhatsApp Button Limitation Warning */}
+                              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                <p className="text-xs font-medium text-amber-900 mb-1">
+                                  ⚠️ WhatsApp Button Limitations:
+                                </p>
+                                <ul className="text-xs text-amber-800 space-y-1 ml-4 list-disc">
+                                  <li><strong>With URL:</strong> Only 1 button allowed</li>
+                                  <li><strong>Without URL (Reply buttons):</strong> Up to 3 buttons</li>
+                                  <li><strong>💡 Tip:</strong> For multiple buttons, leave URL blank and send link in next message</li>
+                                </ul>
+                              </div>
+
                               <input
                                 type="text"
                                 value={newButtonTitle}
@@ -784,7 +796,7 @@ export default function ChatbotPage() {
                                 type="url"
                                 value={newButtonUrl}
                                 onChange={(e) => setNewButtonUrl(e.target.value)}
-                                placeholder="Link URL (optional, e.g., https://example.com)"
+                                placeholder="Link URL (optional - leave blank for multiple buttons)"
                                 className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400"
                               />
                               
