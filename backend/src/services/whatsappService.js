@@ -1084,8 +1084,11 @@ class WhatsAppService {
         );
       }
 
+      // Button and List steps ALWAYS wait for response
+      const shouldWaitForResponse = step.waitForResponse || step.saveAs || step.type === 'buttons' || step.type === 'list' || step.type === 'question';
+
       // If this step doesn't wait for response, automatically advance
-      if (!step.waitForResponse && !step.saveAs) {
+      if (!shouldWaitForResponse) {
         const hasMore = session.advanceStep();
         await session.save();
         
