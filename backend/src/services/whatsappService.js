@@ -1156,16 +1156,28 @@ class WhatsAppService {
       
       // Check if current step has buttons/list items with nextStepId (conditional branching)
       if (step.buttons && step.buttons.length > 0) {
+        console.log(`🔍 Checking buttons:`, step.buttons.map(b => ({ 
+          id: b.id, 
+          title: b.title, 
+          url: b.url,
+          hasUrl: !!b.url 
+        })));
+        
         const selectedButton = step.buttons.find(btn => 
           responseText.toLowerCase().includes(btn.title.toLowerCase()) ||
           responseText === btn.id
         );
+        
         if (selectedButton) {
-          console.log(`🔘 User clicked button: "${selectedButton.title}"`);
+          console.log(`🔘 User clicked button:`, { 
+            title: selectedButton.title, 
+            url: selectedButton.url,
+            hasUrl: !!selectedButton.url
+          });
           
           // If button has URL, send it as clickable link
           if (selectedButton.url) {
-            console.log(`🔗 Button has URL, sending clickable link: ${selectedButton.url}`);
+            console.log(`🔗 Sending clickable link: ${selectedButton.url}`);
             await this.sendTextMessage(
               session.accountId,
               session.phoneNumberId,
@@ -1173,6 +1185,8 @@ class WhatsAppService {
               `${selectedButton.url}`,
               { campaign: 'workflow_button_url' }
             );
+          } else {
+            console.log(`⚠️ Button has no URL to send`);
           }
           
           // Check for conditional branching
