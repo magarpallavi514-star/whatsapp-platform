@@ -840,94 +840,34 @@ class WhatsAppService {
         buttons: buttons.map(b => ({ title: b.title, hasUrl: !!b.url }))
       });
       
-      // Separate URL buttons from reply buttons
-      const urlButtons = buttons.filter(btn => btn.url);
-      const replyButtons = buttons.filter(btn => !btn.url);
-      
-      console.log('🔘 Button types:', { urlButtons: urlButtons.length, replyButtons: replyButtons.length });
-      
-      let payload;
-      let formattedButtons = []; // Store formatted buttons for metadata
-      
-      // If we ONLY have URL buttons (no reply buttons), use CTA format
-      if (urlButtons.length > 0 && replyButtons.length === 0) {
-        console.log('⚠️ WhatsApp only supports 1 URL button in CTA format. Using first URL button only.');
-        formattedButtons = [{ type: 'url', title: urlButtons[0].title, url: urlButtons[0].url }];
-        // CTA URL format - supports only 1 URL button
-        payload = {
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to: recipientPhone,
-          type: 'interactive',
-          interactive: {
-            type: 'cta_url',
-            body: {
-              text: bodyText
-            },
-            action: {
-              name: 'cta_url',
-              parameters: {
-                display_text: urlButtons[0].title.substring(0, 20),
-                url: urlButtons[0].url
-              }
-            }
-          }
-        };
-      } else if (replyButtons.length > 0 && urlButtons.length === 0) {
-        // Standard reply buttons only (max 3)
-        formattedButtons = replyButtons.slice(0, 3).map((btn, index) => ({
-          type: 'reply',
-          reply: {
-            id: btn.id || `btn_${index}`,
-            title: btn.title.substring(0, 20) // WhatsApp limit
-          }
-        }));
+      // ALWAYS send as reply buttons (no URLs in payload)
+      // This allows up to 3 buttons to show
+      // URLs will be sent when user clicks the button
+      const formattedButtons = buttons.slice(0, 3).map((btn, index) => ({
+        type: 'reply',
+        reply: {
+          id: btn.id || `btn_${index}`,
+          title: btn.title.substring(0, 20) // WhatsApp limit
+        }
+      }));
 
-        console.log(`✅ Sending ${formattedButtons.length} reply buttons:`, formattedButtons.map(b => b.reply.title));
+      console.log(`✅ Sending ${formattedButtons.length} reply buttons (URLs stored for click response)`);
 
-        payload = {
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to: recipientPhone,
-          type: 'interactive',
-          interactive: {
-            type: 'button',
-            body: {
-              text: bodyText
-            },
-            action: {
-              buttons: formattedButtons
-            }
+      const payload = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: recipientPhone,
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: {
+            text: bodyText
+          },
+          action: {
+            buttons: formattedButtons
           }
-        };
-      } else {
-        // Mixed: both URL and reply buttons - use reply buttons format
-        // Note: WhatsApp doesn't support mixing URL and reply buttons
-        // So we'll send only reply buttons
-        formattedButtons = replyButtons.slice(0, 3).map((btn, index) => ({
-          type: 'reply',
-          reply: {
-            id: btn.id || `btn_${index}`,
-            title: btn.title.substring(0, 20) // WhatsApp limit
-          }
-        }));
-
-        payload = {
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to: recipientPhone,
-          type: 'interactive',
-          interactive: {
-            type: 'button',
-            body: {
-              text: bodyText
-            },
-            action: {
-              buttons: formattedButtons
-            }
-          }
-        };
-      }
+        }
+      };
 
       const response = await axios.post(
         `${GRAPH_API_URL}/${phoneNumberId}/messages`,

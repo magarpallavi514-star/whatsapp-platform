@@ -793,16 +793,21 @@ export default function ChatbotPage() {
                                 type="text"
                                 value={newButtonTitle}
                                 onChange={(e) => setNewButtonTitle(e.target.value)}
-                                placeholder="Button text (e.g., Yes, No, More Info)"
+                                placeholder="Button text (e.g., Visit Website, Get Support)"
                                 className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400"
                               />
-                              <input
-                                type="url"
-                                value={newButtonUrl}
-                                onChange={(e) => setNewButtonUrl(e.target.value)}
-                                placeholder="Link URL (optional - leave blank for multiple buttons)"
-                                className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400"
-                              />
+                              <div className="space-y-1">
+                                <input
+                                  type="url"
+                                  value={newButtonUrl}
+                                  onChange={(e) => setNewButtonUrl(e.target.value)}
+                                  placeholder="🔗 Add URL to send when clicked (e.g., https://mysite.com)"
+                                  className="w-full px-3 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400"
+                                />
+                                <p className="text-xs text-gray-500">
+                                  💡 When user clicks this button, the URL will be sent as a clickable link
+                                </p>
+                              </div>
                               
                               <Button
                                 type="button"
