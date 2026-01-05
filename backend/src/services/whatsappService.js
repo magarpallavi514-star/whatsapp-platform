@@ -1199,7 +1199,7 @@ class WhatsAppService {
             await this.sendTextMessage(
               session.accountId,
               session.phoneNumberId,
-              session.recipientPhone,
+              session.contactPhone,
               `${selectedButton.url}`,
               { campaign: 'workflow_button_url' }
             );
