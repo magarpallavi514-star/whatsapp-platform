@@ -397,7 +397,7 @@ export const handleWebhook = async (req, res) => {
                   const savedMessage = await Message.create(inboxMessage);
                   console.log('✅ Saved incoming message to database:', savedMessage._id);
                   
-                  // Check for keyword auto-reply (only for text messages)
+                  // Check for keyword auto-reply or workflow response
                   if (message.type === 'text' && content.text) {
                     console.log('🔍 Checking keyword rules...');
                     await whatsappService.processIncomingMessage(
@@ -405,6 +405,15 @@ export const handleWebhook = async (req, res) => {
                       phoneNumberId,
                       message.from,
                       content.text
+                    );
+                  } else if (message.type === 'interactive' && content.interactiveType === 'button_reply') {
+                    console.log('🔘 Processing button click...');
+                    await whatsappService.processIncomingMessage(
+                      accountId,
+                      phoneNumberId,
+                      message.from,
+                      content.buttonText,
+                      { buttonId: content.buttonId } // Pass button ID for URL lookup
                     );
                   }
                   

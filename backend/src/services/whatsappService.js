@@ -420,13 +420,17 @@ class WhatsAppService {
    * @param {string} phoneNumberId 
    * @param {string} senderPhone 
    * @param {string} messageText 
+   * @param {object} metadata - Optional metadata (e.g., buttonId for button clicks)
    */
-  async processIncomingMessage(accountId, phoneNumberId, senderPhone, messageText) {
+  async processIncomingMessage(accountId, phoneNumberId, senderPhone, messageText, metadata = {}) {
     try {
       console.log('📥 Processing incoming message from:', senderPhone);
       console.log('📝 Message text:', messageText);
       console.log('🏢 Account ID:', accountId);
       console.log('📞 Phone Number ID:', phoneNumberId);
+      if (metadata.buttonId) {
+        console.log('🔘 Button ID:', metadata.buttonId);
+      }
       
       // FIRST: Check if user has an active workflow session
       const activeSession = await WorkflowSession.findOne({
@@ -437,7 +441,7 @@ class WhatsAppService {
 
       if (activeSession) {
         console.log('🔄 User has active workflow session, processing response...');
-        await this.handleWorkflowResponse(activeSession, messageText);
+        await this.handleWorkflowResponse(activeSession, messageText, metadata);
         return; // Don't check keyword rules when in a workflow
       }
       
@@ -1124,8 +1128,9 @@ class WhatsAppService {
    * Handle user response in active workflow
    * @param {Object} session - WorkflowSession document
    * @param {string} responseText - User's response text
+   * @param {Object} metadata - Optional metadata (buttonId, etc.)
    */
-  async handleWorkflowResponse(session, responseText) {
+  async handleWorkflowResponse(session, responseText, metadata = {}) {
     try {
       const step = session.getCurrentStep();
       
@@ -1141,6 +1146,9 @@ class WhatsAppService {
       }
 
       console.log(`💾 Received response for step ${session.currentStepIndex + 1}: "${responseText}"`);
+      if (metadata.buttonId) {
+        console.log(`🔘 Button ID from webhook: ${metadata.buttonId}`);
+      }
 
       // Clear timeout timer
       session.awaitingResponseSince = null;
@@ -1163,10 +1171,20 @@ class WhatsAppService {
           hasUrl: !!b.url 
         })));
         
-        const selectedButton = step.buttons.find(btn => 
-          responseText.toLowerCase().includes(btn.title.toLowerCase()) ||
-          responseText === btn.id
-        );
+        // Match by buttonId first (if provided), otherwise by text
+        let selectedButton;
+        if (metadata.buttonId) {
+          console.log(`🔍 Matching by button ID: ${metadata.buttonId}`);
+          selectedButton = step.buttons.find(btn => btn.id === metadata.buttonId);
+        }
+        
+        if (!selectedButton) {
+          console.log(`🔍 Matching by button text: ${responseText}`);
+          selectedButton = step.buttons.find(btn => 
+            responseText.toLowerCase().includes(btn.title.toLowerCase()) ||
+            responseText === btn.id
+          );
+        }
         
         if (selectedButton) {
           console.log(`🔘 User clicked button:`, { 
