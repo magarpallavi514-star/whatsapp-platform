@@ -375,7 +375,7 @@ export default function SettingsPage() {
           alert('Failed to generate token:\n\n' + errorMsg)
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Error generating integration token:", {
         message: error?.message,
         stack: error?.stack
