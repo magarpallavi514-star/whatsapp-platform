@@ -90,7 +90,7 @@ export default function SettingsPage() {
   })
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
-  const API_KEY = "wpk_live_f0b8a01652eb0b9950484f3b4674bd800e9e3e9a216f200f34b0502a0591ac5d"
+  const API_KEY = "wpk_live_bd29f2f4cb5bec511bcab8b9c2e2dba3895b821bfcfcf18bf9fb6b7b70861d7d"
 
   const fetchPhoneNumbers = async () => {
     try {
