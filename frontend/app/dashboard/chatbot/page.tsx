@@ -261,7 +261,6 @@ export default function ChatbotPage() {
     try {
       const response = await fetch(`${API_URL}/api/chatbots/${id}`, {
         method: 'DELETE',
-        headers: {
         headers: getHeaders()
       });
 

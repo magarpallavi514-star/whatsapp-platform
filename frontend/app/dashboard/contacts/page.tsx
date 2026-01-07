@@ -102,7 +102,7 @@ export default function ContactsPage() {
         method,
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       })
@@ -128,7 +128,7 @@ export default function ContactsPage() {
       const response = await fetch(`${API_URL}/api/contacts/${id}`, {
         method: 'DELETE',
         headers: {
-          "Authorization": `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
         },
       })
 
@@ -303,7 +303,7 @@ export default function ContactsPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${API_KEY}`,
+            headers: getHeaders(),
           },
           body: JSON.stringify({ contacts }),
         })

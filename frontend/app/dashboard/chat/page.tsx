@@ -154,7 +154,7 @@ export default function ChatPage() {
     } catch (error) {
       console.error("Error fetching conversations:", error)
     }
-  }, [API_URL, API_KEY])
+  }, [API_URL])
 
   // Fetch messages for selected contact
   const fetchMessages = useCallback(async (conversationId: string) => {
@@ -166,9 +166,7 @@ export default function ChatPage() {
       const response = await fetch(
         `${API_URL}/api/conversations/${encodeURIComponent(conversationId)}/messages`,
         {
-          headers: {
-            "Authorization": `Bearer ${API_KEY}`,
-          },
+          headers: getHeaders(),
         }
       )
       if (response.ok) {
@@ -214,7 +212,7 @@ export default function ChatPage() {
       setIsLoading(false)
       isFetchingRef.current = false
     }
-  }, [API_URL, API_KEY])
+  }, [API_URL])
 
   // Mark conversation as read
   const markAsRead = useCallback(async (conversationId: string) => {
@@ -223,9 +221,7 @@ export default function ChatPage() {
         `${API_URL}/api/conversations/${encodeURIComponent(conversationId)}/read`,
         {
           method: "PATCH",
-          headers: {
-            "Authorization": `Bearer ${API_KEY}`,
-          },
+          headers: getHeaders(),
         }
       )
       // Update local state to clear unread count
@@ -235,7 +231,7 @@ export default function ChatPage() {
     } catch (error) {
       console.error("Error marking as read:", error)
     }
-  }, [API_URL, API_KEY])
+  }, [API_URL])
 
   // Send message
   const sendMessage = useCallback(async () => {
@@ -245,10 +241,7 @@ export default function ChatPage() {
     try {
       const response = await fetch(`${API_URL}/api/messages/send`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${API_KEY}`,
-        },
+        headers: getHeaders(),
         body: JSON.stringify({
           phoneNumberId: selectedContact.phoneNumberId,
           recipientPhone: selectedContact.phone,
@@ -306,7 +299,7 @@ export default function ChatPage() {
     } finally {
       setIsSending(false)
     }
-  }, [newMessage, selectedContact, isSending, API_URL, API_KEY])
+  }, [newMessage, selectedContact, isSending, API_URL])
 
   // Handle file selection and upload
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -337,9 +330,7 @@ export default function ChatPage() {
       
       const response = await fetch(`${API_URL}/api/messages/send-media`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-        },
+        headers: getHeaders(),
         body: formData
       })
       
@@ -472,9 +463,7 @@ export default function ChatPage() {
         const response = await fetch(
           `${API_URL}/api/conversations/${encodeURIComponent(currentId)}/messages`,
           {
-            headers: {
-              "Authorization": `Bearer ${API_KEY}`,
-            },
+            headers: getHeaders(),
           }
         )
         if (response.ok) {
@@ -536,7 +525,7 @@ export default function ChatPage() {
 
     return () => clearInterval(pollInterval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedContact?.id, API_URL, API_KEY])
+  }, [selectedContact?.id, API_URL])
 
   // Format timestamp
   const formatTime = (dateString: string) => {
