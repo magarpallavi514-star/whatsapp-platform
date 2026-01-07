@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { generateToken } from '../middlewares/jwtAuth.js';
+import Account from '../models/Account.js';
 
 /**
  * Auth Controller
@@ -47,6 +48,30 @@ export const login = async (req, res) => {
         name: 'SuperAdmin (Demo)',
         role: 'superadmin'
       };
+      
+      // Ensure demo account exists in database
+      try {
+        let account = await Account.findOne({ accountId: user.accountId });
+        
+        if (!account) {
+          console.log('📝 Creating demo account in database...');
+          account = new Account({
+            accountId: user.accountId,
+            name: user.name,
+            email: user.email,
+            type: 'internal',
+            plan: 'demo',
+            status: 'active'
+          });
+          await account.save();
+          console.log('✅ Demo account created:', user.accountId);
+        } else {
+          console.log('✅ Demo account already exists');
+        }
+      } catch (err) {
+        console.error('⚠️  Warning: Could not create demo account:', err.message);
+        // Continue anyway - JWT auth will still work
+      }
       
       const token = generateToken(user);
       console.log('🔐 SuperAdmin login:');
@@ -131,6 +156,30 @@ export const login = async (req, res) => {
           success: false,
           message: 'Invalid email or password'
         });
+      }
+      
+      // Ensure admin account exists in database
+      try {
+        let account = await Account.findOne({ accountId: ADMIN_USER.accountId });
+        
+        if (!account) {
+          console.log('📝 Creating admin account in database...');
+          account = new Account({
+            accountId: ADMIN_USER.accountId,
+            name: ADMIN_USER.name,
+            email: ADMIN_USER.email,
+            type: 'internal',
+            plan: 'premium',
+            status: 'active'
+          });
+          await account.save();
+          console.log('✅ Admin account created:', ADMIN_USER.accountId);
+        } else {
+          console.log('✅ Admin account already exists');
+        }
+      } catch (err) {
+        console.error('⚠️  Warning: Could not create admin account:', err.message);
+        // Continue anyway - JWT auth will still work
       }
       
       const token = generateToken(ADMIN_USER);

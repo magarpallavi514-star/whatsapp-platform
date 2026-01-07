@@ -10,7 +10,12 @@ export const authenticate = async (req, res, next) => {
     // Extract API key from Authorization header
     const authHeader = req.headers.authorization;
     
+    console.log('🔑 API Key Check:');
+    console.log('  Path:', req.path);
+    console.log('  Auth Header:', !!authHeader ? '✅ Present' : '❌ Missing');
+    
     if (!authHeader) {
+      console.log('  → Rejecting: No auth header');
       return res.status(401).json({
         success: false,
         message: 'Authentication required. Please provide API key in Authorization header.',
@@ -20,6 +25,7 @@ export const authenticate = async (req, res, next) => {
     
     // Check Bearer token format
     if (!authHeader.startsWith('Bearer ')) {
+      console.log('  → Rejecting: Invalid format (missing "Bearer ")');
       return res.status(401).json({
         success: false,
         message: 'Invalid authorization format. Use: Authorization: Bearer <api_key>'
@@ -29,7 +35,10 @@ export const authenticate = async (req, res, next) => {
     // Extract API key
     const apiKey = authHeader.substring(7); // Remove "Bearer "
     
+    console.log('  Token prefix:', apiKey.substring(0, 15) + '...');
+    
     if (!apiKey || apiKey.trim() === '') {
+      console.log('  → Rejecting: Empty token');
       return res.status(401).json({
         success: false,
         message: 'API key is empty'
@@ -38,6 +47,7 @@ export const authenticate = async (req, res, next) => {
     
     // Validate API key format (wpk_live_<64 hex chars>)
     if (!apiKey.startsWith('wpk_live_')) {
+      console.log('  → Rejecting: Invalid API key format (does not start with wpk_live_)');
       return res.status(401).json({
         success: false,
         message: 'Invalid API key format'

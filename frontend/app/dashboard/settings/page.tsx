@@ -53,7 +53,6 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('whatsapp')
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([])
   const [apiKeys, setApiKeys] = useState<ApiKeyData[]>([])
-  const [myAccount, setMyAccount] = useState<MyAccountInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showApiKeyModal, setShowApiKeyModal] = useState(false)
@@ -96,10 +95,18 @@ export default function SettingsPage() {
 
   const getHeaders = () => {
     const token = authService.getToken()
-    return {
+    const headers = {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` })
     }
+    
+    // Debug: log header state
+    console.log('📤 Request Headers:', {
+      hasAuth: !!headers.Authorization,
+      authFormat: headers.Authorization ? headers.Authorization.substring(0, 20) + '...' : 'none'
+    })
+    
+    return headers
   }
 
   const fetchPhoneNumbers = async () => {
@@ -111,9 +118,24 @@ export default function SettingsPage() {
       if (response.ok) {
         const data = await response.json()
         setPhoneNumbers(data.phoneNumbers || [])
+      } else {
+        let errorMessage = `HTTP ${response.status} ${response.statusText || ''}`
+        try {
+          const contentType = response.headers.get('content-type')
+          if (contentType?.includes('application/json')) {
+            const errorBody = await response.json()
+            errorMessage = errorBody.message || errorBody.error || errorMessage
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
+        console.error("❌ Failed to fetch phone numbers:", { 
+          status: response.status, 
+          message: errorMessage 
+        })
       }
-    } catch (error) {
-      console.error("Error fetching phone numbers:", error)
+    } catch (error: any) {
+      console.error("❌ Error fetching phone numbers:", error?.message || String(error))
     } finally {
       setIsLoading(false)
     }
@@ -241,9 +263,24 @@ export default function SettingsPage() {
       if (response.ok) {
         const data = await response.json()
         setApiKeys(data.apiKeys || [])
+      } else {
+        let errorMessage = `HTTP ${response.status} ${response.statusText || ''}`
+        try {
+          const contentType = response.headers.get('content-type')
+          if (contentType?.includes('application/json')) {
+            const errorBody = await response.json()
+            errorMessage = errorBody.message || errorBody.error || errorMessage
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
+        console.error("❌ Failed to fetch API keys:", { 
+          status: response.status, 
+          message: errorMessage 
+        })
       }
-    } catch (error) {
-      console.error("Error fetching API keys:", error)
+    } catch (error: any) {
+      console.error("❌ Error fetching API keys:", error?.message || String(error))
     }
   }
 
@@ -257,52 +294,93 @@ export default function SettingsPage() {
       if (response.ok) {
         const data = await response.json()
         setTenantAccounts(data.accounts || [])
+      } else {
+        let errorMessage = `HTTP ${response.status} ${response.statusText || ''}`
+        try {
+          const contentType = response.headers.get('content-type')
+          if (contentType?.includes('application/json')) {
+            const errorBody = await response.json()
+            errorMessage = errorBody.message || errorBody.error || errorMessage
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
+        console.error("❌ Failed to fetch tenant accounts:", { 
+          status: response.status, 
+          message: errorMessage 
+        })
       }
-    } catch (error) {
-      console.error("Error fetching tenant accounts:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // My Account API Key Management
-  const fetchMyAccount = async () => {
-    try {
-      setIsLoading(true)
-      const response = await fetch(`${API_URL}/api/account`, {
-        headers: getHeaders()
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setMyAccount(data.account || null)
-      }
-    } catch (error) {
-      console.error("Error fetching account:", error)
+    } catch (error: any) {
+      console.error("❌ Error fetching tenant accounts:", error?.message || String(error))
     } finally {
       setIsLoading(false)
     }
   }
 
   const generateMyApiKey = async () => {
-    if (!confirm('Generate new API key? This will invalidate your current key if one exists!')) return
+    if (!confirm('Generate new Integration Token for Enromatics?\n\nThis will create a token you can use to connect Enromatics with your WhatsApp Business Account.')) return
     
     try {
-      const response = await fetch(`${API_URL}/api/account/api-key/generate`, {
+      const token = authService.getToken()
+      console.log("🔑 Token Generation Debug:");
+      console.log("  ✅ Has JWT Token:", !!token);
+      
+      if (!token) {
+        console.error("  ❌ No JWT token found - user may not be authenticated");
+        alert('Not authenticated. Please login again.');
+        router.push('/login');
+        return;
+      }
+      
+      console.log("  📍 API URL:", `${API_URL}/api/account/integration-token`);
+      
+      const headers = getHeaders()
+      console.log("  📤 Headers:", { 
+        hasAuth: !!headers.Authorization,
+        authLength: headers.Authorization?.length || 0,
+        contentType: headers['Content-Type']
+      });
+      
+      console.log("  📡 Sending request...");
+      
+      const response = await fetch(`${API_URL}/api/account/integration-token`, {
         method: 'POST',
-        headers: getHeaders()
+        headers: headers
       })
 
+      console.log("  📥 Response Status:", response.status, response.statusText);
+      
       const result = await response.json()
-      if (response.ok) {
-        setNewApiKey(result.apiKey)
+      console.log("  📦 Response Body:", {
+        success: result.success,
+        hasToken: !!result.integrationToken,
+        message: result.message,
+        error: result.error
+      });
+      
+      if (response.ok && result.integrationToken) {
+        setNewApiKey(result.integrationToken)
         setShowApiKeyModal(true)
-        fetchMyAccount()
+        console.log("✅ Integration Token generated successfully")
       } else {
-        alert('Failed to generate API key: ' + result.message)
+        const errorMsg = result.message || result.error || `HTTP ${response.status}`
+        console.error("❌ Token generation failed:", errorMsg);
+        
+        if (response.status === 401) {
+          alert('Session expired. Please login again.');
+          router.push('/login');
+        } else if (response.status === 404) {
+          alert('Account not found. Please contact support.');
+        } else {
+          alert('Failed to generate token:\n\n' + errorMsg)
+        }
       }
     } catch (error) {
-      console.error("Error generating API key:", error)
-      alert('Failed to generate API key')
+      console.error("❌ Error generating integration token:", {
+        message: error?.message,
+        stack: error?.stack
+      });
+      alert('Failed to generate token: ' + error?.message)
     }
   }
 
@@ -383,10 +461,35 @@ export default function SettingsPage() {
     }
   }
 
+  // Initial load and authentication check
+  useEffect(() => {
+    const initializePage = async () => {
+      const token = authService.getToken()
+      const isAuth = authService.isAuthenticated()
+      
+      console.log('🔐 Settings Page Init:');
+      console.log('  Auth Status:', isAuth);
+      console.log('  Has Token:', !!token);
+      console.log('  Token Length:', token?.length || 0);
+      
+      if (!isAuth || !token) {
+        console.error('❌ Not authenticated - redirecting to login');
+        router.push('/login');
+        return;
+      }
+      
+      // Load initial data
+      fetchPhoneNumbers()
+    }
+    
+    initializePage()
+  }, [])
+
+  // Reload data when tab changes
   useEffect(() => {
     fetchPhoneNumbers()
     if (activeTab === 'api-keys') {
-      fetchTenantAccounts()
+      fetchApiKeys()
     }
   }, [activeTab])
 
@@ -610,115 +713,61 @@ export default function SettingsPage() {
           ) : activeTab === 'api-keys' ? (
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">API Keys</h2>
-                <p className="text-sm text-gray-600 mt-1">Generate API keys for your WhatsApp Business Account</p>
+                <h2 className="text-xl font-semibold text-gray-900">Enromatics Integration</h2>
+                <p className="text-sm text-gray-600 mt-1">Generate an integration token to connect Enromatics with your WhatsApp Business Account</p>
               </div>
 
-              {isLoading ? (
-                <div className="text-center py-12 text-gray-500">
-                  <p>Loading...</p>
-                </div>
-              ) : !myAccount ? (
-                <div className="text-center py-12 text-gray-500">
-                  <Key className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Account not found</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Account Info */}
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <h3 className="font-semibold text-gray-900 mb-3">Your Account</h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-600">Account ID</p>
-                        <p className="font-medium text-gray-900">{myAccount.accountId}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">Name</p>
-                        <p className="font-medium text-gray-900">{myAccount.name}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">WhatsApp Number</p>
-                        <p className="font-medium text-gray-900">{myAccount.displayPhone || phoneNumbers[0]?.displayPhone || 'Not connected'}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600">Business Account ID</p>
-                        <p className="font-mono text-xs text-gray-900">{myAccount.wabaId || phoneNumbers[0]?.wabaId || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* API Key Section */}
-                  <div className="border border-gray-200 rounded-lg p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
-                          <Key className="h-5 w-5 text-green-600" />
-                          API Key
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          Use this key to connect Enromatics or other applications to your WhatsApp Business Account
-                        </p>
-                      </div>
-                    </div>
-
-                    {myAccount.apiKeyPrefix ? (
-                      <div className="space-y-4">
-                        <div className="bg-gray-50 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-gray-700">Current API Key</span>
-                            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">Active</span>
-                          </div>
-                          <p className="font-mono text-sm text-gray-900 mb-3">{myAccount.apiKeyPrefix}••••••••••••••••</p>
-                          <div className="grid grid-cols-2 gap-4 text-xs text-gray-600">
-                            <div>
-                              <p>Created</p>
-                              <p className="font-medium text-gray-900">{myAccount.apiKeyCreatedAt ? formatDate(myAccount.apiKeyCreatedAt) : 'Unknown'}</p>
-                            </div>
-                            <div>
-                              <p>Last Used</p>
-                              <p className="font-medium text-gray-900">{myAccount.apiKeyLastUsedAt ? formatDate(myAccount.apiKeyLastUsedAt) : 'Never'}</p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <Button
-                          onClick={generateMyApiKey}
-                          variant="outline"
-                          className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                        >
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                          Regenerate API Key
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                        <Key className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                        <p className="text-gray-600 mb-1">No API key generated</p>
-                        <p className="text-sm text-gray-500 mb-4">Generate an API key to connect to external applications</p>
-                        <Button
-                          onClick={generateMyApiKey}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Key className="h-4 w-4 mr-2" />
-                          Generate API Key
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Usage Info */}
-                    <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <p className="text-sm font-medium text-blue-900 mb-2">💡 How to use in Enromatics:</p>
-                      <ol className="text-sm text-blue-700 space-y-1 ml-4 list-decimal">
-                        <li>Copy your API key from above</li>
-                        <li>Go to Enromatics Settings → WhatsApp Configuration</li>
-                        <li>Paste the API key</li>
-                        <li>Save and test the connection</li>
-                      </ol>
-                    </div>
+              <div className="space-y-6">
+                {/* Integration Token Generation */}
+                <div className="border border-gray-200 rounded-lg p-6">
+                  <div className="text-center">
+                    <Key className="h-12 w-12 text-green-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Integration Token</h3>
+                    <p className="text-gray-600 mb-6">Click the button below to generate a token for Enromatics connection</p>
+                    
+                    <Button
+                      onClick={generateMyApiKey}
+                      className="bg-green-600 hover:bg-green-700 px-6 py-2"
+                    >
+                      <Key className="h-4 w-4 mr-2" />
+                      Generate Integration Token
+                    </Button>
                   </div>
                 </div>
-              )}
+
+                {/* Usage Instructions */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-blue-900 mb-3">📌 How to use in Enromatics:</p>
+                  <ol className="text-sm text-blue-800 space-y-2 ml-4 list-decimal">
+                    <li>Click "Generate Integration Token" button above</li>
+                    <li>Copy the entire token (starts with <code className="bg-blue-100 px-2 py-1 rounded">wpi_int_</code>)</li>
+                    <li>Go to Enromatics Dashboard</li>
+                    <li>Navigate to Integrations → WhatsApp Configuration</li>
+                    <li>Paste the token in the Token/API Key field</li>
+                    <li>Click "Test Connection" to verify</li>
+                    <li>Save your configuration</li>
+                  </ol>
+                </div>
+
+                {/* Token Format Info */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-gray-900 mb-2">🔑 Token Format:</p>
+                  <p className="text-sm text-gray-700 font-mono bg-white px-3 py-2 rounded border border-gray-300">
+                    wpi_int_[64 random characters]
+                  </p>
+                </div>
+
+                {/* Security Note */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-yellow-900 mb-2">⚠️ Security Tips:</p>
+                  <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
+                    <li>Keep your token private - never share it publicly</li>
+                    <li>If compromised, revoke and generate a new token</li>
+                    <li>The token will work immediately after generation</li>
+                    <li>You can only have one active integration token</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="bg-white rounded-lg border border-gray-200 p-6">

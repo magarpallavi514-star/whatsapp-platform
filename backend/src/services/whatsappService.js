@@ -105,6 +105,22 @@ class WhatsAppService {
       });
       await message.save();
 
+      // Update conversation with latest message timestamp
+      const conversationId = `${accountId}_${phoneNumberId}_${cleanPhone}`;
+      await Conversation.findOneAndUpdate(
+        { conversationId },
+        {
+          $set: {
+            lastMessageAt: new Date(),
+            lastMessagePreview: messageText.substring(0, 200),
+            lastMessageType: 'text',
+            status: 'open'
+          }
+        },
+        { upsert: true, new: true }
+      );
+      console.log('✅ Conversation updated with latest message timestamp');
+
       // Update phone number stats
       await PhoneNumber.updateOne(
         { accountId, phoneNumberId },
@@ -268,6 +284,22 @@ class WhatsAppService {
         timestamp: new Date()
       });
       await message.save();
+
+      // Update conversation with latest message timestamp
+      const conversationId = `${accountId}_${phoneNumberId}_${cleanPhone}`;
+      await Conversation.findOneAndUpdate(
+        { conversationId },
+        {
+          $set: {
+            lastMessageAt: new Date(),
+            lastMessagePreview: `[Template] ${templateName}`,
+            lastMessageType: 'template',
+            status: 'open'
+          }
+        },
+        { upsert: true, new: true }
+      );
+      console.log('✅ Conversation updated with latest message timestamp');
 
       // Update stats
       await PhoneNumber.updateOne(
@@ -726,6 +758,25 @@ class WhatsAppService {
         timestamp: new Date()
       });
       await message.save();
+
+      // Update conversation with latest message timestamp
+      const conversationId = `${accountId}_${phoneNumberId}_${cleanPhone}`;
+      const mediaLabel = mediaType === 'image' ? '🖼️ Photo' : 
+                         mediaType === 'video' ? '🎥 Video' : 
+                         '📄 Document';
+      await Conversation.findOneAndUpdate(
+        { conversationId },
+        {
+          $set: {
+            lastMessageAt: new Date(),
+            lastMessagePreview: mediaLabel,
+            lastMessageType: mediaType,
+            status: 'open'
+          }
+        },
+        { upsert: true, new: true }
+      );
+      console.log('✅ Conversation updated with latest message timestamp');
 
       // Update phone number stats
       await PhoneNumber.updateOne(

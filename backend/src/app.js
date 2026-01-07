@@ -18,6 +18,7 @@ import templateRoutes from './routes/templateRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import chatbotRoutes from './routes/chatbotRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import integrationsRoutes from './routes/integrationsRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -104,8 +105,11 @@ app.use('/api/messages', requireJWT, messageRoutes);
 app.use('/api/conversations', requireJWT, conversationRoutes);
 app.use('/api/contacts', requireJWT, contactRoutes);
 
-// Mount self-service account routes (ACCOUNT AUTH required)
-app.use('/api/account', authenticate, accountRoutes);
+// Mount self-service account routes (JWT AUTH - for dashboard users)
+app.use('/api/account', requireJWT, accountRoutes);
+
+// Mount integration routes (INTEGRATION TOKEN AUTH - for Enromatics, third-party apps)
+app.use('/api/integrations', integrationsRoutes);
 
 // Mount API routes (API KEY AUTH - for external integrations only)
 app.use('/api/stats', authenticate, statsRoutes);

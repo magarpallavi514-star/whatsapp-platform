@@ -413,8 +413,8 @@ export default function ChatPage() {
     // Subscribe to all conversations for this user
     subscribeToConversations();
     
-    // Listen for new messages in real-time
-    socket.on('new_message', (data) => {
+    // Handler for new messages
+    const handleNewMessage = (data: any) => {
       const { conversationId, message } = data;
       console.log('💬 New message received:', conversationId, message);
       
@@ -441,10 +441,10 @@ export default function ChatPage() {
       ).sort((a, b) => 
         new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime()
       ));
-    });
+    };
     
-    // Listen for conversation updates
-    socket.on('conversation_update', (data) => {
+    // Handler for conversation updates
+    const handleConversationUpdate = (data: any) => {
       const { conversation } = data;
       console.log('📭 Conversation updated:', conversation);
       
@@ -459,11 +459,20 @@ export default function ChatPage() {
           new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime()
         );
       });
-    });
+    };
+    
+    // Remove old listeners to prevent duplicates
+    socket.off('new_message', handleNewMessage);
+    socket.off('conversation_update', handleConversationUpdate);
+    
+    // Attach listeners
+    socket.on('new_message', handleNewMessage);
+    socket.on('conversation_update', handleConversationUpdate);
     
     // Cleanup on unmount
     return () => {
-      closeSocket();
+      socket.off('new_message', handleNewMessage);
+      socket.off('conversation_update', handleConversationUpdate);
     };
   }, [selectedContact?.id]);
 

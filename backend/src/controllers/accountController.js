@@ -419,19 +419,29 @@ export const generateIntegrationToken = async (req, res) => {
   try {
     const accountId = req.accountId;
     
+    console.log('🔑 Generating integration token for account:', accountId);
+    
     const account = await Account.findOne({ accountId }).select('+integrationTokenHash');
     
     if (!account) {
+      console.error('❌ Account not found:', accountId);
       return res.status(404).json({
         success: false,
-        message: 'Account not found'
+        message: 'Account not found',
+        accountId: accountId
       });
     }
+    
+    console.log('✅ Account found:', account.name);
     
     // Generate integration token
     const integrationToken = account.generateIntegrationToken();
     
+    console.log('🔐 Token generated, prefix:', account.integrationTokenPrefix);
+    
     await account.save();
+    
+    console.log('✅ Integration token generated successfully');
     
     return res.json({
       success: true,
@@ -443,7 +453,8 @@ export const generateIntegrationToken = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Generate integration token error:', error);
+    console.error('❌ Generate integration token error:', error.message);
+    console.error('Stack:', error.stack);
     return res.status(500).json({
       success: false,
       message: 'Failed to generate integration token',

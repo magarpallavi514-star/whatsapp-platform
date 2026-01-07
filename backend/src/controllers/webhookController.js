@@ -408,11 +408,16 @@ export const handleWebhook = async (req, res) => {
                   // Broadcast new message via Socket.io for real-time updates
                   if (io) {
                     const conversationId = `${accountId}_${phoneNumberId}_${message.from}`;
-                    broadcastNewMessage(io, conversationId, {
-                      _id: savedMessage._id,
-                      ...savedMessage.toObject()
-                    });
+                    const messageObject = savedMessage.toObject();
+                    
+                    // Ensure createdAt is in ISO format for consistency
+                    if (!messageObject.createdAt) {
+                      messageObject.createdAt = new Date().toISOString();
+                    }
+                    
+                    broadcastNewMessage(io, conversationId, messageObject);
                     console.log('📡 Broadcasted new message via Socket.io:', conversationId);
+                    console.log('   Message timestamp:', messageObject.createdAt);
                   }
                   
                   // Check for keyword auto-reply or workflow response

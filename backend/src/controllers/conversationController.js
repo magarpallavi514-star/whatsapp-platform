@@ -57,14 +57,18 @@ export const getConversationMessages = async (req, res) => {
     }
     
     // Get messages for this conversation
-    const messages = await Message.find({
+    // CRITICAL: Get most recent messages first, then sort for display
+    const allMessages = await Message.find({
       accountId: conversation.accountId,
       phoneNumberId: conversation.phoneNumberId,
       recipientPhone: conversation.userPhone
     })
-      .sort({ createdAt: 1 }) // Oldest first for chat display
+      .sort({ createdAt: -1 }) // Get newest messages first
       .limit(parseInt(limit))
       .lean();
+    
+    // Reverse to show oldest-first for chat display
+    const messages = allMessages.reverse();
     
     res.json({
       success: true,

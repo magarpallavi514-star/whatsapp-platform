@@ -4,10 +4,17 @@ import { authService } from './auth';
 let socket: Socket | null = null;
 
 export const initSocket = (): Socket => {
-  if (socket?.connected) return socket;
+  if (socket?.connected) {
+    console.log('📌 Socket already connected, reusing:', socket?.id);
+    return socket;
+  }
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050';
   const token = authService.getToken();
+
+  if (!token) {
+    console.warn('⚠️ No authentication token found - socket connection may fail');
+  }
 
   socket = io(API_URL, {
     auth: {
@@ -21,6 +28,7 @@ export const initSocket = (): Socket => {
 
   socket.on('connect', () => {
     console.log('✅ Socket connected:', socket?.id);
+    console.log('🔗 Connected to:', API_URL);
   });
 
   socket.on('disconnect', () => {
@@ -29,6 +37,10 @@ export const initSocket = (): Socket => {
 
   socket.on('error', (error) => {
     console.error('🔴 Socket error:', error);
+  });
+
+  socket.on('connect_error', (error) => {
+    console.error('🔴 Socket connection error:', error.message);
   });
 
   return socket;
