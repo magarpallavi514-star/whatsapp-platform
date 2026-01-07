@@ -383,11 +383,6 @@ export default function SettingsPage() {
     }
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    alert('Copied to clipboard!')
-  }
-
   // Security handlers
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
