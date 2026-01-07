@@ -411,3 +411,118 @@ export const regenerateMyApiKey = async (req, res) => {
     });
   }
 };
+
+/**
+ * POST /api/account/generate-integration-token - Generate integration token for external apps
+ */
+export const generateIntegrationToken = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    
+    const account = await Account.findOne({ accountId }).select('+integrationTokenHash');
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found'
+      });
+    }
+    
+    // Generate integration token
+    const integrationToken = account.generateIntegrationToken();
+    
+    await account.save();
+    
+    return res.json({
+      success: true,
+      message: 'Integration token generated successfully',
+      integrationToken, // ⚠️ ONLY SHOWN ONCE
+      tokenPrefix: account.integrationTokenPrefix,
+      createdAt: account.integrationTokenCreatedAt,
+      warning: '⚠️ Save this token securely. Use it in external apps (Enromatics, etc.) to connect to this platform.'
+    });
+    
+  } catch (error) {
+    console.error('Generate integration token error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to generate integration token',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * GET /api/account/integration-token - Get integration token info (not the full token)
+ */
+export const getIntegrationToken = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    
+    const account = await Account.findOne({ accountId }).select('integrationTokenPrefix integrationTokenCreatedAt integrationTokenLastUsedAt');
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found'
+      });
+    }
+    
+    return res.json({
+      success: true,
+      integrationToken: {
+        prefix: account.integrationTokenPrefix || null,
+        createdAt: account.integrationTokenCreatedAt || null,
+        lastUsedAt: account.integrationTokenLastUsedAt || null,
+        exists: !!account.integrationTokenPrefix
+      }
+    });
+    
+  } catch (error) {
+    console.error('Get integration token error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get integration token info',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * DELETE /api/account/integration-token - Revoke integration token
+ */
+export const revokeIntegrationToken = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    
+    const account = await Account.findOne({ accountId });
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found'
+      });
+    }
+    
+    // Revoke token
+    account.integrationTokenHash = undefined;
+    account.integrationTokenPrefix = undefined;
+    account.integrationTokenCreatedAt = undefined;
+    account.integrationTokenLastUsedAt = undefined;
+    
+    await account.save();
+    
+    return res.json({
+      success: true,
+      message: 'Integration token revoked successfully'
+    });
+    
+  } catch (error) {
+    console.error('Revoke integration token error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to revoke integration token',
+      error: error.message
+    });
+  }
+};

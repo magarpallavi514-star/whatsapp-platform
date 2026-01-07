@@ -60,6 +60,21 @@ const accountSchema = new mongoose.Schema({
   apiKeyCreatedAt: Date,
   apiKeyLastUsedAt: Date,
   
+  // Integration Token (for external apps like Enromatics)
+  integrationTokenHash: {
+    type: String,
+    unique: true,
+    sparse: true,
+    index: true,
+    select: false // Don't return in queries by default (security)
+  },
+  integrationTokenPrefix: {
+    type: String, // Store first 12 chars for identification (e.g., "wpi_int_abc")
+    select: true
+  },
+  integrationTokenCreatedAt: Date,
+  integrationTokenLastUsedAt: Date,
+  
   // Subscription (Phase 2)
   plan: {
     type: String,
@@ -126,6 +141,34 @@ accountSchema.statics.findByApiKey = async function(apiKey) {
 accountSchema.methods.validateApiKey = function(apiKey) {
   const hash = this.constructor.hashApiKey(apiKey);
   return this.apiKeyHash === hash;
+};
+
+// Integration Token Methods (for external app integrations like Enromatics)
+accountSchema.methods.generateIntegrationToken = function() {
+  // Generate cryptographically secure random integration token
+  // Format: wpi_int_<64_random_hex_chars> (whatsapp-platform-integration)
+  const randomBytes = crypto.randomBytes(32).toString('hex');
+  const integrationToken = `wpi_int_${randomBytes}`;
+  
+  // Store hash (for validation) and prefix (for display)
+  this.integrationTokenHash = this.constructor.hashApiKey(integrationToken);
+  this.integrationTokenPrefix = integrationToken.substring(0, 12); // "wpi_int_abc"
+  this.integrationTokenCreatedAt = new Date();
+  
+  // Return plaintext token (ONLY TIME IT'S VISIBLE)
+  return integrationToken;
+};
+
+// Static method to find account by integration token
+accountSchema.statics.findByIntegrationToken = async function(integrationToken) {
+  const hash = this.hashApiKey(integrationToken);
+  return this.findOne({ integrationTokenHash: hash, status: 'active' }).select('+integrationTokenHash');
+};
+
+// Method to validate integration token
+accountSchema.methods.validateIntegrationToken = function(integrationToken) {
+  const hash = this.constructor.hashApiKey(integrationToken);
+  return this.integrationTokenHash === hash;
 };
 
 export default mongoose.model('Account', accountSchema);
