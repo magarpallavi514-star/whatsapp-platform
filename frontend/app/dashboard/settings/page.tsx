@@ -31,14 +31,31 @@ interface ApiKeyData {
   expiresAt?: string
 }
 
+interface TenantAccount {
+  _id: string
+  accountId: string
+  name: string
+  email: string
+  type: string
+  plan: string
+  status: string
+  apiKeyPrefix?: string
+  apiKeyCreatedAt?: string
+  apiKeyLastUsedAt?: string
+  createdAt: string
+}
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('whatsapp')
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([])
   const [apiKeys, setApiKeys] = useState<ApiKeyData[]>([])
+  const [tenantAccounts, setTenantAccounts] = useState<TenantAccount[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showApiKeyModal, setShowApiKeyModal] = useState(false)
+  const [showTenantModal, setShowTenantModal] = useState(false)
   const [newApiKey, setNewApiKey] = useState('')
+  const [newTenantKey, setNewTenantKey] = useState('')
   const [testingId, setTestingId] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
@@ -48,6 +65,13 @@ export default function SettingsPage() {
     accessToken: '',
     displayName: '',
     displayPhone: ''
+  })
+  const [tenantFormData, setTenantFormData] = useState({
+    accountId: '',
+    name: '',
+    email: '',
+    type: 'client',
+    plan: 'free'
   })
   const [profileData, setProfileData] = useState({
     name: 'John Doe',
@@ -208,6 +232,110 @@ export default function SettingsPage() {
     }
   }
 
+  // Tenant Account Management
+  const ADMIN_API_KEY = "wpk_admin_47a15be172e6a2d97f8eb64d30dfea533a6799718ea4d7f6c0036bf481d60ef2"
+
+  const fetchTenantAccounts = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch(`${API_URL}/api/admin/accounts`, {
+        headers: { "Authorization": `Bearer ${ADMIN_API_KEY}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setTenantAccounts(data.accounts || [])
+      }
+    } catch (error) {
+      console.error("Error fetching tenant accounts:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const createTenantAccount = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const response = await fetch(`${API_URL}/api/admin/accounts`, {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${ADMIN_API_KEY}`
+        },
+        body: JSON.stringify(tenantFormData)
+      })
+
+      const result = await response.json()
+      if (response.ok) {
+        setNewTenantKey(result.apiKey)
+        setShowTenantModal(true)
+        fetchTenantAccounts()
+        setTenantFormData({
+          accountId: '',
+          name: '',
+          email: '',
+          type: 'client',
+          plan: 'free'
+        })
+      } else {
+        alert('Failed to create account: ' + result.message)
+      }
+    } catch (error) {
+      console.error("Error creating tenant account:", error)
+      alert('Failed to create account')
+    }
+  }
+
+  const regenerateTenantKey = async (accountId: string) => {
+    if (!confirm('Regenerate API key? This will invalidate the old key!')) return
+    
+    try {
+      const response = await fetch(`${API_URL}/api/admin/accounts/${accountId}/api-key/regenerate`, {
+        method: 'POST',
+        headers: { "Authorization": `Bearer ${ADMIN_API_KEY}` }
+      })
+
+      const result = await response.json()
+      if (response.ok) {
+        setNewTenantKey(result.apiKey)
+        setShowTenantModal(true)
+        fetchTenantAccounts()
+        alert('API key regenerated successfully!')
+      } else {
+        alert('Failed to regenerate key: ' + result.message)
+      }
+    } catch (error) {
+      console.error("Error regenerating tenant key:", error)
+      alert('Failed to regenerate key')
+    }
+  }
+
+  const deleteTenantAccount = async (accountId: string) => {
+    if (!confirm(`Delete account ${accountId}? This cannot be undone!`)) return
+    
+    try {
+      const response = await fetch(`${API_URL}/api/admin/accounts/${accountId}`, {
+        method: 'DELETE',
+        headers: { "Authorization": `Bearer ${ADMIN_API_KEY}` }
+      })
+
+      if (response.ok) {
+        alert('Account deleted successfully')
+        fetchTenantAccounts()
+      } else {
+        const result = await response.json()
+        alert('Failed to delete account: ' + result.message)
+      }
+    } catch (error) {
+      console.error("Error deleting tenant account:", error)
+      alert('Failed to delete account')
+    }
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    alert('Copied to clipboard!')
+  }
+
   const generateApiKey = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!apiKeyName.trim()) {
@@ -299,7 +427,7 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchPhoneNumbers()
     if (activeTab === 'api-keys') {
-      fetchApiKeys()
+      fetchTenantAccounts()
     }
   }, [activeTab])
 
@@ -323,7 +451,7 @@ export default function SettingsPage() {
               {[
                 { name: "WhatsApp Setup", icon: MessageSquare, id: 'whatsapp' },
                 { name: "Profile", icon: User, id: 'profile' },
-                { name: "API Keys", icon: Shield, id: 'api-keys' },
+                { name: "Tenant Accounts", icon: Shield, id: 'api-keys' },
                 { name: "Security", icon: Lock, id: 'security' },
               ].map((item) => (
                 <button
@@ -524,62 +652,141 @@ export default function SettingsPage() {
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">API Keys</h2>
-                  <p className="text-sm text-gray-600 mt-1">Manage your API keys for programmatic access</p>
+                  <h2 className="text-xl font-semibold text-gray-900">Tenant Account Management</h2>
+                  <p className="text-sm text-gray-600 mt-1">Create and manage customer accounts with API keys</p>
                 </div>
               </div>
 
-              <form onSubmit={generateApiKey} className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Generate New API Key
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={apiKeyName}
-                    onChange={(e) => setApiKeyName(e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-400"
-                    placeholder="Enter a name for this API key (e.g., Production API)"
-                    required
-                  />
-                  <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">
-                    <Key className="h-4 w-4 mr-2" />
-                    Generate
-                  </Button>
+              {/* Create Tenant Form */}
+              <form onSubmit={createTenantAccount} className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-4">Create New Customer Account</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Account ID *
+                    </label>
+                    <input
+                      type="text"
+                      value={tenantFormData.accountId}
+                      onChange={(e) => setTenantFormData({ ...tenantFormData, accountId: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-400"
+                      placeholder="e.g., acme_corp"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Company Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={tenantFormData.name}
+                      onChange={(e) => setTenantFormData({ ...tenantFormData, name: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-400"
+                      placeholder="e.g., Acme Corporation"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      value={tenantFormData.email}
+                      onChange={(e) => setTenantFormData({ ...tenantFormData, email: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900 placeholder:text-gray-400"
+                      placeholder="contact@acme.com"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Plan *
+                    </label>
+                    <select
+                      value={tenantFormData.plan}
+                      onChange={(e) => setTenantFormData({ ...tenantFormData, plan: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-gray-900"
+                    >
+                      <option value="free">Free</option>
+                      <option value="basic">Basic</option>
+                      <option value="pro">Pro</option>
+                      <option value="enterprise">Enterprise</option>
+                    </select>
+                  </div>
                 </div>
+                <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white mt-4">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Tenant Account
+                </Button>
               </form>
 
-              {apiKeys.length === 0 ? (
+              {/* Tenant Accounts List */}
+              {isLoading ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p>Loading tenant accounts...</p>
+                </div>
+              ) : tenantAccounts.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <Key className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No API keys yet</p>
-                  <p className="text-sm">Generate your first API key to get started</p>
+                  <p>No tenant accounts yet</p>
+                  <p className="text-sm">Create your first customer account to get started</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {apiKeys.map((apiKey) => (
-                    <div key={apiKey._id} className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
-                      <div className="flex items-center justify-between">
+                  {tenantAccounts.map((account) => (
+                    <div key={account._id} className="p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+                      <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-medium text-gray-900">{apiKey.name}</h3>
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded font-mono">
-                              {apiKey.keyPrefix}...
+                            <h3 className="font-semibold text-gray-900">{account.name}</h3>
+                            <span className={`px-2 py-1 text-xs rounded ${
+                              account.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {account.status}
+                            </span>
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                              {account.plan}
                             </span>
                           </div>
-                          <div className="flex gap-4 text-sm text-gray-600">
-                            <span>Created: {formatDate(apiKey.createdAt)}</span>
-                            {apiKey.lastUsed && <span>Last used: {formatDate(apiKey.lastUsed)}</span>}
+                          <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mt-2">
+                            <div>
+                              <p className="text-xs text-gray-500">Account ID</p>
+                              <p className="font-mono font-medium">{account.accountId}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Email</p>
+                              <p>{account.email}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">API Key Prefix</p>
+                              <p className="font-mono text-xs">{account.apiKeyPrefix || 'Not generated'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Last Used</p>
+                              <p className="text-xs">{account.apiKeyLastUsedAt ? formatDate(account.apiKeyLastUsedAt) : 'Never'}</p>
+                            </div>
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => deleteApiKey(apiKey._id)}
-                          className="text-red-600 border-red-200 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => regenerateTenantKey(account.accountId)}
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => deleteTenantAccount(account.accountId)}
+                            className="text-red-600 border-red-200 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -813,6 +1020,86 @@ export default function SettingsPage() {
             <div className="flex gap-2 p-6 border-t justify-end">
               <Button className="bg-green-600 hover:bg-green-700" onClick={() => setShowApiKeyModal(false)}>
                 I've Saved My Key
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tenant API Key Modal */}
+      {showTenantModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-2xl">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Tenant Account Created!</h3>
+                  <p className="text-sm text-gray-600">API key generated successfully</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-yellow-900 mb-1">⚠️ Important: Save This Key</p>
+                <p className="text-sm text-yellow-700">
+                  This is the only time you'll see the full API key. 
+                  Give this to your customer to integrate with the platform.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tenant API Key</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTenantKey}
+                    readOnly
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm text-gray-900"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      copyToClipboard(newTenantKey)
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white border-green-600"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm font-medium text-gray-900 mb-2">Usage Example:</p>
+                <pre className="text-xs bg-gray-900 text-gray-100 p-3 rounded overflow-x-auto">
+{`fetch('${API_URL}/api/messages/send', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer ${newTenantKey}',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    to: '+1234567890',
+    message: 'Hello!'
+  })
+})`}
+                </pre>
+              </div>
+            </div>
+
+            <div className="flex gap-2 p-6 border-t justify-end">
+              <Button 
+                className="bg-green-600 hover:bg-green-700" 
+                onClick={() => {
+                  setShowTenantModal(false)
+                  setNewTenantKey('')
+                }}
+              >
+                I've Saved the Key
               </Button>
             </div>
           </div>
