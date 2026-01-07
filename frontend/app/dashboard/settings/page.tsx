@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { MessageSquare, User, Lock, Shield, Plus, Trash2, CheckCircle, XCircle, RefreshCw, Phone, X, Copy, Eye, EyeOff, Key } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -47,6 +48,7 @@ interface MyAccountInfo {
 }
 
 export default function SettingsPage() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState('whatsapp')
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([])
   const [apiKeys, setApiKeys] = useState<ApiKeyData[]>([])
@@ -121,6 +123,12 @@ export default function SettingsPage() {
         credentials: 'include',
         body: JSON.stringify(formData)
       })
+
+      if (response.status === 401) {
+        alert('Your session expired. Please login again.')
+        router.push('/login')
+        return
+      }
 
       const result = await response.json()
       if (response.ok) {

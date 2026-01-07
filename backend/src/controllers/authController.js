@@ -12,7 +12,7 @@ const ADMIN_USER = {
   passwordHash: '$2a$10$1234567890123456789012eGKWxJ7RZGrxKzYN2Dp3B/lYt2.FYYmC', // Will be set on first run
   accountId: 'pixels_internal',
   name: 'Piyush Magar',
-  role: 'admin'
+  role: 'superadmin' // Full platform access
 };
 
 /**

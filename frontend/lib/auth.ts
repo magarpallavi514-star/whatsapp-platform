@@ -55,7 +55,8 @@ export const authService = {
           id: data.user.accountId || '1',
           email: data.user.email,
           name: data.user.name,
-          role: data.user.role === 'admin' ? UserRole.ADMIN : UserRole.USER,
+          role: data.user.role === 'superadmin' ? UserRole.SUPERADMIN : 
+                data.user.role === 'admin' ? UserRole.ADMIN : UserRole.USER,
           accountId: data.user.accountId
         }
 
