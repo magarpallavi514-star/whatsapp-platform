@@ -1,4 +1,4 @@
-import app from './src/app.js';
+import app, { setupSocketIO } from './src/app.js';
 import connectDB from './src/config/database.js';
 import { initSocketIO } from './src/services/socketService.js';
 import http from 'http';
@@ -12,6 +12,9 @@ const server = http.createServer(app);
 // Initialize Socket.io for real-time chat
 const io = initSocketIO(server);
 app.io = io; // Make io available to controllers/routes
+
+// Setup Socket.io for controllers (pass io instance)
+setupSocketIO(io);
 
 // Start server function
 const startServer = async () => {

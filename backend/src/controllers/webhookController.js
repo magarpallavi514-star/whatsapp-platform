@@ -4,11 +4,19 @@ import Conversation from '../models/Conversation.js';
 import Contact from '../models/Contact.js';
 import PhoneNumber from '../models/PhoneNumber.js';
 import { downloadAndUploadMedia, getMediaTypeFromMime } from '../services/s3Service.js';
+import { broadcastNewMessage, broadcastConversationUpdate } from '../services/socketService.js';
 
 /**
  * Webhook Controller for WhatsApp Cloud API
  * Handles verification, incoming messages, and status updates
  */
+
+// Socket.io instance (passed from app.js)
+let io = null;
+
+export const setSocketIO = (socketIOInstance) => {
+  io = socketIOInstance;
+};
 
 /**
  * GET /api/webhooks/whatsapp - Webhook Verification
@@ -396,6 +404,16 @@ export const handleWebhook = async (req, res) => {
                   
                   const savedMessage = await Message.create(inboxMessage);
                   console.log('✅ Saved incoming message to database:', savedMessage._id);
+                  
+                  // Broadcast new message via Socket.io for real-time updates
+                  if (io) {
+                    const conversationId = `${accountId}_${phoneNumberId}_${message.from}`;
+                    broadcastNewMessage(io, conversationId, {
+                      _id: savedMessage._id,
+                      ...savedMessage.toObject()
+                    });
+                    console.log('📡 Broadcasted new message via Socket.io:', conversationId);
+                  }
                   
                   // Check for keyword auto-reply or workflow response
                   if (message.type === 'text' && content.text) {

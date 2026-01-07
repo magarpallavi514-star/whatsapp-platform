@@ -1,11 +1,19 @@
 import whatsappService from '../services/whatsappService.js';
 import Message from '../models/Message.js';
 import { uploadMediaToS3 } from '../services/s3Service.js';
+import { broadcastNewMessage, broadcastConversationUpdate, broadcastMessageStatus } from '../services/socketService.js';
 
 /**
  * Message Controller
  * Handles message sending and retrieval
  */
+
+// Socket.io instance (passed from app.js)
+let io = null;
+
+export const setSocketIO = (socketIOInstance) => {
+  io = socketIOInstance;
+};
 
 /**
  * POST /api/messages/send - Send text message

@@ -127,4 +127,20 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Setup Socket.io for controllers
+export const setupSocketIO = (io) => {
+  const { setSocketIO: setWebhookSocketIO } = webhookRoutes;
+  const { setSocketIO: setMessageSocketIO } = messageRoutes;
+  
+  // Pass io instance to webhook controller
+  import('./controllers/webhookController.js').then(module => {
+    module.setSocketIO(io);
+  });
+  
+  // Pass io instance to message controller
+  import('./controllers/messageController.js').then(module => {
+    module.setSocketIO(io);
+  });
+};
+
 export default app;
