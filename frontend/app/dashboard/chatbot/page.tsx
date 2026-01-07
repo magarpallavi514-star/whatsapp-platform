@@ -3,12 +3,15 @@
 import { useState, useEffect } from "react"
 import { Bot, Plus, Play, Pause, Edit, Trash2, X, Search, MessageSquare, Zap, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { authService } from "@/lib/auth"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050';
 
 const getHeaders = () => {
+  const token = authService.getToken()
   return {
     "Content-Type": "application/json",
+    ...(token && { "Authorization": `Bearer ${token}` })
   }
 }
 
@@ -124,6 +127,9 @@ export default function ChatbotPage() {
 
   const fetchBots = async () => {
     try {
+      const token = authService.getToken();
+      console.log('🔑 Token available:', !!token);
+      
       const response = await fetch(`${API_URL}/api/chatbots`, {
         headers: getHeaders()
       });
@@ -131,8 +137,9 @@ export default function ChatbotPage() {
       console.log('📡 Fetch response status:', response.status);
       
       if (response.status === 401) {
-        console.error('❌ Authentication failed - API key may be invalid');
-        alert('Authentication failed. Please check your API key.');
+        console.error('❌ Authentication failed - Token missing or expired');
+        console.error('Token in storage:', !!authService.getToken());
+        alert('Authentication failed. Please login again.');
         setLoading(false);
         return;
       }

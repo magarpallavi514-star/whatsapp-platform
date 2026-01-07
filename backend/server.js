@@ -1,8 +1,17 @@
 import app from './src/app.js';
 import connectDB from './src/config/database.js';
+import { initSocketIO } from './src/services/socketService.js';
+import http from 'http';
 
 // Get port from environment
 const PORT = process.env.PORT || 5050;
+
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.io for real-time chat
+const io = initSocketIO(server);
+app.io = io; // Make io available to controllers/routes
 
 // Start server function
 const startServer = async () => {
@@ -11,12 +20,13 @@ const startServer = async () => {
     console.log('🔄 Connecting to MongoDB...');
     await connectDB();
     
-    // Start Express server
-    app.listen(PORT, () => {
+    // Start server with Socket.io
+    server.listen(PORT, () => {
       console.log('='.repeat(50));
       console.log(`🚀 Server is running on port ${PORT}`);
       console.log(`📍 Local: http://localhost:${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔌 WebSocket (Socket.io) enabled for real-time chat`);
       console.log('='.repeat(50));
     });
   } catch (error) {

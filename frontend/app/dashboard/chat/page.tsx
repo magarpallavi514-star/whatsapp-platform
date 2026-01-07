@@ -20,6 +20,14 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { authService } from "@/lib/auth"
+import { 
+  initSocket, 
+  getSocket, 
+  closeSocket, 
+  joinConversation, 
+  leaveConversation,
+  subscribeToConversations
+} from "@/lib/socket"
 
 interface Contact {
   id: string
@@ -96,58 +104,24 @@ export default function ChatPage() {
           profilePic: conv.userProfilePic
         }))
         
-        // Smart update: merge backend data with local state but keep local order
-        // when local timestamps are newer. Build a map from existing conversations
-        // then merge transformed results into it, prefer newer timestamps from
-        // the client, and finally sort by the merged lastMessageTime.
+        // Smart update: merge backend data with local state
         setConversations(prev => {
-          // If no previous conversations, just return transformed sorted by time
-          if (prev.length === 0) {
-            return transformed.sort((a: Contact, b: Contact) => {
-              return new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime()
-            })
-          }
-
-          const byId = new Map<string, Contact>()
-          // Seed map with existing conversations to preserve local fields
-          prev.forEach(c => byId.set(c.id, { ...c }))
-
-          // Merge transformed data in (overwrite fields but keep newer timestamps/messages)
-          transformed.forEach((newConv: Contact) => {
-            const existing = byId.get(newConv.id)
-            if (!existing) {
-              byId.set(newConv.id, { ...newConv })
-              return
-            }
-
-            const oldTime = new Date(existing.lastMessageTime || 0).getTime()
-            const newTime = new Date(newConv.lastMessageTime || 0).getTime()
-            const finalTime = oldTime > newTime ? existing.lastMessageTime : newConv.lastMessageTime
-            const finalLastMessage = existing.lastMessage || newConv.lastMessage
-
-            byId.set(newConv.id, {
-              ...existing,
-              ...newConv,
-              lastMessageTime: finalTime,
-              lastMessage: finalLastMessage
-            })
-          })
-
-          // Build merged array and sort by lastMessageTime descending
-          const mergedArr = Array.from(byId.values()).sort((a: Contact, b: Contact) => {
+          // Always sort by latest message time
+          const merged = transformed.sort((a: Contact, b: Contact) => {
             return new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime()
           })
-
-          // Quick equality check: same order and same key fields => no update
-          const isSame = mergedArr.length === prev.length && mergedArr.every((c, i) => (
+          
+          // Quick equality check to avoid unnecessary re-renders
+          if (merged.length === prev.length && merged.every((c: Contact, i: number) => 
             c.id === prev[i].id &&
             c.lastMessage === prev[i].lastMessage &&
-            c.lastMessageTime === prev[i].lastMessageTime &&
+            new Date(c.lastMessageTime || 0).getTime() === new Date(prev[i].lastMessageTime || 0).getTime() &&
             (c.unreadCount || 0) === (prev[i].unreadCount || 0)
-          ))
-
-          if (isSame) return prev
-          return mergedArr
+          )) {
+            return prev
+          }
+          
+          return merged
         })
       } else {
         console.error("Failed to fetch conversations:", response.status, response.statusText)
@@ -431,23 +405,98 @@ export default function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Poll conversations list every 20 seconds to check for new messages in other chats
+  // Initialize Socket.io and listen for real-time updates
+  useEffect(() => {
+    // Initialize Socket.io connection
+    const socket = initSocket();
+    
+    // Subscribe to all conversations for this user
+    subscribeToConversations();
+    
+    // Listen for new messages in real-time
+    socket.on('new_message', (data) => {
+      const { conversationId, message } = data;
+      console.log('💬 New message received:', conversationId, message);
+      
+      // Update messages if we're viewing this conversation
+      if (selectedContact?.id === conversationId) {
+        setMessages(prev => {
+          // Check if message already exists
+          if (prev.some(m => m._id === message._id)) return prev;
+          return [...prev, message];
+        });
+        shouldScrollRef.current = true;
+      }
+      
+      // Update conversation last message
+      setConversations(prev => prev.map(conv => 
+        conv.id === conversationId 
+          ? { 
+              ...conv, 
+              lastMessage: message.content?.text || '[Media]',
+              lastMessageTime: message.createdAt,
+              unreadCount: (conv.unreadCount || 0) + 1
+            }
+          : conv
+      ).sort((a, b) => 
+        new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime()
+      ));
+    });
+    
+    // Listen for conversation updates
+    socket.on('conversation_update', (data) => {
+      const { conversation } = data;
+      console.log('📭 Conversation updated:', conversation);
+      
+      setConversations(prev => {
+        const updated = prev.map(c => c.id === conversation.conversationId ? {
+          ...c,
+          lastMessage: conversation.lastMessagePreview,
+          lastMessageTime: conversation.lastMessageAt,
+          unreadCount: conversation.unreadCount || 0
+        } : c);
+        return updated.sort((a, b) => 
+          new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime()
+        );
+      });
+    });
+    
+    // Cleanup on unmount
+    return () => {
+      closeSocket();
+    };
+  }, [selectedContact?.id]);
+
+  // Poll conversations list every 5 seconds as fallback
   useEffect(() => {
     const interval = setInterval(() => {
       fetchConversations()
-    }, 20000) // Check every 20 seconds
+    }, 5000) // Check every 5 seconds for real-time updates
 
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // When contact is selected, load messages and update ref
+  // When contact is selected, load messages and join Socket.io room
   useEffect(() => {
     if (selectedContact) {
       selectedContactIdRef.current = selectedContact.id
       fetchMessages(selectedContact.id)
+      
+      // Join Socket.io room for this conversation
+      const socket = getSocket();
+      if (socket) {
+        joinConversation(selectedContact.id);
+        console.log('📍 Joined conversation room:', selectedContact.id);
+      }
     } else {
       selectedContactIdRef.current = null
+      
+      // Leave Socket.io room
+      const socket = getSocket();
+      if (socket && selectedContact) {
+        leaveConversation(selectedContact.id);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContact?.id])
@@ -522,7 +571,7 @@ export default function ChatPage() {
       } catch (error) {
         console.error("Error polling for new messages:", error)
       }
-    }, 30000) // Check every 30 seconds
+    }, 5000) // Check every 5 seconds for real-time updates
 
     return () => clearInterval(pollInterval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
