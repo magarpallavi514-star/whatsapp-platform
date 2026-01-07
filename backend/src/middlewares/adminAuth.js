@@ -66,6 +66,10 @@ export const authenticateAdmin = (req, res, next) => {
     // Mark request as admin authenticated
     req.isAdmin = true;
     
+    // For admin operations on internal account, set the accountId
+    // This allows admin to manage the platform's own WhatsApp numbers
+    req.accountId = 'pixels_internal'; // Internal platform account
+    
     next();
   } catch (error) {
     console.error('Admin auth error:', error);

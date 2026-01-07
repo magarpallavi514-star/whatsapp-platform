@@ -91,12 +91,13 @@ export default function SettingsPage() {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
   const API_KEY = "wpk_live_bd29f2f4cb5bec511bcab8b9c2e2dba3895b821bfcfcf18bf9fb6b7b70861d7d"
+  const ADMIN_API_KEY = "wpk_admin_47a15be172e6a2d97f8eb64d30dfea533a6799718ea4d7f6c0036bf481d60ef2"
 
   const fetchPhoneNumbers = async () => {
     try {
       setIsLoading(true)
       const response = await fetch(`${API_URL}/api/settings/phone-numbers`, {
-        headers: { "Authorization": `Bearer ${API_KEY}` }
+        headers: { "Authorization": `Bearer ${ADMIN_API_KEY}` }
       })
       if (response.ok) {
         const data = await response.json()
@@ -120,7 +121,7 @@ export default function SettingsPage() {
         method: 'POST',
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${API_KEY}`
+          "Authorization": `Bearer ${ADMIN_API_KEY}`
         },
         body: JSON.stringify(formData)
       })
@@ -146,7 +147,7 @@ export default function SettingsPage() {
         method: 'PUT',
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${API_KEY}`
+          "Authorization": `Bearer ${ADMIN_API_KEY}`
         },
         body: JSON.stringify({ isActive: !currentStatus })
       })
@@ -161,7 +162,7 @@ export default function SettingsPage() {
       setTestingId(id)
       const response = await fetch(`${API_URL}/api/settings/phone-numbers/${id}/test`, {
         method: 'POST',
-        headers: { "Authorization": `Bearer ${API_KEY}` }
+        headers: { "Authorization": `Bearer ${ADMIN_API_KEY}` }
       })
 
       const result = await response.json()
@@ -184,7 +185,7 @@ export default function SettingsPage() {
     try {
       const response = await fetch(`${API_URL}/api/settings/phone-numbers/${id}`, {
         method: 'DELETE',
-        headers: { "Authorization": `Bearer ${API_KEY}` }
+        headers: { "Authorization": `Bearer ${ADMIN_API_KEY}` }
       })
       if (response.ok) {
         alert('Phone number deleted successfully')
@@ -241,8 +242,6 @@ export default function SettingsPage() {
   }
 
   // Tenant Account Management
-  const ADMIN_API_KEY = "wpk_admin_47a15be172e6a2d97f8eb64d30dfea533a6799718ea4d7f6c0036bf481d60ef2"
-
   const fetchTenantAccounts = async () => {
     try {
       setIsLoading(true)
