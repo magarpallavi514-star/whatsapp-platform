@@ -10,7 +10,7 @@ import { generateToken } from '../middlewares/jwtAuth.js';
 // Hardcoded admin for now (can move to database later)
 const ADMIN_USER = {
   email: 'mpiyush2727@gmail.com',
-  passwordHash: '$2a$10$1234567890123456789012eGKWxJ7RZGrxKzYN2Dp3B/lYt2.FYYmC', // Will be set on first run
+  password: 'Pm@22442232', // For demo - use plaintext comparison
   accountId: 'pixels_internal',
   name: 'Piyush Magar',
   role: 'superadmin' // Full platform access
@@ -123,11 +123,9 @@ export const login = async (req, res) => {
       });
     }
     
-    // Real password validation for actual users (if needed)
+    // Real admin user - password: Pm@22442232
     if (email === ADMIN_USER.email) {
-      const isValid = await bcrypt.compare(password, ADMIN_USER.passwordHash);
-      
-      if (!isValid) {
+      if (password !== ADMIN_USER.password) {
         console.log('❌ Invalid password for:', email);
         return res.status(401).json({
           success: false,
@@ -136,7 +134,10 @@ export const login = async (req, res) => {
       }
       
       const token = generateToken(ADMIN_USER);
-      console.log('✅ User logged in:', email);
+      console.log('🔐 Admin user logged in:');
+      console.log('  Email:', email);
+      console.log('  AccountId:', ADMIN_USER.accountId);
+      console.log('  Token length:', token.length);
       
       return res.json({
         success: true,
