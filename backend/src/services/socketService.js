@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { Server } from 'socket.io';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'whatsapp-platform-jwt-secret-2026';
 
@@ -7,7 +8,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'whatsapp-platform-jwt-secret-2026'
  * Handles WebSocket connections, authentication, and event broadcasting
  */
 export const initSocketIO = (server) => {
-  const { Server } = require('socket.io');
   
   const io = new Server(server, {
     cors: {
