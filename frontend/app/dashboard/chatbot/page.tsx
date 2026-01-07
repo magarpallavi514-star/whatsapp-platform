@@ -5,7 +5,12 @@ import { Bot, Plus, Play, Pause, Edit, Trash2, X, Search, MessageSquare, Zap, Li
 import { Button } from "@/components/ui/button"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050';
-const API_KEY = "wpk_live_f0b8a01652eb0b9950484f3b4674bd800e9e3e9a216f200f34b0502a0591ac5d";
+
+const getHeaders = () => {
+  return {
+    "Content-Type": "application/json",
+  }
+}
 
 interface ReplyOption {
   id: string;
@@ -120,9 +125,7 @@ export default function ChatbotPage() {
   const fetchBots = async () => {
     try {
       const response = await fetch(`${API_URL}/api/chatbots`, {
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`
-        }
+        headers: getHeaders()
       });
       
       console.log('📡 Fetch response status:', response.status);
@@ -204,7 +207,7 @@ export default function ChatbotPage() {
       const response = await fetch(url, {
         method,
         headers: {
-          'Authorization': `Bearer ${API_KEY}`,
+          ...getHeaders(),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
@@ -241,9 +244,7 @@ export default function ChatbotPage() {
     try {
       const response = await fetch(`${API_URL}/api/chatbots/${id}/toggle`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`
-        }
+        headers: getHeaders()
       });
 
       if (response.ok) {
@@ -261,8 +262,7 @@ export default function ChatbotPage() {
       const response = await fetch(`${API_URL}/api/chatbots/${id}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${API_KEY}`
-        }
+        headers: getHeaders()
       });
 
       if (response.ok) {

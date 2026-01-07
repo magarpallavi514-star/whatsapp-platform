@@ -66,15 +66,20 @@ export default function ChatPage() {
 
   // API base URL (update with your backend URL)
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
-  const API_KEY = "wpk_live_f0b8a01652eb0b9950484f3b4674bd800e9e3e9a216f200f34b0502a0591ac5d"
+
+  const getHeaders = () => {
+    // For external app integrations using API keys
+    // For dashboard, would use JWT token from auth service
+    return {
+      "Content-Type": "application/json",
+    }
+  }
 
   // Fetch conversations
   const fetchConversations = useCallback(async () => {
     try {
       const response = await fetch(`${API_URL}/api/conversations`, {
-        headers: {
-          "Authorization": `Bearer ${API_KEY}`,
-        },
+        headers: getHeaders(),
       })
       if (response.ok) {
         const data = await response.json()

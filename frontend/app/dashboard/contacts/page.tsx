@@ -47,16 +47,19 @@ export default function ContactsPage() {
   const [tagInput, setTagInput] = useState("")
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
-  const API_KEY = "wpk_live_f0b8a01652eb0b9950484f3b4674bd800e9e3e9a216f200f34b0502a0591ac5d"
+
+  const getHeaders = () => {
+    return {
+      "Content-Type": "application/json",
+    }
+  }
 
   // Fetch contacts
   const fetchContacts = async () => {
     try {
       setIsLoading(true)
       const response = await fetch(`${API_URL}/api/contacts?limit=100`, {
-        headers: {
-          "Authorization": `Bearer ${API_KEY}`,
-        },
+        headers: getHeaders(),
       })
       if (response.ok) {
         const data = await response.json()

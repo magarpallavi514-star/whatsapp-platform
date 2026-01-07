@@ -157,8 +157,7 @@ export default function SettingsPage() {
     try {
       const response = await fetch(`${API_URL}/api/settings/phone-numbers/${id}`, {
         method: 'PUT',
-        headers: { "Content-Type": "application/json" },
-        credentials: 'include',
+        headers: getHeaders(),
         body: JSON.stringify({ isActive: !currentStatus })
       })
       if (response.ok) fetchPhoneNumbers()
@@ -172,7 +171,7 @@ export default function SettingsPage() {
       setTestingId(id)
       const response = await fetch(`${API_URL}/api/settings/phone-numbers/${id}/test`, {
         method: 'POST',
-        credentials: 'include'
+        headers: getHeaders()
       })
 
       const result = await response.json()
@@ -195,7 +194,7 @@ export default function SettingsPage() {
     try {
       const response = await fetch(`${API_URL}/api/settings/phone-numbers/${id}`, {
         method: 'DELETE',
-        credentials: 'include'
+        headers: getHeaders()
       })
       if (response.ok) {
         alert('Phone number deleted successfully')
@@ -213,10 +212,7 @@ export default function SettingsPage() {
     try {
       const response = await fetch(`${API_URL}/api/settings/profile`, {
         method: 'PUT',
-        headers: {
-          "Content-Type": "application/json",
-          credentials: 'include'
-        },
+        headers: getHeaders(),
         body: JSON.stringify(profileData)
       })
       if (response.ok) {
@@ -240,7 +236,7 @@ export default function SettingsPage() {
   const fetchApiKeys = async () => {
     try {
       const response = await fetch(`${API_URL}/api/settings/api-keys`, {
-        headers: { credentials: 'include' }
+        headers: getHeaders()
       })
       if (response.ok) {
         const data = await response.json()
@@ -256,7 +252,7 @@ export default function SettingsPage() {
     try {
       setIsLoading(true)
       const response = await fetch(`${API_URL}/api/admin/accounts`, {
-        headers: { credentials: 'include' }
+        headers: getHeaders()
       })
       if (response.ok) {
         const data = await response.json()
@@ -274,7 +270,7 @@ export default function SettingsPage() {
     try {
       setIsLoading(true)
       const response = await fetch(`${API_URL}/api/account`, {
-        headers: { credentials: 'include' }
+        headers: getHeaders()
       })
       if (response.ok) {
         const data = await response.json()
@@ -293,7 +289,7 @@ export default function SettingsPage() {
     try {
       const response = await fetch(`${API_URL}/api/account/api-key/generate`, {
         method: 'POST',
-        headers: { credentials: 'include' }
+        headers: getHeaders()
       })
 
       const result = await response.json()
@@ -321,7 +317,7 @@ export default function SettingsPage() {
         method: 'POST',
         headers: {
           "Content-Type": "application/json",
-          credentials: 'include'
+          headers: getHeaders()
         },
         body: JSON.stringify({ name: apiKeyName })
       })
@@ -345,7 +341,7 @@ export default function SettingsPage() {
     try {
       const response = await fetch(`${API_URL}/api/settings/api-keys/${id}`, {
         method: 'DELETE',
-        headers: { credentials: 'include' }
+        headers: getHeaders()
       })
       if (response.ok) {
         alert('API key deleted successfully')
@@ -373,7 +369,7 @@ export default function SettingsPage() {
         method: 'POST',
         headers: {
           "Content-Type": "application/json",
-          credentials: 'include'
+          headers: getHeaders()
         },
         body: JSON.stringify({
           currentPassword: passwordData.currentPassword,
