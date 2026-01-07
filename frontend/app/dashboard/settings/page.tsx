@@ -78,6 +78,16 @@ export default function SettingsPage() {
     confirmPassword: ''
   })
   const [apiKeyName, setApiKeyName] = useState('')
+  const [tenantAccounts, setTenantAccounts] = useState<any[]>([])
+  const [showTenantModal, setShowTenantModal] = useState(false)
+  const [newTenantKey, setNewTenantKey] = useState('')
+  const [profileData, setProfileData] = useState({
+    name: '',
+    email: '',
+    company: '',
+    phone: '',
+    timezone: ''
+  })
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
   const API_KEY = "wpk_live_f0b8a01652eb0b9950484f3b4674bd800e9e3e9a216f200f34b0502a0591ac5d"
@@ -209,6 +219,12 @@ export default function SettingsPage() {
     }
   }
 
+  // Utility function
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    alert('Copied to clipboard!')
+  }
+
   // API Keys handlers
   const fetchApiKeys = async () => {
     try {
@@ -232,7 +248,19 @@ export default function SettingsPage() {
       setIsLoading(true)
       const response = await fetch(`${API_URL}/api/admin/accounts`, {
         headers: { "Authorization": `Bearer ${ADMIN_API_KEY}` }
-     My Account API Key Management
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setTenantAccounts(data.accounts || [])
+      }
+    } catch (error) {
+      console.error("Error fetching tenant accounts:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // My Account API Key Management
   const fetchMyAccount = async () => {
     try {
       setIsLoading(true)
@@ -269,7 +297,10 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error("Error generating API key:", error)
-      alert('Failed to generate API key
+      alert('Failed to generate API key')
+    }
+  }
+
   const generateApiKey = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!apiKeyName.trim()) {
@@ -422,7 +453,7 @@ export default function SettingsPage() {
                   <p className="text-gray-600 mb-1">No WhatsApp numbers connected</p>
                   <p className="text-sm text-gray-500 mb-4">Add your first WhatsApp Business number</p>
                   <Button className="bg-green-600 hover:bg-green-700" onClick={() => setShowAddModal(true)}>
-           MyAccount className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mr-2" />
                     Add Phone Number
                   </Button>
                 </div>
