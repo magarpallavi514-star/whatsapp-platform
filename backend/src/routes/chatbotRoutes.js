@@ -8,12 +8,10 @@ import {
   deleteChatbot,
   getChatbotInteractions
 } from '../controllers/chatbotController.js';
-import { authenticate } from '../middlewares/auth.js';
 
 const router = express.Router();
 
-// All routes require authentication
-router.use(authenticate);
+// JWT auth is handled at app.js level, no need for authenticate here
 
 // Get all chatbots with stats
 router.get('/', getChatbots);
