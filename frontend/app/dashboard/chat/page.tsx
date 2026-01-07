@@ -490,13 +490,14 @@ export default function ChatPage() {
         console.log('📍 Joined conversation room:', selectedContact.id);
       }
     } else {
-      selectedContactIdRef.current = null
-      
-      // Leave Socket.io room
+      // Leave Socket.io room when deselecting
+      const prevContactId = selectedContactIdRef.current;
       const socket = getSocket();
-      if (socket && selectedContact) {
-        leaveConversation(selectedContact.id);
+      if (socket && prevContactId) {
+        leaveConversation(prevContactId);
       }
+      
+      selectedContactIdRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContact?.id])
