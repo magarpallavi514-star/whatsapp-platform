@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { FileText, Plus, Search, MoreVertical, CheckCircle, Clock, XCircle, Edit, Trash2, Eye, X, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { authService } from "@/lib/auth"
 
 interface Template {
   _id: string
@@ -50,16 +51,21 @@ export default function TemplatesPage() {
   })
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
-  const API_KEY = "wpk_live_f0b8a01652eb0b9950484f3b4674bd800e9e3e9a216f200f34b0502a0591ac5d"
+
+  const getHeaders = () => {
+    const token = authService.getToken()
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
+  }
 
   // Fetch templates
   const fetchTemplates = async () => {
     try {
       setIsLoading(true)
       const response = await fetch(`${API_URL}/api/templates`, {
-        headers: {
-          "Authorization": `Bearer ${API_KEY}`,
-        },
+        headers: getHeaders(),
       })
       if (response.ok) {
         const data = await response.json()
@@ -126,11 +132,9 @@ export default function TemplatesPage() {
   const syncTemplatesFromWhatsApp = async () => {
     try {
       setIsSyncing(true)
-      const response = await fetch(`${API_URL}/api/templates/sync`, {
+      const response = await fetch(`${API_URL}/api/settings/templates/sync`, {
         method: 'POST',
-        headers: {
-          "Authorization": `Bearer ${API_KEY}`,
-        },
+        headers: getHeaders(),
       })
 
       const result = await response.json()
