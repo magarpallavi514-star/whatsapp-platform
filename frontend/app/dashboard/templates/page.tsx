@@ -64,13 +64,43 @@ export default function TemplatesPage() {
   const fetchTemplates = async () => {
     try {
       setIsLoading(true)
+      const token = authService.getToken()
+      console.log("Token available:", !!token, "Token:", token ? token.substring(0, 20) + "..." : "none")
+      console.log("Auth status:", authService.isAuthenticated())
+      console.log("API URL:", API_URL)
+      const headers = getHeaders()
+      console.log("Headers being sent:", headers)
+      
+      if (!token) {
+        console.error("No token found - user not authenticated. Redirecting to login...")
+        return
+      }
+      
       const response = await fetch(`${API_URL}/api/templates`, {
-        headers: getHeaders(),
+        headers: headers,
       })
       if (response.ok) {
         const data = await response.json()
-        setTemplates(data.templates || [])
+        console.log("Templates response:", data)
+        console.log("Type of data:", typeof data)
+        console.log("Is array?", Array.isArray(data))
+        console.log("Has templates property?", 'templates' in data)
+        
+        // Handle both array and object responses
+        let templatesArray = []
+        if (Array.isArray(data)) {
+          templatesArray = data
+        } else if (data.templates && Array.isArray(data.templates)) {
+          templatesArray = data.templates
+        }
+        
+        console.log("Setting templates:", templatesArray.length, "items")
+        setTemplates(templatesArray)
         setStats(data.stats || { approved: 0, pending: 0, rejected: 0, draft: 0, total: 0 })
+      } else {
+        console.error("Failed to fetch templates:", response.status)
+        const errorData = await response.text()
+        console.error("Error response:", errorData)
       }
     } catch (error) {
       console.error("Error fetching templates:", error)

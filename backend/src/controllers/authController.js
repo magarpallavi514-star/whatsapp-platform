@@ -80,26 +80,17 @@ export const login = async (req, res) => {
 
 /**
  * POST /api/auth/logout
- * Logout and destroy session
+ * Logout (JWT is stateless - just clear on client side)
  */
 export const logout = async (req, res) => {
   try {
-    req.session.destroy((err) => {
-      if (err) {
-        console.error('❌ Logout error:', err);
-        return res.status(500).json({
-          success: false,
-          message: 'Logout failed'
-        });
-      }
-      
-      res.clearCookie('connect.sid');
-      console.log('✅ User logged out');
-      
-      res.json({
-        success: true,
-        message: 'Logout successful'
-      });
+    // JWT is stateless, no session to destroy
+    // Client should clear localStorage token
+    console.log('✅ User logged out');
+    
+    res.json({
+      success: true,
+      message: 'Logged out successfully'
     });
   } catch (error) {
     console.error('❌ Logout error:', error);
@@ -112,11 +103,11 @@ export const logout = async (req, res) => {
 
 /**
  * GET /api/auth/me
- * Get current logged-in user
+ * Get current logged-in user (requires JWT token)
  */
 export const getCurrentUser = async (req, res) => {
   try {
-    if (!req.session.user) {
+    if (!req.user) {
       return res.status(401).json({
         success: false,
         message: 'Not authenticated'
@@ -125,7 +116,7 @@ export const getCurrentUser = async (req, res) => {
     
     res.json({
       success: true,
-      user: req.session.user
+      user: req.user
     });
     
   } catch (error) {

@@ -98,6 +98,8 @@ app.use('/api/auth', authRoutes);
 
 // Mount dashboard routes (JWT AUTH - for logged-in dashboard users)
 app.use('/api/settings', requireJWT, settingsRoutes);
+app.use('/api/templates', requireJWT, templateRoutes);
+app.use('/api/chatbots', requireJWT, chatbotRoutes);
 
 // Mount self-service account routes (ACCOUNT AUTH required)
 app.use('/api/account', authenticate, accountRoutes);
@@ -107,8 +109,6 @@ app.use('/api/messages', authenticate, messageRoutes);
 app.use('/api/conversations', authenticate, conversationRoutes);
 app.use('/api/contacts', authenticate, contactRoutes);
 app.use('/api/stats', authenticate, statsRoutes);
-app.use('/api/templates', authenticate, templateRoutes);
-app.use('/api/chatbots', authenticate, chatbotRoutes);
 
 // 404 handler
 app.use((req, res) => {
