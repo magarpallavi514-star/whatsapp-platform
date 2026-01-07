@@ -44,13 +44,12 @@ export const authService = {
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include', // Important for cookies!
         body: JSON.stringify({ email, password })
       })
 
       const data = await response.json()
 
-      if (response.ok && data.success) {
+      if (response.ok && data.success && data.token) {
         const user: User = {
           id: data.user.accountId || '1',
           email: data.user.email,
@@ -60,8 +59,10 @@ export const authService = {
           accountId: data.user.accountId
         }
 
+        // Store JWT token instead of session
         localStorage.setItem("isAuthenticated", "true")
         localStorage.setItem("user", JSON.stringify(user))
+        localStorage.setItem("token", data.token)
 
         return { success: true, user }
       } else {
@@ -73,19 +74,31 @@ export const authService = {
     }
   },
 
-  // Logout - Real API call
+  // Get JWT token
+  getToken: (): string | null => {
+    if (typeof window === "undefined") return null
+    return localStorage.getItem("token")
+  },
+
+  // Logout
   logout: async () => {
     try {
-      await fetch(`${API_URL}/api/auth/logout`, {
-        method: 'POST',
-        credentials: 'include'
-      })
+      const token = localStorage.getItem("token")
+      if (token) {
+        await fetch(`${API_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+      }
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
       if (typeof window !== "undefined") {
         localStorage.removeItem("isAuthenticated")
         localStorage.removeItem("user")
+        localStorage.removeItem("token")
       }
     }
   },

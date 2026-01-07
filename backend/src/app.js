@@ -2,12 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import session from 'express-session';
-import cookieParser from 'cookie-parser';
 
 // Import middleware
 import { authenticate } from './middlewares/auth.js';
-import { requireSession } from './middlewares/sessionAuth.js';
+import { requireJWT } from './middlewares/jwtAuth.js';
 
 // Import routes
 import webhookRoutes from './routes/webhookRoutes.js';
@@ -50,20 +48,7 @@ app.use(cors({
   credentials: true
 }));
 
-// Cookie and session support
-app.use(cookieParser());
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'whatsapp-platform-secret-2026',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' needed for cross-origin
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
-
+// JSON and URL-encoded body parsing (JWT is stateless - no session needed)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -111,8 +96,8 @@ app.use('/api/webhooks', webhookRoutes);
 // Mount auth routes (NO AUTH - public login/logout)
 app.use('/api/auth', authRoutes);
 
-// Mount dashboard routes (SESSION AUTH - for logged-in dashboard users)
-app.use('/api/settings', requireSession, settingsRoutes);
+// Mount dashboard routes (JWT AUTH - for logged-in dashboard users)
+app.use('/api/settings', requireJWT, settingsRoutes);
 
 // Mount self-service account routes (ACCOUNT AUTH required)
 app.use('/api/account', authenticate, accountRoutes);

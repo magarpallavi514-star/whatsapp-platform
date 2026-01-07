@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { MessageSquare, User, Lock, Shield, Plus, Trash2, CheckCircle, XCircle, RefreshCw, Phone, X, Copy, Eye, EyeOff, Key } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { authService } from "@/lib/auth"
 
 interface PhoneNumber {
   _id: string
@@ -93,11 +94,19 @@ export default function SettingsPage() {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
 
+  const getHeaders = () => {
+    const token = authService.getToken()
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
+  }
+
   const fetchPhoneNumbers = async () => {
     try {
       setIsLoading(true)
       const response = await fetch(`${API_URL}/api/settings/phone-numbers`, {
-        credentials: 'include' // Session cookie
+        headers: getHeaders()
       })
       if (response.ok) {
         const data = await response.json()
@@ -119,8 +128,7 @@ export default function SettingsPage() {
     try {
       const response = await fetch(`${API_URL}/api/settings/phone-numbers`, {
         method: 'POST',
-        headers: { "Content-Type": "application/json" },
-        credentials: 'include',
+        headers: getHeaders(),
         body: JSON.stringify(formData)
       })
 

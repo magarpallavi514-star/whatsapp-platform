@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { generateToken } from '../middlewares/jwtAuth.js';
 
 /**
  * Auth Controller
@@ -50,21 +51,16 @@ export const login = async (req, res) => {
       });
     }
     
-    // Create session
-    req.session.user = {
-      email: ADMIN_USER.email,
-      accountId: ADMIN_USER.accountId,
-      name: ADMIN_USER.name,
-      role: ADMIN_USER.role
-    };
+    // Generate JWT token instead of session
+    const token = generateToken(ADMIN_USER);
     
     console.log('✅ User logged in:', email);
-    console.log('✅ Session ID:', req.sessionID);
-    console.log('✅ Session user:', req.session.user);
+    console.log('✅ JWT token generated');
     
     res.json({
       success: true,
       message: 'Login successful',
+      token,
       user: {
         email: ADMIN_USER.email,
         name: ADMIN_USER.name,
