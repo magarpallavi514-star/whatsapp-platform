@@ -43,6 +43,7 @@ export const login = async (req, res) => {
     const isValid = await bcrypt.compare(password, passwordHash);
     
     if (!isValid) {
+      console.log('❌ Invalid password for:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -58,6 +59,8 @@ export const login = async (req, res) => {
     };
     
     console.log('✅ User logged in:', email);
+    console.log('✅ Session ID:', req.sessionID);
+    console.log('✅ Session user:', req.session.user);
     
     res.json({
       success: true,
