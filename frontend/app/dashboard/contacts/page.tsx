@@ -100,10 +100,7 @@ export default function ContactsPage() {
       
       const response = await fetch(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Type": "application/json",
-        },
+        headers: getHeaders(),
         body: JSON.stringify(payload),
       })
 
