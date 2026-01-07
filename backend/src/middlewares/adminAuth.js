@@ -1,9 +1,11 @@
 /**
  * Admin Authentication Middleware
  * Validates admin API key for account management operations
+ * Also accepts regular API keys for internal account (pixels_internal)
  */
 
 import crypto from 'crypto';
+import Account from '../models/Account.js';
 
 // Admin key stored securely in environment
 const ADMIN_API_KEY_HASH = process.env.ADMIN_API_KEY_HASH;
@@ -20,9 +22,9 @@ function hashKey(key) {
 
 /**
  * Admin authentication middleware
- * Validates wpk_admin_ prefixed keys
+ * Validates wpk_admin_ prefixed keys OR regular API keys for internal account
  */
-export const authenticateAdmin = (req, res, next) => {
+export const authenticateAdmin = async (req, res, next) => {
   try {
     // Extract Authorization header
     const authHeader = req.headers.authorization;
@@ -37,17 +39,65 @@ export const authenticateAdmin = (req, res, next) => {
     // Extract token
     const token = authHeader.substring(7); // Remove "Bearer "
     
-    // Validate format
-    if (!token.startsWith('wpk_admin_')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid admin API key format. Must start with: wpk_admin_'
-      });
+    // Check if it's an admin key (wpk_admin_)
+    if (token.startsWith('wpk_admin_')) {
+      // Validate against hashed admin key
+      if (!ADMIN_API_KEY_HASH) {
+        console.error('❌ ADMIN_API_KEY_HASH not configured in environment');
+        return res.status(500).json({
+          success: false,
+          message: 'Admin authentication not configured'
+        });
+      }
+      
+      const providedHash = hashKey(token);
+      
+      if (providedHash !== ADMIN_API_KEY_HASH) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid admin API key'
+        });
+      }
+      
+      // Mark request as admin authenticated
+      req.isAdmin = true;
+      req.accountId = 'pixels_internal'; // Internal platform account
+      
+      return next();
     }
     
-    // Validate against hashed admin key
-    if (!ADMIN_API_KEY_HASH) {
-      console.error('❌ ADMIN_API_KEY_HASH not configured in environment');
+    // Check if it's a regular API key for internal account (fallback)
+    if (token.startsWith('wpk_live_')) {
+      try {
+        const account = await Account.findByApiKey(token);
+        
+        if (account && account.accountId === 'pixels_internal') {
+          // Allow internal account to manage its own phone numbers
+          req.isAdmin = false;
+          req.accountId = account.accountId;
+          req.account = account;
+          
+          return next();
+        }
+      } catch (error) {
+        console.error('Error validating regular API key:', error);
+      }
+    }
+    
+    // If we get here, authentication failed
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid API key format. Must be wpk_admin_ or valid wpk_live_ for internal account'
+    });
+    
+  } catch (error) {
+    console.error('Admin auth error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Authentication error'
+    });
+  }
+};
       return res.status(500).json({
         success: false,
         message: 'Admin authentication not configured'

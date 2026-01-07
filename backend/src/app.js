@@ -2,10 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import session from 'express-session';
+import cookieParser from 'cookie-parser';
 
 // Import middleware
 import { authenticate } from './middlewares/auth.js';
-import { authenticateAdmin } from './middlewares/adminAuth.js';
+import { requireSession } from './middlewares/sessionAuth.js';
 
 // Import routes
 import webhookRoutes from './routes/webhookRoutes.js';
@@ -13,11 +15,11 @@ import messageRoutes from './routes/messageRoutes.js';
 import conversationRoutes from './routes/conversationRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
-import adminAccountRoutes from './routes/adminAccountRoutes.js';
 import accountRoutes from './routes/accountRoutes.js';
 import templateRoutes from './routes/templateRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import chatbotRoutes from './routes/chatbotRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -28,6 +30,8 @@ const app = express();
 // Middleware
 const allowedOrigins = [
   'http://localhost:3000',
+  'https://whatsapp-platform-nine.vercel.app',
+  'https://mpiyush15-whatsapp-platform.vercel.app',
   'https://mpiyush15-whatsapp-platform.vercel.app',
   process.env.FRONTEND_URL
 ].filter(Boolean);
@@ -45,6 +49,20 @@ app.use(cors({
   },
   credentials: true
 }));
+
+// Cookie and session support
+app.use(cookieParser());
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'whatsapp-platform-secret-2026',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -89,19 +107,21 @@ app.get('/api/test-db', async (req, res) => {
 // Mount webhook routes (NO AUTH - verified by token)
 app.use('/api/webhooks', webhookRoutes);
 
-// Mount admin routes (ADMIN AUTH required)
-app.use('/api/admin/accounts', authenticateAdmin, adminAccountRoutes);
+// Mount auth routes (NO AUTH - public login/logout)
+app.use('/api/auth', authRoutes);
+
+// Mount dashboard routes (SESSION AUTH - for logged-in dashboard users)
+app.use('/api/settings', requireSession, settingsRoutes);
 
 // Mount self-service account routes (ACCOUNT AUTH required)
 app.use('/api/account', authenticate, accountRoutes);
 
-// Mount API routes (PROTECTED by API key authentication)
+// Mount API routes (API KEY AUTH - for external apps like Enromatics)
 app.use('/api/messages', authenticate, messageRoutes);
 app.use('/api/conversations', authenticate, conversationRoutes);
 app.use('/api/contacts', authenticate, contactRoutes);
 app.use('/api/stats', authenticate, statsRoutes);
 app.use('/api/templates', authenticate, templateRoutes);
-app.use('/api/settings', authenticate, settingsRoutes);
 app.use('/api/chatbots', authenticate, chatbotRoutes);
 
 // 404 handler
