@@ -315,10 +315,7 @@ export default function SettingsPage() {
     try {
       const response = await fetch(`${API_URL}/api/settings/api-keys`, {
         method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-          headers: getHeaders()
-        },
+        headers: getHeaders(),
         body: JSON.stringify({ name: apiKeyName })
       })
       const result = await response.json()
@@ -367,10 +364,7 @@ export default function SettingsPage() {
     try {
       const response = await fetch(`${API_URL}/api/settings/change-password`, {
         method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-          headers: getHeaders()
-        },
+        headers: getHeaders(),
         body: JSON.stringify({
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword

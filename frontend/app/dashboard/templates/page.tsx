@@ -84,10 +84,7 @@ export default function TemplatesPage() {
     try {
       const response = await fetch(`${API_URL}/api/templates`, {
         method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${API_KEY}`,
-        },
+        headers: getHeaders(),
         body: JSON.stringify(formData),
       })
 
@@ -112,9 +109,7 @@ export default function TemplatesPage() {
     try {
       const response = await fetch(`${API_URL}/api/templates/${id}`, {
         method: 'DELETE',
-        headers: {
-          "Authorization": `Bearer ${API_KEY}`,
-        },
+        headers: getHeaders(),
       })
 
       if (response.ok) {

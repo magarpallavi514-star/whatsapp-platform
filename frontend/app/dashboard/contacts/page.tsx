@@ -298,10 +298,7 @@ export default function ContactsPage() {
         // Send to backend
         const response = await fetch(`${API_URL}/api/contacts/import`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            headers: getHeaders(),
-          },
+          headers: getHeaders(),
           body: JSON.stringify({ contacts }),
         })
         
