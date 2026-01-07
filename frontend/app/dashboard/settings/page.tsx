@@ -66,7 +66,7 @@ export default function SettingsPage() {
     displayPhone: ''
   })
   const [tenantFormData, setTenantFormData] = useState({
-    accou 'John Doe',
+    accountName: 'John Doe',
     email: 'john@example.com',
     company: 'My Company',
     phone: '+1 234 567 8900',
