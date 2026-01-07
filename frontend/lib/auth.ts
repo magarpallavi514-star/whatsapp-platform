@@ -15,9 +15,12 @@ export interface User {
   role: UserRole
   phoneNumber?: string
   company?: string
+  accountId?: string
 }
 
-// Mock authentication - Replace with actual API calls
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
+
+// Real authentication with backend API
 export const authService = {
   // Check if user is authenticated
   isAuthenticated: (): boolean => {
@@ -33,41 +36,56 @@ export const authService = {
     return JSON.parse(userStr)
   },
 
-  // Login
+  // Login - Real API call
   login: async (email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
-    // Mock login - Replace with actual API call
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include', // Important for cookies!
+        body: JSON.stringify({ email, password })
+      })
 
-      // Mock user data based on email
-      const role = email.includes("superadmin") ? UserRole.SUPERADMIN
-                 : email.includes("admin") ? UserRole.ADMIN 
-                 : email.includes("manager") ? UserRole.MANAGER
-                 : email.includes("agent") ? UserRole.AGENT
-                 : UserRole.USER
+      const data = await response.json()
 
-      const user: User = {
-        id: "1",
-        email,
-        name: email.split("@")[0],
-        role,
+      if (response.ok && data.success) {
+        const user: User = {
+          id: data.user.accountId || '1',
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role === 'admin' ? UserRole.ADMIN : UserRole.USER,
+          accountId: data.user.accountId
+        }
+
+        localStorage.setItem("isAuthenticated", "true")
+        localStorage.setItem("user", JSON.stringify(user))
+
+        return { success: true, user }
+      } else {
+        return { success: false, error: data.message || "Login failed" }
       }
-
-      localStorage.setItem("isAuthenticated", "true")
-      localStorage.setItem("user", JSON.stringify(user))
-
-      return { success: true, user }
     } catch (error) {
-      return { success: false, error: "Login failed" }
+      console.error('Login error:', error)
+      return { success: false, error: "Login failed. Please try again." }
     }
   },
 
-  // Logout
-  logout: () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("isAuthenticated")
-      localStorage.removeItem("user")
+  // Logout - Real API call
+  logout: async () => {
+    try {
+      await fetch(`${API_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      })
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("isAuthenticated")
+        localStorage.removeItem("user")
+      }
     }
   },
 
