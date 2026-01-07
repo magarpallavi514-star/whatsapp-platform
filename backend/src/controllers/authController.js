@@ -49,7 +49,11 @@ export const login = async (req, res) => {
       };
       
       const token = generateToken(user);
-      console.log('✅ SuperAdmin demo user logged in');
+      console.log('🔐 SuperAdmin login:');
+      console.log('  Email:', email);
+      console.log('  AccountId:', user.accountId);
+      console.log('  Token length:', token.length);
+      console.log('  Token starts with:', token.substring(0, 20) + '...');
       
       return res.json({
         success: true,

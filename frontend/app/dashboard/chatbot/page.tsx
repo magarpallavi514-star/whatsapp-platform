@@ -129,6 +129,13 @@ export default function ChatbotPage() {
     try {
       const token = authService.getToken();
       console.log('🔑 Token available:', !!token);
+      console.log('🔑 Token from storage:', localStorage.getItem('token')?.substring(0, 20) + '...');
+      
+      const headers = getHeaders();
+      console.log('📤 Headers being sent:', { 
+        hasAuthorization: !!headers.Authorization,
+        authHeaderValue: headers.Authorization?.substring(0, 30) + '...'
+      });
       
       const response = await fetch(`${API_URL}/api/chatbots`, {
         headers: getHeaders()

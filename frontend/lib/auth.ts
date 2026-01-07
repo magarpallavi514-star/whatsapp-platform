@@ -48,6 +48,7 @@ export const authService = {
       })
 
       const data = await response.json()
+      console.log('🔐 Login response:', { status: response.status, success: data.success, hasToken: !!data.token });
 
       if (response.ok && data.success && data.token) {
         const user: User = {
@@ -63,9 +64,16 @@ export const authService = {
         localStorage.setItem("isAuthenticated", "true")
         localStorage.setItem("user", JSON.stringify(user))
         localStorage.setItem("token", data.token)
+        
+        console.log('✅ Token stored:', {
+          isAuthenticated: localStorage.getItem("isAuthenticated"),
+          hasToken: !!localStorage.getItem("token"),
+          tokenLength: data.token.length
+        });
 
         return { success: true, user }
       } else {
+        console.log('❌ Login failed:', data.message);
         return { success: false, error: data.message || "Login failed" }
       }
     } catch (error) {
@@ -77,7 +85,9 @@ export const authService = {
   // Get JWT token
   getToken: (): string | null => {
     if (typeof window === "undefined") return null
-    return localStorage.getItem("token")
+    const token = localStorage.getItem("token")
+    console.log('🔑 Getting token:', { hasToken: !!token, tokenLength: token?.length || 0 });
+    return token
   },
 
   // Logout

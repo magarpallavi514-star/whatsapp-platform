@@ -9,9 +9,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'whatsapp-platform-jwt-secret-2026'
 
 export const requireJWT = (req, res, next) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '');
+    
+    console.log('🔑 JWT Check:');
+    console.log('  Auth Header:', !!authHeader ? '✅ Present' : '❌ Missing');
+    console.log('  Token:', !!token ? '✅ Present' : '❌ Missing');
     
     if (!token) {
+      console.log('  → Rejecting: No token provided');
       return res.status(401).json({
         success: false,
         message: 'Authentication required. Please login.',
@@ -21,6 +27,7 @@ export const requireJWT = (req, res, next) => {
     
     // Verify token
     const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('  → ✅ Token verified for:', decoded.email);
     
     // Inject user info into request
     req.accountId = decoded.accountId;
@@ -34,6 +41,7 @@ export const requireJWT = (req, res, next) => {
     next();
   } catch (error) {
     console.error('❌ JWT verification failed:', error.message);
+    console.error('  JWT_SECRET env:', !!process.env.JWT_SECRET ? '✅ Set' : '❌ Using default');
     return res.status(401).json({
       success: false,
       message: 'Invalid or expired token. Please login again.',
