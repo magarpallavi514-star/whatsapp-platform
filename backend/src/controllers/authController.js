@@ -19,6 +19,7 @@ const ADMIN_USER = {
 /**
  * POST /api/auth/login
  * Login with email and password
+ * Demo mode: superadmin@test.com accepts any password
  */
 export const login = async (req, res) => {
   try {
@@ -31,42 +32,125 @@ export const login = async (req, res) => {
       });
     }
     
-    // Check email
-    if (email !== ADMIN_USER.email) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-    
-    // Hash and verify password
-    const passwordHash = await bcrypt.hash('Pm@22442232', 10);
-    const isValid = await bcrypt.compare(password, passwordHash);
-    
-    if (!isValid) {
-      console.log('❌ Invalid password for:', email);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-    
-    // Generate JWT token instead of session
-    const token = generateToken(ADMIN_USER);
-    
-    console.log('✅ User logged in:', email);
-    console.log('✅ JWT token generated');
-    
-    res.json({
-      success: true,
-      message: 'Login successful',
-      token,
-      user: {
-        email: ADMIN_USER.email,
-        name: ADMIN_USER.name,
-        accountId: ADMIN_USER.accountId,
-        role: ADMIN_USER.role
+    // Demo superadmin account - password: 22442232
+    if (email === 'superadmin@test.com') {
+      if (password !== '22442232') {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password'
+        });
       }
+      
+      const user = {
+        email: 'superadmin@test.com',
+        accountId: 'pixels_internal',
+        name: 'SuperAdmin (Demo)',
+        role: 'superadmin'
+      };
+      
+      const token = generateToken(user);
+      console.log('✅ SuperAdmin demo user logged in');
+      
+      return res.json({
+        success: true,
+        message: 'Login successful',
+        token,
+        user
+      });
+    }
+    
+    // Demo admin account - accepts any password
+    if (email === 'admin@test.com') {
+      const user = {
+        email: 'admin@test.com',
+        accountId: 'demo_admin_001',
+        name: 'Admin (Demo)',
+        role: 'admin'
+      };
+      
+      const token = generateToken(user);
+      console.log('✅ Admin demo user logged in');
+      
+      return res.json({
+        success: true,
+        message: 'Login successful',
+        token,
+        user
+      });
+    }
+    
+    // Demo manager account - accepts any password
+    if (email === 'manager@test.com') {
+      const user = {
+        email: 'manager@test.com',
+        accountId: 'demo_manager_001',
+        name: 'Manager (Demo)',
+        role: 'manager'
+      };
+      
+      const token = generateToken(user);
+      console.log('✅ Manager demo user logged in');
+      
+      return res.json({
+        success: true,
+        message: 'Login successful',
+        token,
+        user
+      });
+    }
+    
+    // Demo agent account - accepts any password
+    if (email === 'agent@test.com') {
+      const user = {
+        email: 'agent@test.com',
+        accountId: 'demo_agent_001',
+        name: 'Agent (Demo)',
+        role: 'agent'
+      };
+      
+      const token = generateToken(user);
+      console.log('✅ Agent demo user logged in');
+      
+      return res.json({
+        success: true,
+        message: 'Login successful',
+        token,
+        user
+      });
+    }
+    
+    // Real password validation for actual users (if needed)
+    if (email === ADMIN_USER.email) {
+      const isValid = await bcrypt.compare(password, ADMIN_USER.passwordHash);
+      
+      if (!isValid) {
+        console.log('❌ Invalid password for:', email);
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid email or password'
+        });
+      }
+      
+      const token = generateToken(ADMIN_USER);
+      console.log('✅ User logged in:', email);
+      
+      return res.json({
+        success: true,
+        message: 'Login successful',
+        token,
+        user: {
+          email: ADMIN_USER.email,
+          name: ADMIN_USER.name,
+          accountId: ADMIN_USER.accountId,
+          role: ADMIN_USER.role
+        }
+      });
+    }
+    
+    // User not found
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid email or password'
     });
     
   } catch (error) {
