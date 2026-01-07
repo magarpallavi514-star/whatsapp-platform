@@ -9,20 +9,27 @@ import { uploadMediaToS3 } from '../services/s3Service.js';
 
 /**
  * POST /api/messages/send - Send text message
+ * 
+ * SIMPLE MODE (Enromatics):
+ *   Body: { recipientPhone, message }
+ * 
+ * ADVANCED MODE (Shopify/Multi-phone):
+ *   Body: { phoneNumberId, recipientPhone, message }
  */
 export const sendTextMessage = async (req, res) => {
   try {
     const accountId = req.accountId; // From auth middleware
-    const { phoneNumberId, recipientPhone, message, campaign } = req.body;
+    const phoneNumberId = req.phoneNumberId; // From phoneNumberHelper (auto-detected or validated)
+    const { recipientPhone, message, campaign } = req.body;
     
-    if (!phoneNumberId || !recipientPhone || !message) {
+    if (!recipientPhone || !message) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: phoneNumberId, recipientPhone, message'
+        message: 'Missing required fields: recipientPhone, message'
       });
     }
     
-    console.log('📤 Sending text message:', {
+    console.log(`📤 Sending text message [${req.phoneNumberMode}]:`, {
       accountId,
       phoneNumberId,
       recipientPhone,
@@ -40,7 +47,9 @@ export const sendTextMessage = async (req, res) => {
     res.json({
       success: true,
       message: 'Message sent successfully',
-      data: result
+      data: result,
+      phoneNumberUsed: phoneNumberId,
+      mode: req.phoneNumberMode // 'auto' or 'explicit'
     });
     
   } catch (error) {
@@ -58,12 +67,13 @@ export const sendTextMessage = async (req, res) => {
 export const sendTemplateMessage = async (req, res) => {
   try {
     const accountId = req.accountId; // From auth middleware
-    const { phoneNumberId, recipientPhone, templateName, params, campaign } = req.body;
+    const phoneNumberId = req.phoneNumberId; // From phoneNumberHelper middleware
+    const { recipientPhone, templateName, params, campaign } = req.body;
     
-    if (!phoneNumberId || !recipientPhone || !templateName) {
+    if (!recipientPhone || !templateName) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: phoneNumberId, recipientPhone, templateName'
+        message: 'Missing required fields: recipientPhone, templateName'
       });
     }
     
@@ -175,7 +185,8 @@ export const getMessage = async (req, res) => {
 export const sendMediaMessage = async (req, res) => {
   try {
     const accountId = req.accountId; // From auth middleware
-    const { phoneNumberId, recipientPhone, caption, campaign } = req.body;
+    const phoneNumberId = req.phoneNumberId; // From phoneNumberHelper middleware
+    const { recipientPhone, caption, campaign } = req.body;
     
     // Check if file was uploaded
     if (!req.file) {
@@ -185,10 +196,10 @@ export const sendMediaMessage = async (req, res) => {
       });
     }
     
-    if (!phoneNumberId || !recipientPhone) {
+    if (!recipientPhone) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: phoneNumberId, recipientPhone'
+        message: 'Missing required field: recipientPhone'
       });
     }
     
