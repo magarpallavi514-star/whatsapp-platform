@@ -100,14 +100,14 @@ app.use('/api/auth', authRoutes);
 app.use('/api/settings', requireJWT, settingsRoutes);
 app.use('/api/templates', requireJWT, templateRoutes);
 app.use('/api/chatbots', requireJWT, chatbotRoutes);
+app.use('/api/messages', requireJWT, messageRoutes);
+app.use('/api/conversations', requireJWT, conversationRoutes);
+app.use('/api/contacts', requireJWT, contactRoutes);
 
 // Mount self-service account routes (ACCOUNT AUTH required)
 app.use('/api/account', authenticate, accountRoutes);
 
-// Mount API routes (API KEY AUTH - for external apps like Enromatics)
-app.use('/api/messages', authenticate, messageRoutes);
-app.use('/api/conversations', authenticate, conversationRoutes);
-app.use('/api/contacts', authenticate, contactRoutes);
+// Mount API routes (API KEY AUTH - for external integrations only)
 app.use('/api/stats', authenticate, statsRoutes);
 
 // 404 handler

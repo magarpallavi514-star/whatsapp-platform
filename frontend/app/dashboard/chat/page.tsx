@@ -19,6 +19,7 @@ import {
   Play,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { authService } from "@/lib/auth"
 
 interface Contact {
   id: string
@@ -68,10 +69,10 @@ export default function ChatPage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
 
   const getHeaders = () => {
-    // For external app integrations using API keys
-    // For dashboard, would use JWT token from auth service
+    const token = authService.getToken()
     return {
       "Content-Type": "application/json",
+      ...(token && { "Authorization": `Bearer ${token}` })
     }
   }
 

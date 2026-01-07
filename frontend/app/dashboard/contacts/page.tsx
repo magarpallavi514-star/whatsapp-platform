@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Users, Plus, Upload, Download, Search, MoreVertical, Edit, Trash2, X, Tag, Mail, Phone as PhoneIcon, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { authService } from "@/lib/auth"
 
 interface Contact {
   _id: string
@@ -49,8 +50,10 @@ export default function ContactsPage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
 
   const getHeaders = () => {
+    const token = authService.getToken()
     return {
       "Content-Type": "application/json",
+      ...(token && { "Authorization": `Bearer ${token}` })
     }
   }
 
