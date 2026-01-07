@@ -72,7 +72,8 @@ export default function TemplatesPage() {
       console.log("Headers being sent:", headers)
       
       if (!token) {
-        console.error("No token found - user not authenticated. Redirecting to login...")
+        console.error("No token found - user not authenticated")
+        setIsLoading(false)
         return
       }
       
