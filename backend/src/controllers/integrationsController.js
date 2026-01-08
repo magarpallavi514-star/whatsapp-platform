@@ -137,7 +137,7 @@ export const getConversationDetailsViaIntegration = async (req, res) => {
     console.log(`💬 [INTEGRATION] Fetching conversation details:`, { accountId, conversationId });
 
     const conversation = await Conversation.findOne({
-      _id: conversationId,
+      conversationId: conversationId,
       accountId
     }).lean();
 
@@ -177,7 +177,7 @@ export const getConversationMessagesViaIntegration = async (req, res) => {
 
     // Verify conversation belongs to account
     const conversation = await Conversation.findOne({
-      _id: conversationId,
+      conversationId: conversationId,
       accountId
     });
 
@@ -188,20 +188,24 @@ export const getConversationMessagesViaIntegration = async (req, res) => {
       });
     }
 
+    // CRITICAL FIX: Message model uses accountId + phoneNumberId + recipientPhone
+    // NOT conversationId. Use conversation details to query messages.
+    const messageQuery = {
+      accountId: conversation.accountId,
+      phoneNumberId: conversation.phoneNumberId,
+      recipientPhone: conversation.userPhone
+    };
+
+    console.log(`📨 [INTEGRATION] Message query:`, messageQuery);
+
     // Fetch messages
-    const messages = await Message.find({
-      conversationId,
-      accountId
-    })
+    const messages = await Message.find(messageQuery)
       .sort({ createdAt: -1 })
       .skip(parseInt(offset))
       .limit(parseInt(limit))
       .lean();
 
-    const totalCount = await Message.countDocuments({
-      conversationId,
-      accountId
-    });
+    const totalCount = await Message.countDocuments(messageQuery);
 
     return res.json({
       success: true,
@@ -247,7 +251,7 @@ export const replyToConversationViaIntegration = async (req, res) => {
 
     // Get conversation
     const conversation = await Conversation.findOne({
-      _id: conversationId,
+      conversationId: conversationId,
       accountId
     });
 
