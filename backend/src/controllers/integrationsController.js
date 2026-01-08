@@ -12,6 +12,7 @@ import Message from '../models/Message.js';
 import Contact from '../models/Contact.js';
 import PhoneNumber from '../models/PhoneNumber.js';
 import Account from '../models/Account.js';
+import Template from '../models/Template.js';
 
 /**
  * POST /api/integrations/send-message
