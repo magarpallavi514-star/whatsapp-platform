@@ -697,3 +697,267 @@ export const sendBroadcastViaIntegration = async (req, res) => {
     });
   }
 };
+
+/**
+ * GET /api/integrations/templates
+ * Get all templates for account
+ */
+export const getTemplatesViaIntegration = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    const { limit = 50, offset = 0, status, category } = req.query;
+
+    console.log(`📋 [INTEGRATION] Fetching templates:`, { accountId, limit, offset, status, category });
+
+    const query = { accountId, deleted: false };
+    if (status) query.status = status;
+    if (category) query.category = category;
+
+    const templates = await Template.find(query)
+      .sort({ createdAt: -1 })
+      .skip(parseInt(offset))
+      .limit(parseInt(limit))
+      .lean();
+
+    const totalCount = await Template.countDocuments(query);
+
+    const stats = {
+      approved: await Template.countDocuments({ accountId, status: 'approved', deleted: false }),
+      pending: await Template.countDocuments({ accountId, status: 'pending', deleted: false }),
+      rejected: await Template.countDocuments({ accountId, status: 'rejected', deleted: false }),
+      draft: await Template.countDocuments({ accountId, status: 'draft', deleted: false }),
+      total: await Template.countDocuments({ accountId, deleted: false })
+    };
+
+    return res.json({
+      success: true,
+      data: {
+        templates,
+        pagination: {
+          total: totalCount,
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          hasMore: parseInt(offset) + parseInt(limit) < totalCount
+        },
+        stats
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [INTEGRATION] Get templates error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch templates',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * GET /api/integrations/templates/:id
+ * Get single template details
+ */
+export const getTemplateDetailsViaIntegration = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    const { id: templateId } = req.params;
+
+    console.log(`📋 [INTEGRATION] Fetching template:`, { accountId, templateId });
+
+    const template = await Template.findOne({
+      _id: templateId,
+      accountId,
+      deleted: false
+    }).lean();
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        message: 'Template not found'
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: template
+    });
+
+  } catch (error) {
+    console.error('❌ [INTEGRATION] Get template details error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch template details',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * POST /api/integrations/templates/send
+ * Send template message to recipient
+ */
+export const sendTemplateMessageViaIntegration = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    const { templateName, recipientPhone, variables, language = 'en' } = req.body;
+
+    if (!templateName || !recipientPhone) {
+      return res.status(400).json({
+        success: false,
+        message: 'templateName and recipientPhone are required'
+      });
+    }
+
+    console.log(`📬 [INTEGRATION] Sending template message:`, { accountId, templateName, recipientPhone });
+
+    const template = await Template.findOne({
+      accountId,
+      name: templateName,
+      status: 'approved',
+      deleted: false
+    });
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        message: `Template '${templateName}' not found or not approved`
+      });
+    }
+
+    const phoneNumber = await PhoneNumber.findOne({
+      accountId,
+      isActive: true
+    }).sort({ createdAt: -1 });
+
+    if (!phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active WhatsApp phone number configured'
+      });
+    }
+
+    const result = await whatsappService.sendTemplateMessage(
+      accountId,
+      phoneNumber.phoneNumberId,
+      recipientPhone,
+      template.name,
+      variables || [],
+      language
+    );
+
+    await Template.updateOne(
+      { _id: template._id },
+      { 
+        usageCount: template.usageCount + 1,
+        lastUsedAt: new Date()
+      }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Template message sent successfully',
+      data: {
+        messageId: result.messageId,
+        waMessageId: result.waMessageId,
+        templateName: template.name,
+        recipientPhone,
+        status: 'sent',
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [INTEGRATION] Send template message error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to send template message',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * PUT /api/integrations/templates/:id
+ * Update template
+ */
+export const updateTemplateViaIntegration = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    const { id: templateId } = req.params;
+    const { name, category, content } = req.body;
+
+    const template = await Template.findOne({
+      _id: templateId,
+      accountId,
+      deleted: false
+    });
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        message: 'Template not found'
+      });
+    }
+
+    if (name) template.name = name;
+    if (category) template.category = category;
+    if (content) template.content = content;
+    template.status = 'draft';
+
+    await template.save();
+
+    return res.json({
+      success: true,
+      message: 'Template updated successfully',
+      data: template
+    });
+
+  } catch (error) {
+    console.error('❌ [INTEGRATION] Update template error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update template',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * DELETE /api/integrations/templates/:id
+ * Soft delete a template
+ */
+export const deleteTemplateViaIntegration = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    const { id: templateId } = req.params;
+
+    const template = await Template.findOne({
+      _id: templateId,
+      accountId,
+      deleted: false
+    });
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        message: 'Template not found'
+      });
+    }
+
+    template.deleted = true;
+    await template.save();
+
+    return res.json({
+      success: true,
+      message: 'Template deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ [INTEGRATION] Delete template error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete template',
+      error: error.message
+    });
+  }
+};

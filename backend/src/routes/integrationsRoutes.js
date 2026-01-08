@@ -24,6 +24,13 @@ import {
   // Messages
   sendMessageViaIntegration,
   
+  // Templates
+  getTemplatesViaIntegration,
+  getTemplateDetailsViaIntegration,
+  sendTemplateMessageViaIntegration,
+  updateTemplateViaIntegration,
+  deleteTemplateViaIntegration,
+  
   // Contacts
   getContactsViaIntegration,
   getContactViaIntegration,
@@ -83,6 +90,46 @@ router.post('/conversations/:id/reply', authenticateIntegration, replyToConversa
  * @body    { recipientPhone, message, mediaUrl?, mediaType? }
  */
 router.post('/send-message', authenticateIntegration, sendMessageViaIntegration);
+
+// ========== TEMPLATES ==========
+
+/**
+ * @route   GET /api/integrations/templates
+ * @desc    Get all templates
+ * @access  Integration token required
+ * @query   { limit?, offset?, status?, category? }
+ */
+router.get('/templates', authenticateIntegration, getTemplatesViaIntegration);
+
+/**
+ * @route   GET /api/integrations/templates/:id
+ * @desc    Get single template details
+ * @access  Integration token required
+ */
+router.get('/templates/:id', authenticateIntegration, getTemplateDetailsViaIntegration);
+
+/**
+ * @route   POST /api/integrations/templates/send
+ * @desc    Send template message to recipient
+ * @access  Integration token required
+ * @body    { templateName, recipientPhone, variables?, language? }
+ */
+router.post('/templates/send', authenticateIntegration, sendTemplateMessageViaIntegration);
+
+/**
+ * @route   PUT /api/integrations/templates/:id
+ * @desc    Update template
+ * @access  Integration token required
+ * @body    { name?, category?, content? }
+ */
+router.put('/templates/:id', authenticateIntegration, updateTemplateViaIntegration);
+
+/**
+ * @route   DELETE /api/integrations/templates/:id
+ * @desc    Delete template
+ * @access  Integration token required
+ */
+router.delete('/templates/:id', authenticateIntegration, deleteTemplateViaIntegration);
 
 // ========== CONTACTS ==========
 
