@@ -279,7 +279,7 @@ export const replyToConversationViaIntegration = async (req, res) => {
     const result = await whatsappService.sendTextMessage(
       accountId,
       phoneNumber.phoneNumberId,
-      conversation.contactPhone,
+      conversation.userPhone,
       message,
       { campaign: 'enromatics', conversationId }
     );
