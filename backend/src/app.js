@@ -19,6 +19,7 @@ import settingsRoutes from './routes/settingsRoutes.js';
 import chatbotRoutes from './routes/chatbotRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import integrationsRoutes from './routes/integrationsRoutes.js';
+import broadcastRoutes from './routes/broadcastRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -29,8 +30,12 @@ const app = express();
 // Middleware
 const allowedOrigins = [
   'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+  'http://127.0.0.1:3002',
   'https://whatsapp-platform-nine.vercel.app',
-  'https://mpiyush15-whatsapp-platform.vercel.app',
   'https://mpiyush15-whatsapp-platform.vercel.app',
   process.env.FRONTEND_URL
 ].filter(Boolean);
@@ -40,13 +45,25 @@ app.use(cors({
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Development: allow any localhost origin
+    if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+      return callback(null, true);
+    }
+    
+    if (origin && allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else if (!origin) {
       callback(null, true);
     } else {
+      console.log('⚠️ CORS rejected origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 200
 }));
 
 // JSON and URL-encoded body parsing (JWT is stateless - no session needed)
@@ -104,6 +121,7 @@ app.use('/api/chatbots', requireJWT, chatbotRoutes);
 app.use('/api/messages', requireJWT, messageRoutes);
 app.use('/api/conversations', requireJWT, conversationRoutes);
 app.use('/api/contacts', requireJWT, contactRoutes);
+app.use('/api/broadcasts', requireJWT, broadcastRoutes);
 
 // Mount self-service account routes (JWT AUTH - for dashboard users)
 app.use('/api/account', requireJWT, accountRoutes);
