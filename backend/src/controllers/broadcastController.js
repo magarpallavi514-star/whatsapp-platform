@@ -1,12 +1,30 @@
 import broadcastService from '../services/broadcastService.js';
 import broadcastExecutionService from '../services/broadcastExecutionService.js';
+import PhoneNumber from '../models/PhoneNumber.js';
 
 export const createBroadcast = async (req, res) => {
   try {
     // Get accountId from JWT middleware or params
     const accountId = req.accountId || req.params.accountId;
-    const phoneNumberId = req.params.phoneNumberId || req.body.phoneNumberId || 'default';
+    let phoneNumberId = req.params.phoneNumberId || req.body.phoneNumberId;
     const data = req.body;
+
+    // If phoneNumberId not provided, fetch the first active phone number for the account
+    if (!phoneNumberId || phoneNumberId === 'default') {
+      const activePhone = await PhoneNumber.findOne({
+        accountId,
+        isActive: true
+      });
+
+      if (!activePhone) {
+        return res.status(400).json({
+          success: false,
+          error: 'No active phone number configured for this account'
+        });
+      }
+
+      phoneNumberId = activePhone.phoneNumberId;
+    }
 
     const broadcast = await broadcastService.createBroadcast(
       accountId,

@@ -75,16 +75,6 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Demo Info */}
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs text-blue-800 font-medium mb-1">Demo Accounts:</p>
-                <p className="text-xs text-blue-600">superadmin@test.com → SuperAdmin (Platform Owner)</p>
-                <p className="text-xs text-blue-600">admin@test.com → Admin (Client Owner)</p>
-                <p className="text-xs text-blue-600">manager@test.com → Manager (Team Lead)</p>
-                <p className="text-xs text-blue-600">agent@test.com → Agent (Support)</p>
-                <p className="text-xs text-blue-600 mt-1">Password: any</p>
-              </div>
-
               {/* Email Field */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
