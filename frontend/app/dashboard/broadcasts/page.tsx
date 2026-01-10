@@ -76,12 +76,12 @@ export default function BroadcastsPage() {
           const totalSent = broadcastsList.reduce((sum: number, b: Broadcast) => sum + b.sent, 0)
           const totalDelivered = broadcastsList.reduce((sum: number, b: Broadcast) => sum + b.delivered, 0)
           const scheduledCount = broadcastsList.filter((b: Broadcast) => b.status === 'scheduled').length
-          const readRate = totalSent > 0 ? ((totalDelivered / totalSent) * 100).toFixed(1) : 0
+          const readRateValue = totalSent > 0 ? parseFloat(((totalDelivered / totalSent) * 100).toFixed(1)) : 0
 
           setStats({
             totalSent,
             totalDelivered,
-            readRate: parseFloat(readRate),
+            readRate: readRateValue,
             scheduled: scheduledCount
           })
         } else if (!response.ok) {
