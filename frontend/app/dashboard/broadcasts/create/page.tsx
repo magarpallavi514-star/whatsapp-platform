@@ -14,6 +14,24 @@ interface Contact {
   type?: string
 }
 
+interface BroadcastFormData {
+  name: string
+  messageType: "text" | "template" | "media"
+  content: {
+    text: string
+    templateName: string
+    templateParams: string[]
+    mediaUrl: string
+    mediaType: string
+  }
+  recipientList: string
+  recipients: {
+    phoneNumbers: string[]
+    contactIds: string[]
+  }
+  throttleRate: number
+}
+
 export default function CreateBroadcastPage() {
   const router = useRouter()
   const user = authService.getCurrentUser()
@@ -24,7 +42,7 @@ export default function CreateBroadcastPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [recipientMode, setRecipientMode] = useState<"manual" | "contacts">("manual")
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<BroadcastFormData>({
     name: "",
     messageType: "text",
     content: {
@@ -257,9 +275,9 @@ export default function CreateBroadcastPage() {
         <div className="p-6">
           <div className="flex items-center gap-4">
             <Link href="/dashboard/broadcasts">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
+              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <ArrowLeft className="h-5 w-5 text-gray-600" />
+              </button>
             </Link>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Create Broadcast</h1>
