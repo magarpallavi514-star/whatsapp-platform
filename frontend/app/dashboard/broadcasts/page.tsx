@@ -1,6 +1,6 @@
 "use client"
 
-import { Megaphone, Plus, Calendar, Users, Send, MoreVertical, Loader } from "lucide-react"
+import { Megaphone, Plus, Calendar, Users, Send, MoreVertical, Loader, Edit, Trash2, Clock, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -27,6 +27,8 @@ export default function BroadcastsPage() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user?.accountId) return
@@ -108,6 +110,67 @@ export default function BroadcastsPage() {
       isMounted = false
     }
   }, [user?.accountId])
+
+  const handleSendBroadcast = async (broadcastId: string) => {
+    setActionLoading(broadcastId)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/broadcasts/${broadcastId}/start`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        }
+      )
+      const data = await response.json()
+      if (data.success) {
+        // Refresh broadcasts list
+        setBroadcasts(broadcasts.map(b => 
+          b.id === broadcastId ? { ...b, status: "completed" } : b
+        ))
+        setOpenMenu(null)
+      } else {
+        alert(data.error || "Failed to send broadcast")
+      }
+    } catch (err) {
+      alert("Error sending broadcast: " + (err instanceof Error ? err.message : "Unknown error"))
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleDeleteBroadcast = async (broadcastId: string) => {
+    if (!confirm("Are you sure you want to delete this broadcast?")) return
+    
+    setActionLoading(broadcastId)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/broadcasts/${broadcastId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        }
+      )
+      const data = await response.json()
+      if (data.success) {
+        setBroadcasts(broadcasts.filter(b => b.id !== broadcastId))
+        setOpenMenu(null)
+      } else {
+        alert(data.error || "Failed to delete broadcast")
+      }
+    } catch (err) {
+      alert("Error deleting broadcast: " + (err instanceof Error ? err.message : "Unknown error"))
+    } finally {
+      setActionLoading(null)
+    }
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -191,7 +254,7 @@ export default function BroadcastsPage() {
               </Link>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-visible">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
@@ -225,10 +288,86 @@ export default function BroadcastsPage() {
                       <td className="py-4 px-4 text-sm text-gray-600">{broadcast.sent.toLocaleString()}</td>
                       <td className="py-4 px-4 text-sm text-gray-600">{broadcast.delivered.toLocaleString()}</td>
                       <td className="py-4 px-4 text-sm text-gray-600">{broadcast.read.toLocaleString()}</td>
-                      <td className="py-4 px-4">
-                        <button className="text-gray-600 hover:text-gray-900">
-                          <MoreVertical className="h-5 w-5" />
-                        </button>
+                      <td className="py-4 px-4 relative">
+                        <div className="relative z-50">
+                          <button 
+                            onClick={() => setOpenMenu(openMenu === broadcast.id ? null : broadcast.id)}
+                            className="text-gray-600 hover:text-gray-900 p-2 hover:bg-gray-100 rounded"
+                          >
+                            <MoreVertical className="h-5 w-5" />
+                          </button>
+                          
+                          {openMenu === broadcast.id && (
+                            <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-[9999]">
+                              {broadcast.status === "draft" && (
+                                <>
+                                  <Link 
+                                    href={`/dashboard/broadcasts/edit/${broadcast.id}`}
+                                    className="block w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 border-b border-gray-200"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                    <span>Edit</span>
+                                  </Link>
+                                  <button
+                                    onClick={() => handleSendBroadcast(broadcast.id)}
+                                    disabled={actionLoading === broadcast.id}
+                                    className="block w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 border-b border-gray-200 text-green-600 disabled:opacity-50"
+                                  >
+                                    {actionLoading === broadcast.id ? (
+                                      <Loader className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Send className="h-4 w-4" />
+                                    )}
+                                    <span>{actionLoading === broadcast.id ? "Sending..." : "Send Now"}</span>
+                                  </button>
+                                </>
+                              )}
+                              
+                              {broadcast.status === "completed" && (
+                                <button
+                                  onClick={() => handleSendBroadcast(broadcast.id)}
+                                  disabled={actionLoading === broadcast.id}
+                                  className="block w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 border-b border-gray-200 text-green-600 disabled:opacity-50"
+                                >
+                                  {actionLoading === broadcast.id ? (
+                                    <Loader className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="h-4 w-4" />
+                                  )}
+                                  <span>{actionLoading === broadcast.id ? "Sending..." : "Send Again"}</span>
+                                </button>
+                              )}
+
+                              {broadcast.status === "scheduled" && (
+                                <button
+                                  onClick={() => handleSendBroadcast(broadcast.id)}
+                                  disabled={actionLoading === broadcast.id}
+                                  className="block w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 border-b border-gray-200 text-blue-600 disabled:opacity-50"
+                                >
+                                  {actionLoading === broadcast.id ? (
+                                    <Loader className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Clock className="h-4 w-4" />
+                                  )}
+                                  <span>{actionLoading === broadcast.id ? "Sending..." : "Send Now"}</span>
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => handleDeleteBroadcast(broadcast.id)}
+                                disabled={actionLoading === broadcast.id}
+                                className="block w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 text-red-600 disabled:opacity-50"
+                              >
+                                {actionLoading === broadcast.id ? (
+                                  <Loader className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                                <span>{actionLoading === broadcast.id ? "Deleting..." : "Delete"}</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

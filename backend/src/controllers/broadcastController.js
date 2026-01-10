@@ -108,7 +108,9 @@ export const updateBroadcast = async (req, res) => {
 
 export const startBroadcast = async (req, res) => {
   try {
-    const { accountId, phoneNumberId, broadcastId } = req.params;
+    const accountId = req.accountId || req.params.accountId;
+    const phoneNumberId = req.params.phoneNumberId || req.body.phoneNumberId || 'default';
+    const broadcastId = req.params.broadcastId;
 
     const broadcast = await broadcastService.startBroadcast(accountId, broadcastId);
 
