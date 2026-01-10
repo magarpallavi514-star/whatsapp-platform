@@ -20,6 +20,7 @@ import chatbotRoutes from './routes/chatbotRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import integrationsRoutes from './routes/integrationsRoutes.js';
 import broadcastRoutes from './routes/broadcastRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -122,6 +123,7 @@ app.use('/api/messages', requireJWT, messageRoutes);
 app.use('/api/conversations', requireJWT, conversationRoutes);
 app.use('/api/contacts', requireJWT, contactRoutes);
 app.use('/api/broadcasts', requireJWT, broadcastRoutes);
+app.use('/api/notifications', requireJWT, notificationRoutes);
 
 // Mount self-service account routes (JWT AUTH - for dashboard users)
 app.use('/api/account', requireJWT, accountRoutes);

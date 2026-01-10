@@ -17,6 +17,9 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [user, setUser] = useState<UserType | null>(null)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const pathname = usePathname()
   const router = useRouter()
 
@@ -24,6 +27,41 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     const currentUser = authService.getCurrentUser()
     setUser(currentUser)
   }, [])
+
+  // Fetch notifications
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const token = localStorage.getItem("token")
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/notifications`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json"
+            }
+          }
+        )
+        const data = await response.json()
+        if (data.success) {
+          setNotifications(data.data?.notifications || [])
+          const unread = (data.data?.notifications || []).filter((n: any) => !n.read).length
+          setUnreadCount(unread)
+        }
+      } catch (error) {
+        console.error("Error fetching notifications:", error)
+      }
+    }
+
+    if (user?.accountId) {
+      fetchNotifications()
+      
+      // Refresh notifications every 30 seconds
+      const interval = setInterval(fetchNotifications, 30000)
+      
+      return () => clearInterval(interval)
+    }
+  }, [user?.accountId])
 
   const handleLogout = () => {
     authService.logout()
@@ -208,10 +246,71 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <button className="relative text-gray-600 hover:text-gray-900">
-                <Bell className="h-6 w-6" />
-                <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full" />
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setNotificationsOpen(!notificationsOpen)}
+                  className="relative text-gray-600 hover:text-gray-900"
+                >
+                  <Bell className="h-6 w-6" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+                
+                {/* Notifications Dropdown */}
+                {notificationsOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-y-auto">
+                    <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button 
+                          onClick={() => {
+                            setNotifications(notifications.map(n => ({ ...n, read: true })))
+                            setUnreadCount(0)
+                          }}
+                          className="text-xs text-green-600 hover:text-green-700 font-medium"
+                        >
+                          Mark all as read
+                        </button>
+                      )}
+                    </div>
+                    
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <Bell className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                        <p className="text-gray-500">No notifications</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-100">
+                        {notifications.map((notification, index) => (
+                          <div 
+                            key={index}
+                            className={`p-4 hover:bg-gray-50 cursor-pointer transition ${
+                              !notification.read ? 'bg-green-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`h-2 w-2 rounded-full mt-2 flex-shrink-0 ${
+                                !notification.read ? 'bg-green-600' : 'bg-gray-300'
+                              }`} />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-gray-900 text-sm">{notification.title}</p>
+                                <p className="text-gray-600 text-sm mt-1">{notification.message}</p>
+                                <p className="text-xs text-gray-500 mt-2">
+                                  {new Date(notification.createdAt).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
               <button className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
                 <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
                   <User className="h-5 w-5 text-green-600" />
