@@ -29,6 +29,7 @@ export default function BroadcastsPage() {
   const [error, setError] = useState("")
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     if (!user?.accountId) return
@@ -63,8 +64,8 @@ export default function BroadcastsPage() {
             name: broadcast.name,
             status: broadcast.status,
             sent: broadcast.stats?.sent || 0,
-            delivered: broadcast.stats?.sent || 0,
-            read: 0,
+            delivered: broadcast.stats?.delivered || broadcast.stats?.sent || 0,
+            read: broadcast.stats?.read || 0,
             date: new Date(broadcast.createdAt).toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'short',
@@ -109,7 +110,7 @@ export default function BroadcastsPage() {
     return () => {
       isMounted = false
     }
-  }, [user?.accountId])
+  }, [user?.accountId, refreshKey])
 
   const handleSendBroadcast = async (broadcastId: string) => {
     setActionLoading(broadcastId)
@@ -127,11 +128,12 @@ export default function BroadcastsPage() {
       )
       const data = await response.json()
       if (data.success) {
-        // Refresh broadcasts list
-        setBroadcasts(broadcasts.map(b => 
-          b.id === broadcastId ? { ...b, status: "completed" } : b
-        ))
+        // Close menu and wait a moment before refreshing
         setOpenMenu(null)
+        // Trigger refresh after 2 seconds to allow backend to update stats
+        setTimeout(() => {
+          setRefreshKey(prev => prev + 1)
+        }, 2000)
       } else {
         alert(data.error || "Failed to send broadcast")
       }
