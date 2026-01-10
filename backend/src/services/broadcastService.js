@@ -27,7 +27,12 @@ export class BroadcastService {
    * Get all broadcasts for an account
    */
   async getBroadcasts(accountId, phoneNumberId, filters = {}) {
-    const query = { accountId, phoneNumberId };
+    const query = { accountId };
+    
+    // Only filter by phoneNumberId if it's not 'any'
+    if (phoneNumberId && phoneNumberId !== 'any') {
+      query.phoneNumberId = phoneNumberId;
+    }
 
     if (filters.status) {
       query.status = filters.status;

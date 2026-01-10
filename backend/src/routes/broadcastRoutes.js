@@ -12,6 +12,11 @@ import {
 const router = express.Router();
 
 // Broadcast routes
+// Simpler routes (accountId from JWT middleware)
+router.get('/', getBroadcasts);
+router.post('/', createBroadcast);
+
+// Parameterized routes (with explicit phoneNumberId)
 router.post('/:accountId/:phoneNumberId/broadcasts', createBroadcast);
 router.get('/:accountId/:phoneNumberId/broadcasts', getBroadcasts);
 router.get('/:accountId/broadcasts/:broadcastId', getBroadcastById);

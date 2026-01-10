@@ -3,7 +3,9 @@ import broadcastExecutionService from '../services/broadcastExecutionService.js'
 
 export const createBroadcast = async (req, res) => {
   try {
-    const { accountId, phoneNumberId } = req.params;
+    // Get accountId from JWT middleware or params
+    const accountId = req.accountId || req.params.accountId;
+    const phoneNumberId = req.params.phoneNumberId || req.body.phoneNumberId || 'default';
     const data = req.body;
 
     const broadcast = await broadcastService.createBroadcast(
@@ -27,7 +29,9 @@ export const createBroadcast = async (req, res) => {
 
 export const getBroadcasts = async (req, res) => {
   try {
-    const { accountId, phoneNumberId } = req.params;
+    // Get accountId from JWT middleware
+    const accountId = req.accountId || req.params.accountId;
+    const phoneNumberId = req.params.phoneNumberId || 'any';
     const { status, limit, skip } = req.query;
 
     const result = await broadcastService.getBroadcasts(
