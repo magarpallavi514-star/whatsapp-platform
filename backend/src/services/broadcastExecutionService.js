@@ -121,6 +121,11 @@ export class BroadcastExecutionService {
   async sendBroadcastMessage(accountId, phoneNumberId, broadcast, recipientPhone) {
     try {
       let messageId;
+      
+      // Validate phoneNumberId
+      if (!phoneNumberId) {
+        throw new Error('Phone number ID is required for broadcast execution');
+      }
 
       // Send based on message type
       if (broadcast.messageType === 'text') {

@@ -109,10 +109,30 @@ export const updateBroadcast = async (req, res) => {
 export const startBroadcast = async (req, res) => {
   try {
     const accountId = req.accountId || req.params.accountId;
-    const phoneNumberId = req.params.phoneNumberId || req.body.phoneNumberId || 'default';
     const broadcastId = req.params.broadcastId;
 
-    const broadcast = await broadcastService.startBroadcast(accountId, broadcastId);
+    // First get the broadcast to extract phoneNumberId
+    const broadcast = await broadcastService.getBroadcastById(accountId, broadcastId);
+    
+    if (!broadcast) {
+      return res.status(404).json({
+        success: false,
+        error: 'Broadcast not found'
+      });
+    }
+
+    // Use phoneNumberId from broadcast, fallback to body or params
+    const phoneNumberId = req.params.phoneNumberId || req.body.phoneNumberId || broadcast.phoneNumberId;
+    
+    if (!phoneNumberId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Phone number not configured for this broadcast'
+      });
+    }
+
+    // Start the broadcast
+    const updatedBroadcast = await broadcastService.startBroadcast(accountId, broadcastId);
 
     // Execute broadcast asynchronously
     broadcastExecutionService.executeBroadcast(
@@ -124,7 +144,7 @@ export const startBroadcast = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Broadcast started',
-      data: broadcast
+      data: updatedBroadcast
     });
   } catch (error) {
     console.error('Error starting broadcast:', error);
