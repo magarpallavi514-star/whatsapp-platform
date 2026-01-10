@@ -6,9 +6,19 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { authService } from "@/lib/auth"
 
+interface Broadcast {
+  id: string
+  name: string
+  status: string
+  sent: number
+  delivered: number
+  read: number
+  date: string
+}
+
 export default function BroadcastsPage() {
   const user = authService.getCurrentUser()
-  const [broadcasts, setBroadcasts] = useState([])
+  const [broadcasts, setBroadcasts] = useState<Broadcast[]>([])
   const [stats, setStats] = useState({
     totalSent: 0,
     totalDelivered: 0,
@@ -46,7 +56,7 @@ export default function BroadcastsPage() {
 
         // Check if response is successful, regardless of HTTP status
         if (data.success || (data.data && !response.ok === false)) {
-          const broadcastsList = (data.data?.broadcasts || []).map((broadcast: any) => ({
+          const broadcastsList: Broadcast[] = (data.data?.broadcasts || []).map((broadcast: any) => ({
             id: broadcast._id,
             name: broadcast.name,
             status: broadcast.status,
@@ -63,9 +73,9 @@ export default function BroadcastsPage() {
           setBroadcasts(broadcastsList)
 
           // Calculate stats
-          const totalSent = broadcastsList.reduce((sum: number, b) => sum + b.sent, 0)
-          const totalDelivered = broadcastsList.reduce((sum: number, b) => sum + b.delivered, 0)
-          const scheduledCount = broadcastsList.filter(b => b.status === 'scheduled').length
+          const totalSent = broadcastsList.reduce((sum: number, b: Broadcast) => sum + b.sent, 0)
+          const totalDelivered = broadcastsList.reduce((sum: number, b: Broadcast) => sum + b.delivered, 0)
+          const scheduledCount = broadcastsList.filter((b: Broadcast) => b.status === 'scheduled').length
           const readRate = totalSent > 0 ? ((totalDelivered / totalSent) * 100).toFixed(1) : 0
 
           setStats({
