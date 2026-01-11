@@ -114,28 +114,34 @@ export default function SettingsPage() {
     try {
       setIsLoading(true)
       const headers = getHeaders()
-      console.log('📱 Fetching phone numbers with headers:', {
+      console.log('📱 FETCH PHONE NUMBERS START');
+      console.log('  API URL:', `${API_URL}/api/settings/phone-numbers`);
+      console.log('  Headers:', {
         hasAuth: !!headers.Authorization,
-        authLength: headers.Authorization?.length || 0
+        authLength: headers.Authorization?.length || 0,
+        contentType: headers['Content-Type']
       })
       
       const response = await fetch(`${API_URL}/api/settings/phone-numbers`, {
+        method: 'GET',
         headers: headers
       })
       
-      console.log('📱 Phone numbers response:', {
-        status: response.status,
-        ok: response.ok,
-        statusText: response.statusText
-      })
+      console.log('📱 FETCH RESPONSE RECEIVED');
+      console.log('  Status:', response.status);
+      console.log('  OK:', response.ok);
+      console.log('  Content-Type:', response.headers.get('content-type'));
       
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ Phone numbers data received:', {
-          count: data.phoneNumbers?.length || 0,
-          data: data
+        console.log('✅ RESPONSE DATA:', {
+          success: data.success,
+          phoneNumbersCount: data.phoneNumbers?.length || 0,
+          phoneNumbers: data.phoneNumbers
         })
+        
         setPhoneNumbers(data.phoneNumbers || [])
+        console.log('✅ State updated with', (data.phoneNumbers || []).length, 'phone numbers')
       } else {
         let errorMessage = `HTTP ${response.status} ${response.statusText || ''}`
         try {
@@ -145,17 +151,19 @@ export default function SettingsPage() {
             errorMessage = errorBody.message || errorBody.error || errorMessage
           }
         } catch (e) {
-          // Ignore parsing errors
+          console.error('Could not parse error response:', e)
         }
         console.error("❌ Failed to fetch phone numbers:", { 
           status: response.status, 
-          message: errorMessage 
+          message: errorMessage,
+          statusText: response.statusText
         })
       }
     } catch (error: any) {
-      console.error("❌ Error fetching phone numbers:", error?.message || String(error))
+      console.error("❌ Error fetching phone numbers:", error?.message || String(error), error)
     } finally {
       setIsLoading(false)
+      console.log('📱 FETCH PHONE NUMBERS END');
     }
   }
 
@@ -484,11 +492,14 @@ export default function SettingsPage() {
     const initializePage = async () => {
       const token = authService.getToken()
       const isAuth = authService.isAuthenticated()
+      const user = authService.getCurrentUser()
       
       console.log('🔐 Settings Page Init:');
       console.log('  Auth Status:', isAuth);
       console.log('  Has Token:', !!token);
       console.log('  Token Length:', token?.length || 0);
+      console.log('  Current User:', user?.email);
+      console.log('  Current Account ID:', user?.accountId);
       
       if (!isAuth || !token) {
         console.error('❌ Not authenticated - redirecting to login');
@@ -497,6 +508,7 @@ export default function SettingsPage() {
       }
       
       // Load initial data
+      console.log('📱 Calling fetchPhoneNumbers...');
       fetchPhoneNumbers()
     }
     
