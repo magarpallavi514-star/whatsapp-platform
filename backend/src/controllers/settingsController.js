@@ -15,10 +15,28 @@ export const getPhoneNumbers = async (req, res) => {
   try {
     const accountId = req.accountId;
     
+    console.log('📱 [GET PHONE NUMBERS]');
+    console.log('  Account ID from middleware:', accountId);
+    console.log('  User email:', req.user?.email);
+    console.log('  User role:', req.user?.role);
+    
+    if (!accountId) {
+      console.error('❌ NO ACCOUNT ID IN REQUEST!');
+      console.log('  req.accountId:', req.accountId);
+      console.log('  req.user:', req.user);
+      console.log('  All req keys:', Object.keys(req).filter(k => !k.startsWith('_')).slice(0, 10));
+      return res.status(401).json({
+        success: false,
+        message: 'Account ID not found in request. Authentication failed.'
+      });
+    }
+    
     const phoneNumbers = await PhoneNumber.find({ accountId })
       .select('-accessToken') // Don't expose token
       .sort({ isActive: -1, createdAt: -1 })
       .lean();
+    
+    console.log('  Found phones:', phoneNumbers.length);
     
     res.json({
       success: true,
