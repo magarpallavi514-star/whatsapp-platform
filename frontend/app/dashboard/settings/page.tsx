@@ -12,6 +12,7 @@ interface PhoneNumber {
   wabaId: string
   displayName: string
   displayPhone: string
+  phone?: string
   isActive: boolean
   verifiedAt?: string
   lastTestedAt?: string
@@ -112,11 +113,28 @@ export default function SettingsPage() {
   const fetchPhoneNumbers = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`${API_URL}/api/settings/phone-numbers`, {
-        headers: getHeaders()
+      const headers = getHeaders()
+      console.log('📱 Fetching phone numbers with headers:', {
+        hasAuth: !!headers.Authorization,
+        authLength: headers.Authorization?.length || 0
       })
+      
+      const response = await fetch(`${API_URL}/api/settings/phone-numbers`, {
+        headers: headers
+      })
+      
+      console.log('📱 Phone numbers response:', {
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText
+      })
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('✅ Phone numbers data received:', {
+          count: data.phoneNumbers?.length || 0,
+          data: data
+        })
         setPhoneNumbers(data.phoneNumbers || [])
       } else {
         let errorMessage = `HTTP ${response.status} ${response.statusText || ''}`
@@ -576,7 +594,7 @@ export default function SettingsPage() {
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                               <p className="text-gray-600">Phone Number</p>
-                              <p className="font-medium text-gray-900">{phone.displayPhone}</p>
+                              <p className="font-medium text-gray-900">{phone.phone || phone.displayPhone}</p>
                             </div>
                             <div>
                               <p className="text-gray-600">Phone Number ID</p>

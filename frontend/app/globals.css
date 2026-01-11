@@ -1,86 +1,96 @@
 @import "tailwindcss";
 
-/* Color scheme that syncs with system theme */
-@layer base {
+/* Define CSS variables for theme colors */
+:root {
+  color-scheme: light;
+  --background: 0 0% 100%;
+  --foreground: 0 0% 10%;
+  --primary: 0 0% 0%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 10%;
+  --muted: 0 0% 90%;
+  --muted-foreground: 0 0% 40%;
+  --accent: 59 89% 46%;
+  --accent-foreground: 0 0% 100%;
+  --border: 0 0% 90%;
+  --input: 0 0% 96%;
+  --ring: 59 89% 46%;
+}
+
+@media (prefers-color-scheme: dark) {
   :root {
-    color-scheme: light;
-    --background: 0 0% 100%;
-    --foreground: 0 0% 10%;
-    --primary: 0 0% 0%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 10%;
-    --muted: 0 0% 90%;
-    --muted-foreground: 0 0% 40%;
+    color-scheme: dark;
+    --background: 0 0% 5%;
+    --foreground: 0 0% 95%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 25%;
+    --muted-foreground: 0 0% 75%;
     --accent: 59 89% 46%;
     --accent-foreground: 0 0% 100%;
-    --border: 0 0% 90%;
-    --input: 0 0% 96%;
+    --border: 0 0% 20%;
+    --input: 0 0% 12%;
     --ring: 59 89% 46%;
   }
+}
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      color-scheme: dark;
-      --background: 0 0% 5%;
-      --foreground: 0 0% 95%;
-      --primary: 0 0% 100%;
-      --primary-foreground: 0 0% 0%;
-      --secondary: 0 0% 15%;
-      --secondary-foreground: 0 0% 95%;
-      --muted: 0 0% 25%;
-      --muted-foreground: 0 0% 75%;
-      --accent: 59 89% 46%;
-      --accent-foreground: 0 0% 100%;
-      --border: 0 0% 20%;
-      --input: 0 0% 12%;
-      --ring: 59 89% 46%;
-    }
+html.dark {
+  color-scheme: dark;
+  --background: 0 0% 5%;
+  --foreground: 0 0% 95%;
+  --primary: 0 0% 100%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 95%;
+  --muted: 0 0% 25%;
+  --muted-foreground: 0 0% 75%;
+  --accent: 59 89% 46%;
+  --accent-foreground: 0 0% 100%;
+  --border: 0 0% 20%;
+  --input: 0 0% 12%;
+  --ring: 59 89% 46%;
+}
+
+/* Base styles */
+@layer base {
+  * {
+    @apply transition-colors duration-300;
   }
 
-  /* Ensure fonts are always visible */
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    @apply bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Smooth transitions for theme changes */
-  * {
-    @apply transition-colors duration-300;
-  }
-
-  /* Headings should be visible in both themes */
   h1, h2, h3, h4, h5, h6 {
-    @apply text-foreground;
+    @apply text-gray-900 dark:text-gray-50;
   }
 
-  /* Text elements */
-  p, span, div, li {
-    @apply text-foreground;
+  p, span, div, li, a {
+    @apply text-gray-900 dark:text-gray-50;
   }
 
-  /* Links */
   a {
-    @apply text-accent hover:text-opacity-80;
+    @apply text-green-600 dark:text-green-400 hover:opacity-80;
   }
 
-  /* Form inputs */
+  /* Keep input colors FIXED - no theme changes */
   input, textarea, select {
-    @apply bg-input text-foreground border-border;
+    @apply bg-white text-gray-900 border border-gray-300;
   }
 
-  /* Buttons */
-  button {
-    @apply text-foreground;
+  input::placeholder, textarea::placeholder {
+    @apply text-gray-400;
   }
 }
 
-/* Tailwind utilities with theme support */
+/* Utility classes */
 @layer utilities {
-  /* Background utilities */
   .bg-base {
     @apply bg-white dark:bg-gray-950;
   }
@@ -93,7 +103,6 @@
     @apply bg-white dark:bg-gray-800;
   }
 
-  /* Text utilities */
   .text-base {
     @apply text-gray-900 dark:text-gray-50;
   }
@@ -106,30 +115,20 @@
     @apply text-gray-500 dark:text-gray-500;
   }
 
-  /* Border utilities */
   .border-base {
     @apply border-gray-200 dark:border-gray-700;
   }
 
-  /* Card component */
   .card {
-    @apply bg-surface border border-base rounded-lg p-4 shadow-sm dark:shadow-md;
-  }
-
-  /* Ensure input text is always visible */
-  input::placeholder {
-    @apply text-gray-400 dark:text-gray-500;
-  }
-
-  textarea::placeholder {
-    @apply text-gray-400 dark:text-gray-500;
+    @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm dark:shadow-md;
   }
 }
 
-/* Reset body default styles */
+/* Ensure smooth transitions on theme change */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
 body {
-  margin: 0;
-  padding: 0;
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
