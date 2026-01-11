@@ -42,10 +42,21 @@ export class BroadcastExecutionService {
       throw new Error(`Cannot execute broadcast with status: ${broadcast.status}`);
     }
 
+    console.log(`\n${'═'.repeat(60)}`);
+    console.log(`📢 STARTING BROADCAST EXECUTION`);
+    console.log(`${'═'.repeat(60)}`);
+    console.log(`Broadcast ID: ${broadcastId}`);
+    console.log(`Account ID: ${accountId}`);
+    console.log(`Phone Number ID: ${phoneNumberId}`);
+    console.log(`Message Type: ${broadcast.messageType}`);
+
     // Get all recipients
     const recipients = await this.buildRecipientList(accountId, broadcast.recipients);
 
+    console.log(`Recipients Count: ${recipients.length}\n`);
+
     if (recipients.length === 0) {
+      console.log('⚠️  No recipients found, marking as completed\n');
       broadcast.status = 'completed';
       broadcast.completedAt = new Date();
       await broadcast.save();
@@ -77,18 +88,23 @@ export class BroadcastExecutionService {
         broadcast.stats.sent = sent;
         broadcast.stats.inProgress = recipients.length - i - 1;
         broadcast.stats.pending = recipients.length - sent;
+        console.log(`✅ [${i + 1}/${recipients.length}] Message sent to ${recipient}`);
 
       } catch (error) {
         failed++;
-        broadcast.errorLog.push({
+        const errorDetails = {
           phoneNumber: recipient,
           error: error.message,
+          errorCode: error.code,
           timestamp: new Date()
-        });
+        };
+        broadcast.errorLog.push(errorDetails);
 
         broadcast.stats.failed = failed;
         broadcast.stats.inProgress = recipients.length - i - 1;
         broadcast.stats.pending = recipients.length - sent;
+        
+        console.error(`❌ [${i + 1}/${recipients.length}] Failed to send to ${recipient}: ${error.message}`);
       }
 
       // Save progress every 10 messages
@@ -106,6 +122,14 @@ export class BroadcastExecutionService {
     broadcast.status = 'completed';
     broadcast.completedAt = new Date();
     await broadcast.save();
+
+    console.log(`\n${'═'.repeat(60)}`);
+    console.log(`✅ BROADCAST EXECUTION COMPLETED`);
+    console.log(`${'═'.repeat(60)}`);
+    console.log(`Total Sent: ${sent}/${recipients.length}`);
+    console.log(`Total Failed: ${failed}/${recipients.length}`);
+    console.log(`Success Rate: ${((sent / recipients.length) * 100).toFixed(2)}%`);
+    console.log(`${'═'.repeat(60)}\n`);
 
     return {
       broadcastId: broadcast._id,
@@ -136,7 +160,7 @@ export class BroadcastExecutionService {
           broadcast.content.text,
           { broadcastId: broadcast._id.toString() }
         );
-        messageId = result.messages[0].id;
+        messageId = result.messageId;
 
       } else if (broadcast.messageType === 'template') {
         const result = await whatsappService.sendTemplateMessage(
@@ -147,7 +171,7 @@ export class BroadcastExecutionService {
           broadcast.content.templateParams,
           { broadcastId: broadcast._id.toString() }
         );
-        messageId = result.messages[0].id;
+        messageId = result.messageId;
 
       } else if (broadcast.messageType === 'media') {
         const result = await whatsappService.sendMediaMessage(
@@ -158,7 +182,7 @@ export class BroadcastExecutionService {
           broadcast.content.mediaUrl,
           { broadcastId: broadcast._id.toString() }
         );
-        messageId = result.messages[0].id;
+        messageId = result.messageId;
       }
 
       // Log message to database
@@ -180,7 +204,12 @@ export class BroadcastExecutionService {
       return { success: true, messageId };
 
     } catch (error) {
-      console.error(`Failed to send broadcast to ${recipientPhone}:`, error);
+      console.error(`❌ [BROADCAST ERROR] Failed to send to ${recipientPhone}:`);
+      console.error(`   Error: ${error.message}`);
+      console.error(`   Type: ${error.response?.status || 'Unknown'}`);
+      if (error.response?.data?.error) {
+        console.error(`   Details: ${JSON.stringify(error.response.data.error)}`);
+      }
       throw error;
     }
   }
