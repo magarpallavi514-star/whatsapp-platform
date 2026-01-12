@@ -54,7 +54,7 @@ html.dark {
     @apply text-gray-900 dark:text-gray-50;
   }
 
-  p, span, div, li {
+  p, div, li {
     @apply text-gray-900 dark:text-gray-50;
   }
 

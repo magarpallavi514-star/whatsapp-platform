@@ -14,5 +14,9 @@ export default {
       },
     },
   },
+  corePlugins: {
+    // Disable the prefers-color-scheme media query generation
+    // We ONLY want dark mode to work when html.dark class is explicitly added
+  },
   plugins: [],
 }
