@@ -11,41 +11,23 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('system');
+  const [theme, setThemeState] = useState<Theme>('light');
   const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
 
-    // Load saved theme
-    const savedTheme = (localStorage.getItem('theme') as Theme) || 'system';
+    // Load saved theme - default to 'light'
+    const savedTheme = (localStorage.getItem('theme') as Theme) || 'light';
     setThemeState(savedTheme);
     applyTheme(savedTheme);
-
-    // Listen to system theme changes
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      if (savedTheme === 'system') {
-        applyTheme('system');
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   const applyTheme = (themeMode: Theme) => {
     const html = document.documentElement;
-    let isDarkMode = false;
-
-    if (themeMode === 'dark') {
-      isDarkMode = true;
-    } else if (themeMode === 'light') {
-      isDarkMode = false;
-    } else {
-      isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
+    // Only apply dark if explicitly set to 'dark' - ignore 'system' preference
+    const isDarkMode = themeMode === 'dark';
 
     if (isDarkMode) {
       html.classList.add('dark');
@@ -57,9 +39,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem('theme', newTheme);
-    applyTheme(newTheme);
+    // Convert 'system' to 'light' - we don't use system theme
+    const finalTheme = newTheme === 'system' ? 'light' : newTheme;
+    setThemeState(finalTheme);
+    localStorage.setItem('theme', finalTheme);
+    applyTheme(finalTheme);
   };
 
   if (!mounted) {
@@ -67,7 +51,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, isDark }}>
+    <ThemeContext.Provider value={{ theme: theme === 'system' ? 'light' : theme, setTheme, isDark }}>
       {children}
     </ThemeContext.Provider>
   );

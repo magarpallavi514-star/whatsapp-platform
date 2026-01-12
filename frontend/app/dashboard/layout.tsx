@@ -117,7 +117,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition ${
                     pathname === item.href
                       ? "bg-green-600 text-white"
-                      : "text-gray-300 hover:bg-gray-800"
+                      : "text-gray-100 hover:bg-gray-800"
                   }`}
                   onClick={() => setSidebarOpen(false)}
                 >
@@ -160,7 +160,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition ${
                   pathname === item.href
                     ? "bg-green-600 text-white"
-                    : "text-gray-300 hover:bg-gray-800"
+                    : "text-gray-100 hover:bg-gray-800"
                 } ${sidebarCollapsed ? "justify-center" : ""} ${
                   (item as any).superAdminOnly ? "border-t border-gray-800 mt-2 pt-3" : ""
                 }`}
@@ -183,7 +183,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
             )}
             <Link
               href="/dashboard/settings"
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-800 transition mb-1 ${
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-100 hover:bg-gray-800 transition mb-1 ${
                 sidebarCollapsed ? "justify-center" : ""
               }`}
               title={sidebarCollapsed ? "Settings" : ""}
@@ -193,7 +193,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
             </Link>
             <button
               onClick={handleLogout}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-800 transition mb-1 ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-100 hover:bg-gray-800 transition mb-1 ${
                 sidebarCollapsed ? "justify-center" : ""
               }`}
               title={sidebarCollapsed ? "Logout" : ""}

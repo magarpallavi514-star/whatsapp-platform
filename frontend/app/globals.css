@@ -18,24 +18,7 @@
   --ring: 59 89% 46%;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --background: 0 0% 5%;
-    --foreground: 0 0% 95%;
-    --primary: 0 0% 100%;
-    --primary-foreground: 0 0% 0%;
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 0 0% 25%;
-    --muted-foreground: 0 0% 75%;
-    --accent: 59 89% 46%;
-    --accent-foreground: 0 0% 100%;
-    --border: 0 0% 20%;
-    --input: 0 0% 12%;
-    --ring: 59 89% 46%;
-  }
-}
+/* Only apply dark mode when explicitly set by user, NOT by OS theme */
 
 html.dark {
   color-scheme: dark;
@@ -71,7 +54,7 @@ html.dark {
     @apply text-gray-900 dark:text-gray-50;
   }
 
-  p, span, div, li, a {
+  p, span, div, li {
     @apply text-gray-900 dark:text-gray-50;
   }
 
@@ -79,13 +62,13 @@ html.dark {
     @apply text-green-600 dark:text-green-400 hover:opacity-80;
   }
 
-  /* Keep input colors FIXED - no theme changes */
+  /* Input colors respect theme */
   input, textarea, select {
-    @apply bg-white text-gray-900 border border-gray-300;
+    @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600;
   }
 
   input::placeholder, textarea::placeholder {
-    @apply text-gray-400;
+    @apply text-gray-400 dark:text-gray-500;
   }
 }
 
