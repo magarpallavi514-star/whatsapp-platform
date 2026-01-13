@@ -1,6 +1,6 @@
 "use client"
 
-import { Megaphone, Plus, Calendar, Users, Send, MoreVertical, Loader, Edit, Trash2, Clock, CheckCircle } from "lucide-react"
+import { Megaphone, Plus, Calendar, Users, Send, MoreVertical, Loader, Edit, Trash2, Clock, CheckCircle, Eye, X, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -14,6 +14,27 @@ interface Broadcast {
   delivered: number
   read: number
   date: string
+}
+
+interface BroadcastDetail {
+  _id: string
+  name: string
+  messageType: string
+  content: {
+    text?: string
+    templateName?: string
+    templateParams?: string[]
+    mediaUrl?: string
+    mediaType?: string
+  }
+  recipients: {
+    phoneNumbers?: string[]
+    contactIds?: string[]
+  }
+  stats: {
+    sent: number
+    delivered: number
+  }
 }
 
 export default function BroadcastsPage() {
@@ -30,6 +51,9 @@ export default function BroadcastsPage() {
   const [openMenu, setOpenMenu] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [viewingBroadcast, setViewingBroadcast] = useState<BroadcastDetail | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user?.accountId) return
@@ -174,6 +198,39 @@ export default function BroadcastsPage() {
     }
   }
 
+  const handleViewBroadcast = async (broadcastId: string) => {
+    setLoadingDetail(true)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/broadcasts/${broadcastId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        }
+      )
+      const data = await response.json()
+      if (data.success || data.data) {
+        setViewingBroadcast(data.data)
+        setOpenMenu(null)
+      } else {
+        alert(data.error || "Failed to fetch broadcast details")
+      }
+    } catch (err) {
+      alert("Error fetching broadcast: " + (err instanceof Error ? err.message : "Unknown error"))
+    } finally {
+      setLoadingDetail(false)
+    }
+  }
+
+  const copyToClipboard = (text: string, phone: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedPhone(phone)
+    setTimeout(() => setCopiedPhone(null), 2000)
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -301,6 +358,18 @@ export default function BroadcastsPage() {
                           
                           {openMenu === broadcast.id && (
                             <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-[9999]">
+                              <button
+                                onClick={() => handleViewBroadcast(broadcast.id)}
+                                disabled={loadingDetail}
+                                className="block w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 border-b border-gray-200 text-blue-600 disabled:opacity-50"
+                              >
+                                {loadingDetail ? (
+                                  <Loader className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                                <span>{loadingDetail ? "Loading..." : "View Details"}</span>
+                              </button>
                               {broadcast.status === "draft" && (
                                 <>
                                   <Link 
@@ -379,6 +448,133 @@ export default function BroadcastsPage() {
           )}
         </div>
       </div>
+
+      {/* View Details Modal */}
+      {viewingBroadcast && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[10000]">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 p-6 flex items-center justify-between border-b border-gray-200">
+              <div>
+                <h2 className="text-2xl font-bold text-white">{viewingBroadcast.name}</h2>
+                <p className="text-blue-100 text-sm mt-1">Message Details</p>
+              </div>
+              <button
+                onClick={() => setViewingBroadcast(null)}
+                className="text-white hover:bg-blue-500 p-2 rounded transition"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Message Content */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Message Content</h3>
+                <div className="bg-white p-4 rounded border border-gray-200">
+                  {viewingBroadcast.messageType === "text" && (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Text Message:</p>
+                      <p className="text-gray-900 whitespace-pre-wrap">{viewingBroadcast.content.text}</p>
+                    </div>
+                  )}
+                  {viewingBroadcast.messageType === "template" && (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Template:</p>
+                      <p className="text-gray-900 font-medium">{viewingBroadcast.content.templateName}</p>
+                      {viewingBroadcast.content.templateParams && viewingBroadcast.content.templateParams.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-sm text-gray-600 mb-2">Parameters:</p>
+                          <ul className="space-y-1">
+                            {viewingBroadcast.content.templateParams.map((param, idx) => (
+                              <li key={idx} className="text-sm text-gray-700">• {param}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {viewingBroadcast.messageType === "media" && (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Media ({viewingBroadcast.content.mediaType}):</p>
+                      <p className="text-gray-900 text-sm break-all">{viewingBroadcast.content.mediaUrl}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Statistics */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <p className="text-sm text-gray-600">Total Sent</p>
+                  <p className="text-2xl font-bold text-blue-600">{viewingBroadcast.stats?.sent || 0}</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                  <p className="text-sm text-gray-600">Delivered</p>
+                  <p className="text-2xl font-bold text-green-600">{viewingBroadcast.stats?.delivered || 0}</p>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                  <p className="text-sm text-gray-600">Rate</p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {viewingBroadcast.stats?.sent ? 
+                      ((viewingBroadcast.stats.delivered / viewingBroadcast.stats.sent) * 100).toFixed(1) 
+                      : 0}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Recipients */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Recipients ({viewingBroadcast.recipients?.phoneNumbers?.length || 0})</h3>
+                {viewingBroadcast.recipients?.phoneNumbers && viewingBroadcast.recipients.phoneNumbers.length > 0 ? (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {viewingBroadcast.recipients.phoneNumbers.map((phone, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-white p-3 rounded border border-gray-200 flex items-center justify-between hover:bg-gray-50"
+                      >
+                        <span className="text-gray-900 font-mono text-sm">{phone}</span>
+                        <button
+                          onClick={() => copyToClipboard(phone, phone)}
+                          className="p-1 hover:bg-gray-200 rounded transition ml-2"
+                          title="Copy to clipboard"
+                        >
+                          {copiedPhone === phone ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white p-4 rounded text-center text-gray-500">
+                    No recipients found
+                  </div>
+                )}
+              </div>
+
+              {/* Download Button */}
+              <button
+                onClick={() => {
+                  const phones = viewingBroadcast.recipients?.phoneNumbers?.join("\n") || ""
+                  const element = document.createElement("a")
+                  element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(phones))
+                  element.setAttribute("download", `${viewingBroadcast.name}_recipients.txt`)
+                  element.style.display = "none"
+                  document.body.appendChild(element)
+                  element.click()
+                  document.body.removeChild(element)
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition"
+              >
+                Download Recipients List
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
