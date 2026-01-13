@@ -62,13 +62,24 @@ html.dark {
     @apply text-green-600 dark:text-green-400 hover:opacity-80;
   }
 
-  /* Input colors respect theme */
+  /* Input colors - always light regardless of OS theme */
   input, textarea, select {
-    @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600;
+    color-scheme: light;
+    @apply bg-white text-gray-900 border border-gray-300;
   }
 
   input::placeholder, textarea::placeholder {
-    @apply text-gray-400 dark:text-gray-500;
+    @apply text-gray-400;
+  }
+  
+  /* Force light inputs even in dark mode */
+  .dark input, .dark textarea, .dark select {
+    color-scheme: light;
+    @apply bg-white text-gray-900 border border-gray-300;
+  }
+  
+  .dark input::placeholder, .dark textarea::placeholder {
+    @apply text-gray-400;
   }
 }
 
