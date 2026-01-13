@@ -73,28 +73,34 @@ export const getBroadcasts = async (req, res) => {
 
 export const getBroadcastById = async (req, res) => {
   try {
-    // Handle both routes:
-    // 1. /:broadcastId (with accountId from JWT)
-    // 2. /:accountId/broadcasts/:broadcastId (with accountId in params)
-    let accountId = req.params.accountId;
-    let broadcastId = req.params.broadcastId;
+    // Get accountId from JWT middleware (always available for protected routes)
+    const accountId = req.accountId;
     
-    // If accountId is not in params, it's the first route format
-    // and broadcastId is in req.params.broadcastId position
+    // Get broadcastId from params - could be from different route formats:
+    // 1. GET /api/broadcasts/:broadcastId
+    // 2. GET /api/:accountId/broadcasts/:broadcastId
+    const broadcastId = req.params.broadcastId || req.params.accountId;
+    
     if (!broadcastId) {
-      broadcastId = req.params.broadcastId || req.params.accountId;
-      accountId = req.accountId; // From JWT middleware
+      return res.status(400).json({
+        success: false,
+        error: 'Broadcast ID is required'
+      });
     }
 
+    console.log(`📊 Fetching broadcast ${broadcastId} for account ${accountId}`);
+    
     const broadcast = await broadcastService.getBroadcastById(accountId, broadcastId);
 
     if (!broadcast) {
+      console.log(`❌ Broadcast ${broadcastId} not found for account ${accountId}`);
       return res.status(404).json({
         success: false,
         error: 'Broadcast not found'
       });
     }
 
+    console.log(`✅ Broadcast ${broadcastId} found`);
     res.status(200).json({
       success: true,
       data: broadcast
@@ -225,25 +231,32 @@ export const getBroadcastStats = async (req, res) => {
 
 export const deleteBroadcast = async (req, res) => {
   try {
-    // Handle both routes
-    let accountId = req.params.accountId;
-    let broadcastId = req.params.broadcastId;
+    // Get accountId from JWT middleware
+    const accountId = req.accountId;
     
-    // If accountId is not in params, it's the simple route
+    // Get broadcastId from params
+    const broadcastId = req.params.broadcastId || req.params.accountId;
+    
     if (!broadcastId) {
-      broadcastId = req.params.accountId;
-      accountId = req.accountId; // From JWT middleware
+      return res.status(400).json({
+        success: false,
+        error: 'Broadcast ID is required'
+      });
     }
 
+    console.log(`🗑️ Deleting broadcast ${broadcastId} for account ${accountId}`);
+    
     const result = await broadcastService.deleteBroadcast(accountId, broadcastId);
 
     if (!result) {
+      console.log(`❌ Broadcast ${broadcastId} not found for deletion`);
       return res.status(404).json({
         success: false,
         error: 'Broadcast not found'
       });
     }
 
+    console.log(`✅ Broadcast ${broadcastId} deleted successfully`);
     res.status(200).json({
       success: true,
       message: 'Broadcast deleted successfully'

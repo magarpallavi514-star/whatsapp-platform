@@ -52,10 +52,20 @@ export class BroadcastService {
    * Get broadcast by ID
    */
   async getBroadcastById(accountId, broadcastId) {
-    return Broadcast.findOne({
+    console.log(`🔍 BroadcastService: Looking for broadcast ${broadcastId} in account ${accountId}`);
+    
+    const broadcast = await Broadcast.findOne({
       _id: broadcastId,
       accountId
     });
+    
+    if (!broadcast) {
+      console.log(`❌ Broadcast not found. Query: { _id: "${broadcastId}", accountId: "${accountId}" }`);
+    } else {
+      console.log(`✅ Broadcast found: ${broadcast.name} (status: ${broadcast.status})`);
+    }
+    
+    return broadcast;
   }
 
   /**
