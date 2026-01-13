@@ -221,19 +221,28 @@ export class BroadcastExecutionService {
     const phoneNumbers = [];
 
     if (recipients.phoneNumbers) {
-      phoneNumbers.push(...recipients.phoneNumbers);
+      // Filter out null/undefined phone numbers
+      const validPhones = recipients.phoneNumbers.filter(p => p && typeof p === 'string' && p.trim());
+      phoneNumbers.push(...validPhones);
     }
 
     if (recipients.contactIds && recipients.contactIds.length > 0) {
       const contacts = await Contact.find({
         _id: { $in: recipients.contactIds },
         accountId
-      }).select('phoneNumber');
+      }).select('phone whatsappNumber');
 
-      phoneNumbers.push(...contacts.map(c => c.phoneNumber));
+      // Get phone numbers - prefer whatsappNumber, fallback to phone
+      const contactPhones = contacts
+        .map(c => c.whatsappNumber || c.phone)
+        .filter(p => p && typeof p === 'string' && p.trim());
+
+      phoneNumbers.push(...contactPhones);
     }
 
-    return [...new Set(phoneNumbers)];
+    // Filter out any null/undefined values before returning
+    const cleanedNumbers = phoneNumbers.filter(p => p && typeof p === 'string' && p.trim());
+    return [...new Set(cleanedNumbers)];
   }
 
   /**

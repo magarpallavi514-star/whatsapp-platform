@@ -10,7 +10,8 @@ import { useRouter } from "next/navigation"
 interface Contact {
   _id: string
   name: string
-  phoneNumber: string
+  phone: string
+  whatsappNumber: string
   type?: string
 }
 
@@ -96,7 +97,8 @@ export default function CreateBroadcastPage() {
 
   const filteredContacts = contacts.filter(contact =>
     contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    contact.phoneNumber.includes(searchQuery)
+    contact.whatsappNumber.includes(searchQuery) ||
+    contact.phone.includes(searchQuery)
   )
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -196,7 +198,7 @@ export default function CreateBroadcastPage() {
 
   const getPhoneNumbersFromContacts = () => {
     const selectedContacts = contacts.filter(c => formData.recipients.contactIds.includes(c._id))
-    return selectedContacts.map(c => c.phoneNumber)
+    return selectedContacts.map(c => c.whatsappNumber || c.phone)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -498,7 +500,7 @@ export default function CreateBroadcastPage() {
                         />
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-900 truncate">{contact.name}</p>
-                          <p className="text-sm text-gray-600 truncate">{contact.phoneNumber}</p>
+                          <p className="text-sm text-gray-600 truncate">{contact.whatsappNumber || contact.phone}</p>
                         </div>
                       </label>
                     ))}

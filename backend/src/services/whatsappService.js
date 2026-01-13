@@ -47,6 +47,11 @@ class WhatsAppService {
     let message;
     
     try {
+      // Validate recipient phone FIRST before any operations
+      if (!recipientPhone || typeof recipientPhone !== 'string') {
+        throw new Error(`Invalid recipient phone: ${recipientPhone}. Expected non-empty string.`);
+      }
+
       const config = await this.getPhoneConfig(accountId, phoneNumberId);
       
       // Clean phone number (remove + and spaces)
@@ -173,6 +178,11 @@ class WhatsAppService {
     let message;
     
     try {
+      // Validate recipient phone FIRST before any operations
+      if (!recipientPhone || typeof recipientPhone !== 'string') {
+        throw new Error(`Invalid recipient phone: ${recipientPhone}. Expected non-empty string.`);
+      }
+
       const config = await this.getPhoneConfig(accountId, phoneNumberId);
       const cleanPhone = recipientPhone.replace(/[\s+()-]/g, '');
 
@@ -677,6 +687,11 @@ class WhatsAppService {
     let message;
     
     try {
+      // Validate recipient phone FIRST before any operations
+      if (!recipientPhone || typeof recipientPhone !== 'string') {
+        throw new Error(`Invalid recipient phone: ${recipientPhone}. Expected non-empty string.`);
+      }
+
       const config = await this.getPhoneConfig(accountId, phoneNumberId);
       const cleanPhone = recipientPhone.replace(/[\s+()-]/g, '');
       
