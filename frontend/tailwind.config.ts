@@ -10,7 +10,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Use standard Tailwind colors, dark: prefix handles dark mode
+        // Use standard Tailwind colors, prefix handles dark mode
       },
     },
   },

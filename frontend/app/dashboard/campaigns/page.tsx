@@ -149,14 +149,14 @@ export default function CampaignsPage() {
   // Status badge color
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      draft: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
-      scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      running: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      paused: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      completed: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-      failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+      draft: 'bg-gray-100 text-gray-800',
+      scheduled: 'bg-blue-100 text-blue-800',
+      running: 'bg-green-100 text-green-800',
+      paused: 'bg-yellow-100 text-yellow-800',
+      completed: 'bg-purple-100 text-purple-800',
+      failed: 'bg-red-100 text-red-800'
     };
-    return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+    return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
   // Type badge icon
@@ -182,19 +182,19 @@ export default function CampaignsPage() {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        <p className="text-gray-600">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Campaigns</h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">Create and manage your WhatsApp campaigns</p>
+            <h1 className="text-3xl font-bold text-gray-900">Campaigns</h1>
+            <p className="mt-2 text-gray-600">Create and manage your WhatsApp campaigns</p>
           </div>
           <Link
             href="/dashboard/campaigns/create"
@@ -206,7 +206,7 @@ export default function CampaignsPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Search */}
             <input
@@ -217,7 +217,7 @@ export default function CampaignsPage() {
                 setSearchQuery(e.target.value);
                 setPage(1);
               }}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
 
             {/* Status Filter */}
@@ -227,7 +227,7 @@ export default function CampaignsPage() {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
               <option value="">All Status</option>
               <option value="draft">Draft</option>
@@ -245,7 +245,7 @@ export default function CampaignsPage() {
                 setTypeFilter(e.target.value);
                 setPage(1);
               }}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
               <option value="">All Types</option>
               <option value="broadcast">Broadcast</option>
@@ -258,7 +258,7 @@ export default function CampaignsPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
               <option value="recent">Recent</option>
               <option value="oldest">Oldest</option>
@@ -274,7 +274,7 @@ export default function CampaignsPage() {
                   setSearchQuery('');
                   setPage(1);
                 }}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
               >
                 Clear Filters
               </button>
@@ -284,24 +284,24 @@ export default function CampaignsPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg mb-6">
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6">
             {error}
           </div>
         )}
 
         {/* Campaigns Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-400">Loading campaigns...</p>
+                <p className="text-gray-600">Loading campaigns...</p>
               </div>
             </div>
           ) : campaigns.length === 0 ? (
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
-                <p className="text-gray-600 dark:text-gray-400 mb-4">No campaigns found</p>
+                <p className="text-gray-600 mb-4">No campaigns found</p>
                 <Link
                   href="/dashboard/campaigns/create"
                   className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition"
@@ -313,47 +313,47 @@ export default function CampaignsPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Campaign
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Recipients
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Delivery Rate
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Open Rate
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Created
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                <tbody className="divide-y divide-gray-200">
                   {campaigns.map((campaign) => (
                     <tr
                       key={campaign._id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                      className="hover:bg-gray-50 transition"
                     >
                       {/* Campaign Name */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                          <p className="text-sm font-semibold text-gray-900">
                             {campaign.name}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          <p className="text-xs text-gray-500 truncate">
                             {campaign.description || 'No description'}
                           </p>
                         </div>
@@ -362,7 +362,7 @@ export default function CampaignsPage() {
                       {/* Type */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-lg mr-2">{getTypeIcon(campaign.type)}</span>
-                        <span className="text-sm text-gray-600 dark:text-gray-400 capitalize">
+                        <span className="text-sm text-gray-600 capitalize">
                           {campaign.type}
                         </span>
                       </td>
@@ -379,9 +379,9 @@ export default function CampaignsPage() {
                       </td>
 
                       {/* Recipients */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         <div>
-                          <p className="font-semibold text-gray-900 dark:text-white">
+                          <p className="font-semibold text-gray-900">
                             {campaign.recipients.sent} / {campaign.recipients.total}
                           </p>
                           <p className="text-xs">
@@ -393,13 +393,13 @@ export default function CampaignsPage() {
                       {/* Delivery Rate */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="w-12 h-2 bg-gray-200 dark:bg-gray-600 rounded-full mr-2">
+                          <div className="w-12 h-2 bg-gray-200 rounded-full mr-2">
                             <div
                               className="h-2 bg-green-600 rounded-full"
                               style={{ width: `${campaign.stats.deliveryRate}%` }}
                             ></div>
                           </div>
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                          <span className="text-sm font-semibold text-gray-900">
                             {campaign.stats.deliveryRate}%
                           </span>
                         </div>
@@ -408,20 +408,20 @@ export default function CampaignsPage() {
                       {/* Open Rate */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="w-12 h-2 bg-gray-200 dark:bg-gray-600 rounded-full mr-2">
+                          <div className="w-12 h-2 bg-gray-200 rounded-full mr-2">
                             <div
                               className="h-2 bg-blue-600 rounded-full"
                               style={{ width: `${campaign.stats.openRate}%` }}
                             ></div>
                           </div>
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                          <span className="text-sm font-semibold text-gray-900">
                             {campaign.stats.openRate}%
                           </span>
                         </div>
                       </td>
 
                       {/* Created */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {formatDate(campaign.createdAt)}
                       </td>
 
@@ -431,7 +431,7 @@ export default function CampaignsPage() {
                           {/* View/Edit */}
                           <Link
                             href={`/dashboard/campaigns/${campaign._id}`}
-                            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                            className="text-blue-600 hover:text-blue-700"
                             title="View details"
                           >
                             👁️
@@ -441,7 +441,7 @@ export default function CampaignsPage() {
                           {campaign.status === 'draft' && (
                             <button
                               onClick={() => handleStatusAction(campaign._id, 'start')}
-                              className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
+                              className="text-green-600 hover:text-green-700"
                               title="Start campaign"
                             >
                               ▶️
@@ -452,7 +452,7 @@ export default function CampaignsPage() {
                           {campaign.status === 'running' && (
                             <button
                               onClick={() => handleStatusAction(campaign._id, 'pause')}
-                              className="text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300"
+                              className="text-yellow-600 hover:text-yellow-700"
                               title="Pause campaign"
                             >
                               ⏸️
@@ -463,7 +463,7 @@ export default function CampaignsPage() {
                           {campaign.status === 'paused' && (
                             <button
                               onClick={() => handleStatusAction(campaign._id, 'resume')}
-                              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                              className="text-blue-600 hover:text-blue-700"
                               title="Resume campaign"
                             >
                               ▶️
@@ -474,7 +474,7 @@ export default function CampaignsPage() {
                           {(campaign.status === 'draft' || campaign.status === 'failed') && (
                             <button
                               onClick={() => handleDelete(campaign._id)}
-                              className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                              className="text-red-600 hover:text-red-700"
                               title="Delete campaign"
                             >
                               🗑️
@@ -493,21 +493,21 @@ export default function CampaignsPage() {
         {/* Pagination */}
         {!loading && campaigns.length > 0 && (
           <div className="mt-6 flex items-center justify-between">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-gray-600">
               Page <span className="font-semibold">{page}</span>
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage(page + 1)}
                 disabled={campaigns.length < limit}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 Next
               </button>
