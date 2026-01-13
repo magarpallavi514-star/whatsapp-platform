@@ -4,12 +4,10 @@ export function ThemeScript() {
       dangerouslySetInnerHTML={{
         __html: `
           try {
-            const theme = localStorage.getItem('theme') || 'light';
-            if (theme === 'dark') {
-              document.documentElement.classList.add('dark');
-            } else {
-              document.documentElement.classList.remove('dark');
-            }
+            // FORCE LIGHT MODE ONLY - Never sync with OS theme
+            localStorage.setItem('theme', 'light');
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
           } catch (e) {}
         `,
       }}

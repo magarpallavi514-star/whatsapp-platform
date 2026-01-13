@@ -34,7 +34,7 @@ export default function RootLayout({
       <head>
         <ThemeScript />
       </head>
-      <body className="antialiased bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-50 transition-colors duration-300">
+      <body className="antialiased bg-white text-gray-900 transition-colors duration-300">
         {children}
       </body>
     </html>
