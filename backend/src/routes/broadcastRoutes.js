@@ -6,7 +6,8 @@ import {
   updateBroadcast,
   startBroadcast,
   cancelBroadcast,
-  getBroadcastStats
+  getBroadcastStats,
+  deleteBroadcast
 } from '../controllers/broadcastController.js';
 
 const router = express.Router();
@@ -15,6 +16,8 @@ const router = express.Router();
 // Simpler routes (accountId from JWT middleware)
 router.get('/', getBroadcasts);
 router.post('/', createBroadcast);
+router.get('/:broadcastId', getBroadcastById);
+router.delete('/:broadcastId', deleteBroadcast);
 router.post('/:broadcastId/start', startBroadcast);
 router.post('/:broadcastId/cancel', cancelBroadcast);
 router.get('/:broadcastId/stats', getBroadcastStats);

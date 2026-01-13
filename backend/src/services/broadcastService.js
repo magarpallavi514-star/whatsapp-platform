@@ -162,6 +162,32 @@ export class BroadcastService {
         : 0
     };
   }
+
+  /**
+   * Delete a broadcast
+   */
+  async deleteBroadcast(accountId, broadcastId) {
+    const broadcast = await Broadcast.findOne({
+      _id: broadcastId,
+      accountId
+    });
+
+    if (!broadcast) {
+      return null;
+    }
+
+    // Only allow deletion if broadcast is not running
+    if (broadcast.status === 'running') {
+      throw new Error('Cannot delete a broadcast that is currently running');
+    }
+
+    await Broadcast.deleteOne({
+      _id: broadcastId,
+      accountId
+    });
+
+    return true;
+  }
 }
 
 export default new BroadcastService();
