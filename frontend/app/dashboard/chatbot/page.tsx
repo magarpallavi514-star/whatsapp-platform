@@ -137,7 +137,7 @@ export default function ChatbotPage() {
         authHeaderValue: headers.Authorization?.substring(0, 30) + '...'
       });
       
-      const response = await fetch(`${API_URL}/api/chatbots`, {
+      const response = await fetch(`${API_URL}/chatbots`, {
         headers: getHeaders()
       });
       
@@ -210,8 +210,8 @@ export default function ChatbotPage() {
       console.log('📍 API URL:', API_URL);
 
       const url = editingBot 
-        ? `${API_URL}/api/chatbots/${editingBot._id}`
-        : `${API_URL}/api/chatbots`;
+        ? `${API_URL}/chatbots/${editingBot._id}`
+        : `${API_URL}/chatbots`;
       
       console.log('📡 Request URL:', url);
       console.log('🔧 Method:', editingBot ? 'PUT' : 'POST');
@@ -256,7 +256,7 @@ export default function ChatbotPage() {
 
   const toggleBot = async (id: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/chatbots/${id}/toggle`, {
+      const response = await fetch(`${API_URL}/chatbots/${id}/toggle`, {
         method: 'PATCH',
         headers: getHeaders()
       });
@@ -273,7 +273,7 @@ export default function ChatbotPage() {
     if (!confirm('Are you sure you want to delete this chatbot?')) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/chatbots/${id}`, {
+      const response = await fetch(`${API_URL}/chatbots/${id}`, {
         method: 'DELETE',
         headers: getHeaders()
       });

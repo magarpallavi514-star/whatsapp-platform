@@ -92,7 +92,7 @@ export default function SettingsPage() {
     timezone: ''
   })
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api"
 
   const getHeaders = () => {
     const token = authService.getToken()
@@ -113,16 +113,26 @@ export default function SettingsPage() {
   const fetchPhoneNumbers = async () => {
     try {
       setIsLoading(true)
-      const headers = getHeaders()
-      console.log('📱 FETCH PHONE NUMBERS START');
-      console.log('  API URL:', `${API_URL}/api/settings/phone-numbers`);
-      console.log('  Headers:', {
-        hasAuth: !!headers.Authorization,
-        authLength: headers.Authorization?.length || 0,
-        contentType: headers['Content-Type']
-      })
+      const token = authService.getToken()
       
-      const response = await fetch(`${API_URL}/api/settings/phone-numbers`, {
+      // Check if token exists
+      if (!token) {
+        console.error("❌ No token found - user not authenticated")
+        setError("Authentication required. Please login again.")
+        setIsLoading(false)
+        return
+      }
+      
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+      
+      console.log('📱 FETCH PHONE NUMBERS START');
+      console.log('  API URL:', `${API_URL}/settings/phone-numbers`);
+      console.log('  Token present:', !!token);
+      
+      const response = await fetch(`${API_URL}/settings/phone-numbers`, {
         method: 'GET',
         headers: headers
       })
@@ -130,7 +140,6 @@ export default function SettingsPage() {
       console.log('📱 FETCH RESPONSE RECEIVED');
       console.log('  Status:', response.status);
       console.log('  OK:', response.ok);
-      console.log('  Content-Type:', response.headers.get('content-type'));
       
       if (response.ok) {
         const data = await response.json()
@@ -158,9 +167,11 @@ export default function SettingsPage() {
           message: errorMessage,
           statusText: response.statusText
         })
+        setError(errorMessage)
       }
     } catch (error: any) {
       console.error("❌ Error fetching phone numbers:", error?.message || String(error), error)
+      setError(error?.message || "Failed to fetch phone numbers")
     } finally {
       setIsLoading(false)
       console.log('📱 FETCH PHONE NUMBERS END');
@@ -174,7 +185,7 @@ export default function SettingsPage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/settings/phone-numbers`, {
+      const response = await fetch(`${API_URL}/settings/phone-numbers`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(formData)
@@ -203,7 +214,7 @@ export default function SettingsPage() {
 
   const toggleActive = async (id: string, currentStatus: boolean) => {
     try {
-      const response = await fetch(`${API_URL}/api/settings/phone-numbers/${id}`, {
+      const response = await fetch(`${API_URL}/settings/phone-numbers/${id}`, {
         method: 'PUT',
         headers: getHeaders(),
         body: JSON.stringify({ isActive: !currentStatus })
@@ -217,7 +228,7 @@ export default function SettingsPage() {
   const testConnection = async (id: string) => {
     try {
       setTestingId(id)
-      const response = await fetch(`${API_URL}/api/settings/phone-numbers/${id}/test`, {
+      const response = await fetch(`${API_URL}/settings/phone-numbers/${id}/test`, {
         method: 'POST',
         headers: getHeaders()
       })
@@ -240,7 +251,7 @@ export default function SettingsPage() {
   const deletePhoneNumber = async (id: string) => {
     if (!confirm('Are you sure you want to delete this phone number?')) return
     try {
-      const response = await fetch(`${API_URL}/api/settings/phone-numbers/${id}`, {
+      const response = await fetch(`${API_URL}/settings/phone-numbers/${id}`, {
         method: 'DELETE',
         headers: getHeaders()
       })
@@ -258,7 +269,7 @@ export default function SettingsPage() {
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const response = await fetch(`${API_URL}/api/settings/profile`, {
+      const response = await fetch(`${API_URL}/settings/profile`, {
         method: 'PUT',
         headers: getHeaders(),
         body: JSON.stringify(profileData)
@@ -283,7 +294,7 @@ export default function SettingsPage() {
   // API Keys handlers
   const fetchApiKeys = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/settings/api-keys`, {
+      const response = await fetch(`${API_URL}/settings/api-keys`, {
         headers: getHeaders()
       })
       if (response.ok) {
@@ -314,7 +325,7 @@ export default function SettingsPage() {
   const fetchTenantAccounts = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`${API_URL}/api/admin/accounts`, {
+      const response = await fetch(`${API_URL}/admin/accounts`, {
         headers: getHeaders()
       })
       if (response.ok) {
@@ -358,7 +369,7 @@ export default function SettingsPage() {
         return;
       }
       
-      console.log("  📍 API URL:", `${API_URL}/api/account/integration-token`);
+      console.log("  📍 API URL:", `${API_URL}/account/integration-token`);
       
       const headers = getHeaders()
       console.log("  📤 Headers:", { 
@@ -369,7 +380,7 @@ export default function SettingsPage() {
       
       console.log("  📡 Sending request...");
       
-      const response = await fetch(`${API_URL}/api/account/integration-token`, {
+      const response = await fetch(`${API_URL}/account/integration-token`, {
         method: 'POST',
         headers: headers
       })
@@ -417,7 +428,7 @@ export default function SettingsPage() {
       return
     }
     try {
-      const response = await fetch(`${API_URL}/api/settings/api-keys`, {
+      const response = await fetch(`${API_URL}/settings/api-keys`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({ name: apiKeyName })
@@ -440,7 +451,7 @@ export default function SettingsPage() {
   const deleteApiKey = async (id: string) => {
     if (!confirm('Are you sure you want to delete this API key? This action cannot be undone.')) return
     try {
-      const response = await fetch(`${API_URL}/api/settings/api-keys/${id}`, {
+      const response = await fetch(`${API_URL}/settings/api-keys/${id}`, {
         method: 'DELETE',
         headers: getHeaders()
       })
@@ -466,7 +477,7 @@ export default function SettingsPage() {
       return
     }
     try {
-      const response = await fetch(`${API_URL}/api/settings/change-password`, {
+      const response = await fetch(`${API_URL}/settings/change-password`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({
@@ -1082,7 +1093,7 @@ export default function SettingsPage() {
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm font-medium text-gray-900 mb-2">Usage Example:</p>
                 <pre className="text-xs bg-gray-900 text-gray-100 p-3 rounded overflow-x-auto">
-{`fetch('${API_URL}/api/messages/send', {
+{`fetch('${API_URL}/messages/send', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer ${newTenantKey}',

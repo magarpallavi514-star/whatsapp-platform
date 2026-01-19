@@ -33,8 +33,15 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     const fetchNotifications = async () => {
       try {
         const token = localStorage.getItem("token")
+        
+        // Only fetch if token exists
+        if (!token) {
+          console.warn('⚠️ No token in localStorage, skipping notifications fetch');
+          return;
+        }
+        
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/notifications`,
+          `${process.env.NEXT_PUBLIC_API_URL}/notifications`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -42,6 +49,12 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
             }
           }
         )
+        
+        if (!response.ok) {
+          console.error('Notifications fetch failed:', response.status, response.statusText);
+          return;
+        }
+        
         const data = await response.json()
         if (data.success) {
           setNotifications(data.data?.notifications || [])

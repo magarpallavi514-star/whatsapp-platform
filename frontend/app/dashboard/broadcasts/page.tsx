@@ -66,9 +66,17 @@ export default function BroadcastsPage() {
         setError("")
         const token = localStorage.getItem("token")
         
+        // Check if token exists
+        if (!token) {
+          console.warn('⚠️ No token in localStorage, unable to fetch broadcasts');
+          setError("Please login to view broadcasts")
+          setLoading(false)
+          return;
+        }
+        
         // Fetch broadcasts - first try to get all broadcasts for the account
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/broadcasts`,
+          `${process.env.NEXT_PUBLIC_API_URL}/broadcasts`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -76,6 +84,13 @@ export default function BroadcastsPage() {
             }
           }
         )
+
+        if (!response.ok) {
+          console.error('Broadcasts fetch failed:', response.status, response.statusText);
+          setError(`Failed to fetch broadcasts (${response.status})`);
+          setLoading(false);
+          return;
+        }
 
         const data = await response.json()
         
@@ -141,7 +156,7 @@ export default function BroadcastsPage() {
     try {
       const token = localStorage.getItem("token")
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/broadcasts/${broadcastId}/start`,
+        `${process.env.NEXT_PUBLIC_API_URL}/broadcasts/${broadcastId}/start`,
         {
           method: "POST",
           headers: {
@@ -175,7 +190,7 @@ export default function BroadcastsPage() {
     try {
       const token = localStorage.getItem("token")
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/broadcasts/${broadcastId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/broadcasts/${broadcastId}`,
         {
           method: "DELETE",
           headers: {
@@ -203,7 +218,7 @@ export default function BroadcastsPage() {
     try {
       const token = localStorage.getItem("token")
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/broadcasts/${broadcastId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/broadcasts/${broadcastId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

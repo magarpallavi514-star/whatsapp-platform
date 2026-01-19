@@ -50,7 +50,7 @@ export default function TemplatesPage() {
     buttons: [] as Array<{ type: string; text: string; url?: string; phone?: string }>
   })
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api"
 
   const getHeaders = () => {
     const token = authService.getToken()
@@ -77,7 +77,7 @@ export default function TemplatesPage() {
         return
       }
       
-      const response = await fetch(`${API_URL}/api/templates`, {
+      const response = await fetch(`${API_URL}/templates`, {
         headers: headers,
       })
       if (response.ok) {
@@ -113,7 +113,7 @@ export default function TemplatesPage() {
   // Create template
   const createTemplate = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/templates`, {
+      const response = await fetch(`${API_URL}/templates`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify(formData),
@@ -138,7 +138,7 @@ export default function TemplatesPage() {
     if (!confirm("Are you sure you want to delete this template?")) return
     
     try {
-      const response = await fetch(`${API_URL}/api/templates/${id}`, {
+      const response = await fetch(`${API_URL}/templates/${id}`, {
         method: 'DELETE',
         headers: getHeaders(),
       })
@@ -158,7 +158,7 @@ export default function TemplatesPage() {
   const syncTemplatesFromWhatsApp = async () => {
     try {
       setIsSyncing(true)
-      const response = await fetch(`${API_URL}/api/settings/templates/sync`, {
+      const response = await fetch(`${API_URL}/settings/templates/sync`, {
         method: 'POST',
         headers: getHeaders(),
       })

@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'whatsapp-platform-jwt-secret-2026';
+import { JWT_SECRET } from '../config/jwt.js';
 
 /**
  * Initialize Socket.io for real-time chat
@@ -23,18 +22,43 @@ export const initSocketIO = (server) => {
   // Authentication middleware for WebSocket
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
+    console.log('\n🔐 Socket Auth Verification:');
+    console.log('  Token exists:', !!token);
+    console.log('  Token length:', token?.length || 0);
+    console.log('  Token starts:', token?.substring(0, 20) || 'none');
+    console.log('  JWT_SECRET configured:', !!JWT_SECRET);
+    console.log('  JWT_SECRET length:', JWT_SECRET.length);
+    console.log('  JWT_SECRET matches expected:', JWT_SECRET === process.env.JWT_SECRET);
+    
     if (!token) {
+      console.error('  ❌ No token provided');
       return next(new Error('Authentication error'));
     }
 
     try {
-      const decoded = jwt.verify(token.replace('Bearer ', ''), JWT_SECRET);
+      const cleanToken = token.replace('Bearer ', '');
+      console.log('  Clean token length:', cleanToken.length);
+      console.log('  Attempting verification with SECRET of length:', JWT_SECRET.length);
+      
+      const decoded = jwt.verify(cleanToken, JWT_SECRET);
+      console.log('  ✅ Token verified successfully');
+      console.log('  Token email:', decoded.email);
+      console.log('  Token accountId:', decoded.accountId);
+      
       socket.userId = decoded.accountId;
       socket.email = decoded.email;
       socket.accountId = decoded.accountId;
       next();
     } catch (error) {
-      next(new Error('Invalid token'));
+      console.error('  ❌ JWT Verification FAILED:');
+      console.error('    Error:', error.message);
+      console.error('    Error Code:', error.code);
+      console.error('    Error Name:', error.name);
+      if (error.name === 'JsonWebTokenError') {
+        console.error('    This is a signature verification error');
+        console.error('    Likely cause: JWT_SECRET mismatch between token creation and verification');
+      }
+      next(new Error('Invalid token: ' + error.message));
     }
   });
 

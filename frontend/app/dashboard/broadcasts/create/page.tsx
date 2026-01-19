@@ -233,7 +233,7 @@ export default function CreateBroadcastPage() {
       const token = localStorage.getItem("token")
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/broadcasts`,
+        `${process.env.NEXT_PUBLIC_API_URL}/broadcasts`,
         {
           method: "POST",
           headers: {

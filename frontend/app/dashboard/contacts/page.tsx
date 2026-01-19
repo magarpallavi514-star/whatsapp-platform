@@ -47,7 +47,7 @@ export default function ContactsPage() {
   })
   const [tagInput, setTagInput] = useState("")
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api"
 
   const getHeaders = () => {
     const token = authService.getToken()
@@ -61,7 +61,7 @@ export default function ContactsPage() {
   const fetchContacts = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`${API_URL}/api/contacts?limit=100`, {
+      const response = await fetch(`${API_URL}/contacts?limit=100`, {
         headers: getHeaders(),
       })
       if (response.ok) {
@@ -96,8 +96,8 @@ export default function ContactsPage() {
       }
 
       const url = selectedContact 
-        ? `${API_URL}/api/contacts/${selectedContact._id}`
-        : `${API_URL}/api/contacts`
+        ? `${API_URL}/contacts/${selectedContact._id}`
+        : `${API_URL}/contacts`
       
       const method = selectedContact ? 'PUT' : 'POST'
       
@@ -125,7 +125,7 @@ export default function ContactsPage() {
     if (!confirm("Are you sure you want to delete this contact?")) return
     
     try {
-      const response = await fetch(`${API_URL}/api/contacts/${id}`, {
+      const response = await fetch(`${API_URL}/contacts/${id}`, {
         method: 'DELETE',
         headers: {
           "Content-Type": "application/json",
@@ -299,7 +299,7 @@ export default function ContactsPage() {
         }).filter(c => c.name && c.whatsappNumber)
         
         // Send to backend
-        const response = await fetch(`${API_URL}/api/contacts/import`, {
+        const response = await fetch(`${API_URL}/contacts/import`, {
           method: 'POST',
           headers: getHeaders(),
           body: JSON.stringify({ contacts }),

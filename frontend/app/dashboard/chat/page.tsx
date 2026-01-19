@@ -74,7 +74,7 @@ export default function ChatPage() {
   const [autoRefresh, setAutoRefresh] = useState(true)
 
   // API base URL (update with your backend URL)
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api"
 
   const getHeaders = () => {
     const token = authService.getToken()
@@ -87,7 +87,7 @@ export default function ChatPage() {
   // Fetch conversations
   const fetchConversations = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/api/conversations`, {
+      const response = await fetch(`${API_URL}/conversations`, {
         headers: getHeaders(),
       })
       if (response.ok) {
@@ -139,7 +139,7 @@ export default function ChatPage() {
     setIsLoading(true)
     try {
       const response = await fetch(
-        `${API_URL}/api/conversations/${encodeURIComponent(conversationId)}/messages`,
+        `${API_URL}/conversations/${encodeURIComponent(conversationId)}/messages`,
         {
           headers: getHeaders(),
         }
@@ -193,7 +193,7 @@ export default function ChatPage() {
   const markAsRead = useCallback(async (conversationId: string) => {
     try {
       await fetch(
-        `${API_URL}/api/conversations/${encodeURIComponent(conversationId)}/read`,
+        `${API_URL}/conversations/${encodeURIComponent(conversationId)}/read`,
         {
           method: "PATCH",
           headers: getHeaders(),
@@ -214,7 +214,7 @@ export default function ChatPage() {
 
     setIsSending(true)
     try {
-      const response = await fetch(`${API_URL}/api/messages/send`, {
+      const response = await fetch(`${API_URL}/messages/send`, {
         method: "POST",
         headers: getHeaders(),
         body: JSON.stringify({
@@ -303,7 +303,7 @@ export default function ChatPage() {
         type: file.type
       })
       
-      const response = await fetch(`${API_URL}/api/messages/send-media`, {
+      const response = await fetch(`${API_URL}/messages/send-media`, {
         method: 'POST',
         headers: getHeaders(),
         body: formData
@@ -521,7 +521,7 @@ export default function ChatPage() {
 
       try {
         const response = await fetch(
-          `${API_URL}/api/conversations/${encodeURIComponent(currentId)}/messages`,
+          `${API_URL}/conversations/${encodeURIComponent(currentId)}/messages`,
           {
             headers: getHeaders(),
           }

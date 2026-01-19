@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'whatsapp-platform-jwt-secret-2026';
+import { JWT_SECRET } from '../config/jwt.js';
 
 /**
  * JWT Authentication Middleware

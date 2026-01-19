@@ -1,24 +1,31 @@
 import express from 'express';
 import * as pricingController from '../controllers/pricingController.js';
-import { authMiddleware } from '../middlewares/authMiddleware.js';
+import { requireJWT } from '../middlewares/jwtAuth.js';
 
 const router = express.Router();
 
-// Public routes
+/**
+ * PUBLIC ROUTES - No Auth Required
+ */
+
+// Get all active public pricing plans
 router.get('/plans/public', pricingController.getPublicPricingPlans);
+
+// Get specific plan details
 router.get('/plans/public/:planId', pricingController.getPricingPlanDetails);
 
-// Protected routes
-router.use(authMiddleware);
+/**
+ * ADMIN ROUTES - Requires JWT Auth
+ */
 
-// Superadmin routes
-router.post('/plans', pricingController.createPricingPlan);
-router.get('/plans', pricingController.getAllPricingPlans);
-router.put('/plans/:planId', pricingController.updatePricingPlan);
-router.delete('/plans/:planId', pricingController.deletePricingPlan);
+// Pricing Plan Management (Superadmin only)
+router.post('/admin/plans', requireJWT, pricingController.createPricingPlan);
+router.get('/admin/plans', requireJWT, pricingController.getAllPricingPlans);
+router.put('/admin/plans/:planId', requireJWT, pricingController.updatePricingPlan);
+router.delete('/admin/plans/:planId', requireJWT, pricingController.deletePricingPlan);
 
 // Feature management
-router.post('/plans/:planId/features', pricingController.addFeatureToPlan);
-router.delete('/plans/:planId/features/:featureId', pricingController.removeFeatureFromPlan);
+router.post('/admin/plans/:planId/features', requireJWT, pricingController.addFeatureToPlan);
+router.delete('/admin/plans/:planId/features/:featureId', requireJWT, pricingController.removeFeatureFromPlan);
 
 export default router;

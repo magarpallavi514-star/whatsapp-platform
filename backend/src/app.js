@@ -22,6 +22,8 @@ import integrationsRoutes from './routes/integrationsRoutes.js';
 import broadcastRoutes from './routes/broadcastRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import campaignRoutes from './routes/campaignRoutes.js';
+import pricingRoutes from './routes/pricingRoutes.js';
+import subscriptionRoutes from './routes/subscriptionRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -91,6 +93,51 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Debug endpoint - check JWT validation
+app.post('/api/debug/verify-token', (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'No token provided',
+        authHeader: authHeader ? 'present' : 'missing'
+      });
+    }
+    
+    // Import jwt here to verify
+    import('jsonwebtoken').then(jwt => {
+      const JWT_SECRET = process.env.JWT_SECRET || 'whatsapp-platform-jwt-secret-2026';
+      try {
+        const decoded = jwt.default.verify(token, JWT_SECRET);
+        res.json({
+          success: true,
+          message: 'Token is valid',
+          decoded,
+          tokenLength: token.length,
+          expiresAt: new Date(decoded.exp * 1000)
+        });
+      } catch (error) {
+        res.status(401).json({
+          success: false,
+          message: 'Token verification failed',
+          error: error.message,
+          jwtSecret: JWT_SECRET ? '✅ Set' : '❌ Using default',
+          tokenLength: token.length
+        });
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Debug error',
+      error: error.message
+    });
+  }
+});
+
 // Test database connection endpoint
 app.get('/api/test-db', async (req, res) => {
   if (mongoose.connection.readyState === 1) {
@@ -126,6 +173,12 @@ app.use('/api/contacts', requireJWT, contactRoutes);
 app.use('/api/broadcasts', requireJWT, broadcastRoutes);
 app.use('/api/campaigns', requireJWT, campaignRoutes);
 app.use('/api/notifications', requireJWT, notificationRoutes);
+
+// Mount pricing routes (PUBLIC for public plans, JWT AUTH for admin)
+app.use('/api/pricing', pricingRoutes);
+
+// Mount subscription routes (JWT AUTH for user subscriptions)
+app.use('/api/subscription', requireJWT, subscriptionRoutes);
 
 // Mount self-service account routes (JWT AUTH - for dashboard users)
 app.use('/api/account', requireJWT, accountRoutes);

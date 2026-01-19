@@ -9,16 +9,23 @@ export const initSocket = (): Socket => {
     return socket;
   }
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050';
+  // Socket.io connects to the ROOT server, not /api endpoint
+  const SOCKET_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050').replace('/api', '');
   const token = authService.getToken();
+
+  console.log('🔌 Socket Init Debug:');
+  console.log('  Socket URL:', SOCKET_URL);
+  console.log('  Token exists:', !!token);
+  console.log('  Token length:', token?.length || 0);
+  console.log('  Auth status:', authService.isAuthenticated());
 
   if (!token) {
     console.warn('⚠️ No authentication token found - socket connection may fail');
   }
 
-  socket = io(API_URL, {
+  socket = io(SOCKET_URL, {
     auth: {
-      token: `Bearer ${token}`,
+      token: token ? `Bearer ${token}` : '',
     },
     reconnection: true,
     reconnectionDelay: 1000,
@@ -28,7 +35,7 @@ export const initSocket = (): Socket => {
 
   socket.on('connect', () => {
     console.log('✅ Socket connected:', socket?.id);
-    console.log('🔗 Connected to:', API_URL);
+    console.log('🔗 Connected to:', SOCKET_URL);
   });
 
   socket.on('disconnect', () => {
@@ -41,6 +48,21 @@ export const initSocket = (): Socket => {
 
   socket.on('connect_error', (error) => {
     console.error('🔴 Socket connection error:', error.message);
+    console.error('  Error details:', error);
+    if (error.message.includes('Invalid token')) {
+      console.error('  💡 Token is invalid, corrupted, or was signed with a different secret');
+      console.error('  💡 This usually means:');
+      console.error('     1. JWT_SECRET on backend changed');
+      console.error('     2. Token stored in localStorage is stale');
+      console.error('     3. Token was corrupted during transmission');
+      console.error('  Solution: Clear localStorage and login again');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('user');
+        console.error('  ✅ Cleared localStorage. Please refresh and login again.');
+      }
+    }
   });
 
   return socket;

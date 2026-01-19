@@ -1,21 +1,22 @@
 import express from 'express';
 import * as subscriptionController from '../controllers/subscriptionController.js';
-import { authMiddleware } from '../middlewares/authMiddleware.js';
+import { requireJWT } from '../middlewares/jwtAuth.js';
 
 const router = express.Router();
 
-// Protected routes
-router.use(authMiddleware);
+/**
+ * PROTECTED ROUTES - Requires JWT
+ */
 
 // User subscription routes
-router.get('/my-subscription', subscriptionController.getMySubscription);
-router.post('/create', subscriptionController.createSubscription);
-router.post('/change-plan', subscriptionController.changePlan);
-router.post('/cancel', subscriptionController.cancelSubscription);
-router.post('/pause', subscriptionController.pauseSubscription);
-router.post('/resume', subscriptionController.resumeSubscription);
+router.get('/my-subscription', requireJWT, subscriptionController.getMySubscription);
+router.post('/create', requireJWT, subscriptionController.createSubscription);
+router.post('/change-plan', requireJWT, subscriptionController.changePlan);
+router.post('/cancel', requireJWT, subscriptionController.cancelSubscription);
+router.post('/pause', requireJWT, subscriptionController.pauseSubscription);
+router.post('/resume', requireJWT, subscriptionController.resumeSubscription);
 
 // Superadmin routes
-router.get('/', subscriptionController.getAllSubscriptions);
+router.get('/', requireJWT, subscriptionController.getAllSubscriptions);
 
 export default router;
