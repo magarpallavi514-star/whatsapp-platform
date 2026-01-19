@@ -18,7 +18,7 @@ export interface User {
   accountId?: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api"
 
 // Real authentication with backend API
 export const authService = {
@@ -39,7 +39,7 @@ export const authService = {
   // Login - Real API call
   login: async (email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

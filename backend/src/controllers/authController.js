@@ -11,11 +11,18 @@ import Account from '../models/Account.js';
 // Hardcoded admin for now (can move to database later)
 const ADMIN_USER = {
   email: 'mpiyush2727@gmail.com',
-  password: 'Pm@22442232', // For demo - use plaintext comparison
+  password: 'Pm@22442232', // EXACT PASSWORD - For demo - use plaintext comparison
   accountId: 'pixels_internal',
   name: 'Piyush Magar',
   role: 'superadmin' // Full platform access
 };
+
+// Debug helper
+console.log('🔑 ADMIN_USER Configuration:');
+console.log('   Email:', ADMIN_USER.email);
+console.log('   Password:', ADMIN_USER.password);
+console.log('   AccountId:', ADMIN_USER.accountId);
+console.log('   Role:', ADMIN_USER.role);
 
 /**
  * POST /api/auth/login
@@ -150,8 +157,18 @@ export const login = async (req, res) => {
     
     // Real admin user - password: Pm@22442232
     if (email === ADMIN_USER.email) {
+      console.log('🔐 Attempting ADMIN_USER login:');
+      console.log('   Email match:', email === ADMIN_USER.email);
+      console.log('   Incoming email:', email);
+      console.log('   Expected email:', ADMIN_USER.email);
+      console.log('   Incoming password length:', password.length);
+      console.log('   Expected password length:', ADMIN_USER.password.length);
+      console.log('   Password match:', password === ADMIN_USER.password);
+      
       if (password !== ADMIN_USER.password) {
         console.log('❌ Invalid password for:', email);
+        console.log('   Expected:', ADMIN_USER.password);
+        console.log('   Got:', password);
         return res.status(401).json({
           success: false,
           message: 'Invalid email or password'

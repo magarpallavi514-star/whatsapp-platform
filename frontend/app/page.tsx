@@ -209,7 +209,7 @@ export default function LandingPage() {
                 <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50">Login</Button>
               </Link>
               <Link href="/signup">
-                <Button size="sm" className="bg-green-600 hover:bg-green-700">Start Free Trial</Button>
+                <Button size="sm" className="bg-black hover:bg-gray-900">Start Free Trial</Button>
               </Link>
             </div>
           </div>
@@ -237,7 +237,7 @@ export default function LandingPage() {
                 Broadcast, Automate, Engage, Sell - do everything with the AI-powered WhatsApp Marketing & Engagement Platform
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-                <Button size="lg" className="text-base h-12 px-8">
+                <Button size="lg" className="text-base h-12 px-8 text-white">
                   Start for FREE
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>

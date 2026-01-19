@@ -1,5 +1,6 @@
 import express from 'express';
 import authController from '../controllers/authController.js';
+import googleAuthController from '../controllers/googleAuthController.js';
 import { requireJWT } from '../middlewares/jwtAuth.js';
 
 const router = express.Router();
@@ -9,11 +10,15 @@ const router = express.Router();
  * Uses JWT (stateless) for authentication
  */
 
-// Public routes
+// Public routes - Email/Password
 router.post('/login', authController.login);
 router.post('/logout', authController.logout);
 
+// Public routes - Google OAuth
+router.post('/google/login', googleAuthController.loginWithGoogle);
+
 // Protected route - requires JWT
 router.get('/me', requireJWT, authController.getCurrentUser);
+router.post('/google/link', requireJWT, googleAuthController.linkGoogleAccount);
 
 export default router;
