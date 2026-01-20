@@ -25,22 +25,10 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // Check role-based access for specific routes
-      const routePermissions: { [key: string]: UserRole[] } = {
-        "/dashboard/broadcasts": permissions.canAccessBroadcasts,
-        "/dashboard/contacts": permissions.canAccessContacts,
-        "/dashboard/templates": permissions.canAccessTemplates,
-        "/dashboard/chatbot": permissions.canAccessChatbot,
-        "/dashboard/chat": permissions.canAccessChat,
-        "/dashboard/analytics": permissions.canAccessAnalytics,
-        "/dashboard/campaigns": permissions.canAccessCampaigns,
-        "/dashboard/settings": permissions.canAccessSettings,
-      }
-
-      // Check if current route requires specific permissions
-      const requiredRoles = routePermissions[pathname]
-      if (requiredRoles && !authService.hasRole(user, requiredRoles)) {
+      // Check role-based access for the current route using RBAC
+      if (!canAccessRoute(user.role as UserRole, pathname)) {
         // Redirect to dashboard home if user doesn't have permission
+        console.warn(`❌ Access denied to ${pathname} for role ${user.role}`)
         router.push("/dashboard")
         return
       }

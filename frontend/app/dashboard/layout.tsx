@@ -13,10 +13,11 @@ import { useState, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { authService, User as UserType, UserRole } from "@/lib/auth"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
-import Sidebar from "@/components/Sidebar"
+import { canAccessRoute } from "@/lib/rbac"
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [user, setUser] = useState<UserType | null>(null)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
