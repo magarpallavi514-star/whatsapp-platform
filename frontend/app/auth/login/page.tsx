@@ -25,7 +25,7 @@ export default function LoginPage() {
       if (result.success) {
         setSuccess(true)
         setTimeout(() => {
-          router.push("/")
+          router.push("/dashboard")
         }, 1500)
       } else {
         setError(result.error || "Login failed")
