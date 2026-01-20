@@ -43,6 +43,7 @@ const allowedOrigins = [
   'http://127.0.0.1:3002',
   'https://whatsapp-platform-nine.vercel.app',
   'https://mpiyush15-whatsapp-platform.vercel.app',
+  'https://mpiyush15-whatsapp-platform-57rcl0koq-piyushs-projects-5d893f5f.vercel.app',
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
