@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { authService, UserRole, permissions } from "@/lib/auth"
+import { authService, UserRole } from "@/lib/auth"
+import { canAccessRoute } from "@/lib/rbac"
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter()
