@@ -57,10 +57,11 @@ function CheckoutContent() {
 
   // Get plan from API or fallback
   const plan = allPlans.length > 0 
-    ? allPlans.find((p: any) => p.name.toLowerCase() === planId.toLowerCase()) || allPlans[0]
+    ? (allPlans.find((p: any) => p.planId?.includes(planId) || p.name.toLowerCase() === planId.toLowerCase()) || allPlans[0])
     : fallbackPlans[planId as keyof typeof fallbackPlans] || fallbackPlans.starter
 
   useEffect(() => {
+    console.log('📋 Checkout Info:', { planId, allPlans: allPlans.length, selectedPlan: plan?.name, planPrice: plan?.monthlyPrice });
     // Load Cashfree script
     const script = document.createElement('script')
     script.src = 'https://sdk.cashfree.com/js/cashfree.js'

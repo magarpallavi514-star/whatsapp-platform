@@ -181,7 +181,7 @@ app.use('/api/notifications', requireJWT, notificationRoutes);
 app.use('/api/pricing', pricingRoutes);
 
 // Mount subscription routes (JWT AUTH for user subscriptions)
-app.use('/api/subscription', requireJWT, subscriptionRoutes);
+app.use('/api/subscriptions', requireJWT, subscriptionRoutes);
 
 // Mount payment webhook routes (PUBLIC for Cashfree webhooks, JWT AUTH for status checks)
 app.use('/api/payments', paymentWebhookRoutes);
