@@ -26,6 +26,7 @@ import pricingRoutes from './routes/pricingRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import billingRoutes from './routes/billingRoutes.js';
 import paymentWebhookRoutes from './routes/paymentWebhookRoutes.js';
+import organizationsRoutes from './routes/organizationsRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -191,6 +192,9 @@ app.use('/api/billing', requireJWT, billingRoutes);
 
 // Mount self-service account routes (JWT AUTH - for dashboard users)
 app.use('/api/account', requireJWT, accountRoutes);
+
+// Mount organizations admin routes (JWT AUTH - for admin)
+app.use('/api/admin/organizations', requireJWT, organizationsRoutes);
 
 // Mount integration routes (INTEGRATION TOKEN AUTH - for Enromatics, third-party apps)
 app.use('/api/integrations', integrationsRoutes);

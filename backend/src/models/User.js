@@ -43,6 +43,13 @@ const userSchema = new mongoose.Schema({
     default: 'active'
   },
 
+  // Plan
+  plan: {
+    type: String,
+    enum: ['free', 'starter', 'pro', 'enterprise'],
+    default: 'free'
+  },
+
   // Metadata
   lastLogin: Date,
   loginCount: {
