@@ -1,21 +1,60 @@
 "use client"
 
-import { DollarSign, TrendingUp, CreditCard, Users, Download } from "lucide-react"
+import { useState, useEffect } from "react"
+import { DollarSign, TrendingUp, CreditCard, Users, Download, RefreshCw, Clock, CheckCircle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { API_URL } from "@/lib/config/api"
 
 export default function PlatformBillingPage() {
-  const stats = [
-    { label: "Monthly Recurring Revenue", value: "₹2.4L", change: "+18%", trend: "up" },
-    { label: "Annual Run Rate", value: "₹28.8L", change: "+22%", trend: "up" },
-    { label: "Active Subscriptions", value: "22", change: "+3", trend: "up" },
-    { label: "Churn Rate", value: "2.1%", change: "-0.5%", trend: "down" },
-  ]
+  const [organizations, setOrganizations] = useState<any[]>([])
+  const [lastOrgSync, setLastOrgSync] = useState<string>("")
+  const [autoSyncOrgs, setAutoSyncOrgs] = useState(true)
+  const [orgSyncLoading, setOrgSyncLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const subscriptions = [
-    { org: "Fashion Store Inc", plan: "Pro", amount: "₹3,200", status: "Active", nextBilling: "Feb 15, 2026", billingCycle: "Monthly" },
-    { org: "TechHub Solutions", plan: "Enterprise", amount: "₹15,000", status: "Active", nextBilling: "Feb 20, 2026", billingCycle: "Yearly" },
-    { org: "Pizza Paradise", plan: "Basic", amount: "₹1,500", status: "Active", nextBilling: "Feb 2, 2026", billingCycle: "Monthly" },
-    { org: "Wellness Clinic", plan: "Pro", amount: "₹0", status: "Trial", nextBilling: "Jan 17, 2026", billingCycle: "Trial" },
+  useEffect(() => {
+    fetchOrganizations()
+    
+    // Auto-sync organizations every 30 seconds
+    if (autoSyncOrgs) {
+      const interval = setInterval(fetchOrganizations, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [autoSyncOrgs])
+
+  const fetchOrganizations = async () => {
+    try {
+      setOrgSyncLoading(true)
+      const token = localStorage.getItem('token')
+
+      const response = await fetch(`${API_URL}/admin/organizations`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch organizations")
+      }
+
+      const data = await response.json()
+      setOrganizations(data.data || [])
+      setLastOrgSync(new Date().toLocaleTimeString('en-IN'))
+    } catch (err) {
+      console.error("Error fetching organizations:", err)
+    } finally {
+      setOrgSyncLoading(false)
+      setIsLoading(false)
+    }
+  }
+
+  // Calculate stats from real organizations data
+  const stats = [
+    { label: "Total Organizations", value: organizations.length.toString(), change: "+2", trend: "up" },
+    { label: "Active Subscriptions", value: organizations.filter(o => o.status === 'active').length.toString(), change: "+1", trend: "up" },
+    { label: "Total Payment Collected", value: `₹${organizations.reduce((sum, o) => sum + (o.totalPayments || 0), 0).toLocaleString()}`, change: "+5%", trend: "up" },
+    { label: "Billing Dates Set", value: `${organizations.filter(o => o.nextBillingDate).length}/${organizations.length}`, change: "100%", trend: "up" },
   ]
 
   return (
@@ -134,53 +173,120 @@ export default function PlatformBillingPage() {
         </div>
       </div>
 
-      {/* Subscriptions Table */}
+      {/* Subscriptions Table - Real-time Sync */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">All Subscriptions</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Organization</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Plan</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Amount</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Billing Cycle</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Status</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Next Billing</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subscriptions.map((sub, index) => (
-                <tr key={index} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="py-4 px-4 text-sm font-medium text-gray-900">{sub.org}</td>
-                  <td className="py-4 px-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      sub.plan === "Enterprise"
-                        ? "bg-purple-100 text-purple-700"
-                        : sub.plan === "Pro"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}>
-                      {sub.plan}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 text-sm font-medium text-gray-900">{sub.amount}</td>
-                  <td className="py-4 px-4 text-sm text-gray-600">{sub.billingCycle}</td>
-                  <td className="py-4 px-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      sub.status === "Active"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-orange-100 text-orange-700"
-                    }`}>
-                      {sub.status}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 text-sm text-gray-600">{sub.nextBilling}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">All Organizations & Subscriptions</h2>
+            <p className="text-sm text-gray-600 mt-1">Real-time billing monitoring</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchOrganizations}
+              disabled={orgSyncLoading}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${orgSyncLoading ? "animate-spin" : ""}`} />
+              Sync Now
+            </button>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoSyncOrgs}
+                onChange={(e) => setAutoSyncOrgs(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <span className="text-sm font-medium text-gray-700">Auto Sync (30s)</span>
+            </label>
+            <span className="text-xs text-gray-500">Last: {lastOrgSync || 'Never'}</span>
+          </div>
         </div>
+
+        {isLoading ? (
+          <div className="text-center py-8">
+            <RefreshCw className="h-6 w-6 animate-spin mx-auto text-blue-600 mb-2" />
+            <p className="text-gray-600">Loading organizations...</p>
+          </div>
+        ) : organizations.length === 0 ? (
+          <div className="text-center py-8">
+            <Users className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+            <p className="text-gray-600">No organizations found</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Organization</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Plan</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Billing Cycle</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Total Payments</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Status</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Next Billing</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Days Remaining</th>
+                </tr>
+              </thead>
+              <tbody>
+                {organizations.map((org) => {
+                  const nextBillingDate = org.nextBillingDate ? new Date(org.nextBillingDate) : null
+                  const today = new Date()
+                  const daysUntil = nextBillingDate ? Math.ceil((nextBillingDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null
+                  let billingStatus = "active"
+                  if (daysUntil === null) billingStatus = "not-set"
+                  else if (daysUntil < 0) billingStatus = "overdue"
+                  else if (daysUntil <= 7) billingStatus = "due-soon"
+
+                  return (
+                    <tr key={org._id} className="border-b last:border-0 hover:bg-gray-50">
+                      <td className="py-4 px-4 text-sm font-medium text-gray-900">{org.name}</td>
+                      <td className="py-4 px-4">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          org.plan === "pro"
+                            ? "bg-blue-100 text-blue-700"
+                            : org.plan === "enterprise"
+                            ? "bg-purple-100 text-purple-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}>
+                          {org.plan ? org.plan.charAt(0).toUpperCase() + org.plan.slice(1) : 'N/A'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-sm text-gray-600 capitalize">{org.billingCycle || 'N/A'}</td>
+                      <td className="py-4 px-4 text-sm font-medium text-gray-900">₹{org.totalPayments || '0'}</td>
+                      <td className="py-4 px-4">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          org.status === 'active'
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}>
+                          {org.status ? org.status.charAt(0).toUpperCase() + org.status.slice(1) : 'N/A'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-sm text-gray-600">
+                        {nextBillingDate ? nextBillingDate.toLocaleDateString('en-IN') : "Not Set"}
+                      </td>
+                      <td className="py-4 px-4 text-sm">
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                          billingStatus === 'active' ? 'bg-green-100 text-green-800' :
+                          billingStatus === 'due-soon' ? 'bg-yellow-100 text-yellow-800' :
+                          billingStatus === 'overdue' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {billingStatus === 'active' && <CheckCircle className="h-3 w-3" />}
+                          {billingStatus === 'due-soon' && <Clock className="h-3 w-3" />}
+                          {billingStatus === 'overdue' && <AlertCircle className="h-3 w-3" />}
+                          {billingStatus === 'active' ? 'Active' :
+                           billingStatus === 'due-soon' ? `Due in ${daysUntil}d` :
+                           billingStatus === 'overdue' ? `Overdue ${daysUntil ? Math.abs(daysUntil) : 0}d` :
+                           'Not Set'}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

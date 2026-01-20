@@ -4,7 +4,7 @@ import {
   MessageSquare, LayoutDashboard, Send, Users, BarChart3, Settings, 
   Bell, Search, ChevronDown, Menu, X, Megaphone, Bot, Calendar,
   FileText, LogOut, User, ChevronLeft, ChevronRight, Building2, 
-  Activity, DollarSign, Sliders
+  Activity, DollarSign, Sliders, CreditCard
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { API_URL } from "@/lib/config/api"
@@ -90,6 +90,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     { name: "Organizations", icon: Building2, href: "/dashboard/organizations", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     { name: "System Health", icon: Activity, href: "/dashboard/system-health", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     { name: "Platform Billing", icon: DollarSign, href: "/dashboard/platform-billing", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
+    { name: "Transactions", icon: CreditCard, href: "/dashboard/transactions", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     { name: "Website Settings", icon: Sliders, href: "/dashboard/website-settings", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     
     // Regular pages

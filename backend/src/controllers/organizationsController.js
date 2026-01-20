@@ -13,7 +13,7 @@ import mongoose from 'mongoose';
 export const getAllOrganizations = async (req, res) => {
   try {
     const users = await User.find({})
-      .select('_id email name phone status role plan createdAt')
+      .select('_id email name phone phoneNumber countryCode status role plan billingCycle nextBillingDate totalPayments createdAt')
       .sort({ createdAt: -1 });
 
     res.json({
@@ -22,10 +22,13 @@ export const getAllOrganizations = async (req, res) => {
         _id: user._id,
         email: user.email,
         name: user.name || user.email,
-        phoneNumber: user.phone || '',
+        phoneNumber: user.phoneNumber || user.phone || '',
         plan: user.plan || 'free',
         status: user.status || 'active',
         role: user.role,
+        billingCycle: user.billingCycle || 'monthly',
+        nextBillingDate: user.nextBillingDate,
+        totalPayments: user.totalPayments || 0,
         createdAt: user.createdAt
       }))
     });
@@ -45,7 +48,7 @@ export const getAllOrganizations = async (req, res) => {
  */
 export const createOrganization = async (req, res) => {
   try {
-    const { name, email, countryCode, phoneNumber, plan, status } = req.body;
+    const { name, email, countryCode, phoneNumber, plan, status, billingCycle, nextBillingDate } = req.body;
 
     // Validate required fields
     if (!email || !name) {
@@ -69,9 +72,14 @@ export const createOrganization = async (req, res) => {
       name,
       email: email.toLowerCase(),
       phone: phoneNumber ? `${countryCode}${phoneNumber}` : '',
+      phoneNumber: phoneNumber,
+      countryCode: countryCode || '+91',
       plan: plan || 'free',
       status: status || 'active',
+      billingCycle: billingCycle || 'monthly',
+      nextBillingDate: nextBillingDate ? new Date(nextBillingDate) : null,
       role: 'user',
+      totalPayments: 0,
       accountId: new mongoose.Types.ObjectId() // Create new account ID
     });
 
@@ -84,10 +92,13 @@ export const createOrganization = async (req, res) => {
         _id: newUser._id,
         email: newUser.email,
         name: newUser.name,
-        phoneNumber: newUser.phone,
+        phoneNumber: newUser.phoneNumber,
         plan: newUser.plan,
         status: newUser.status,
         role: newUser.role,
+        billingCycle: newUser.billingCycle,
+        nextBillingDate: newUser.nextBillingDate,
+        totalPayments: newUser.totalPayments,
         createdAt: newUser.createdAt
       }
     });
@@ -110,7 +121,7 @@ export const getOrganizationById = async (req, res) => {
     const { id } = req.params;
 
     const user = await User.findById(id)
-      .select('_id email name phone status role plan createdAt updatedAt');
+      .select('_id email name phone phoneNumber countryCode status role plan nextBillingDate totalPayments createdAt updatedAt');
 
     if (!user) {
       return res.status(404).json({
@@ -125,10 +136,12 @@ export const getOrganizationById = async (req, res) => {
         _id: user._id,
         email: user.email,
         name: user.name,
-        phoneNumber: user.phone,
+        phoneNumber: user.phoneNumber || user.phone,
         plan: user.plan,
         status: user.status,
         role: user.role,
+        nextBillingDate: user.nextBillingDate,
+        totalPayments: user.totalPayments || 0,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       }
@@ -150,7 +163,7 @@ export const getOrganizationById = async (req, res) => {
 export const updateOrganization = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, countryCode, phoneNumber, plan, status } = req.body;
+    const { name, email, countryCode, phoneNumber, plan, status, billingCycle, nextBillingDate } = req.body;
 
     const user = await User.findById(id);
     if (!user) {
@@ -174,10 +187,14 @@ export const updateOrganization = async (req, res) => {
       user.email = email.toLowerCase();
     }
     if (phoneNumber) {
+      user.phoneNumber = phoneNumber;
       user.phone = phoneNumber ? `${countryCode || '+91'}${phoneNumber}` : '';
     }
+    if (countryCode) user.countryCode = countryCode;
     if (plan) user.plan = plan;
     if (status) user.status = status;
+    if (billingCycle) user.billingCycle = billingCycle;
+    if (nextBillingDate) user.nextBillingDate = new Date(nextBillingDate);
 
     await user.save();
 
@@ -188,10 +205,13 @@ export const updateOrganization = async (req, res) => {
         _id: user._id,
         email: user.email,
         name: user.name,
-        phoneNumber: user.phone,
+        phoneNumber: user.phoneNumber,
         plan: user.plan,
         status: user.status,
         role: user.role,
+        billingCycle: user.billingCycle,
+        nextBillingDate: user.nextBillingDate,
+        totalPayments: user.totalPayments,
         createdAt: user.createdAt
       }
     });
@@ -230,6 +250,54 @@ export const deleteOrganization = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete organization',
+      error: error.message
+    });
+  }
+};
+/**
+ * Update existing organizations with missing next billing dates
+ * @route POST /api/admin/organizations/migrate/billing-dates
+ */
+export const migrateBillingDates = async (req, res) => {
+  try {
+    const users = await User.find({ 
+      $or: [
+        { nextBillingDate: null },
+        { nextBillingDate: undefined }
+      ]
+    });
+
+    let updated = 0;
+
+    for (const user of users) {
+      const signupDate = new Date(user.createdAt || new Date());
+      let nextBillingDate = new Date(signupDate);
+
+      const billingCycle = user.billingCycle || 'monthly';
+
+      if (billingCycle === 'monthly') {
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+      } else if (billingCycle === 'quarterly') {
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 3);
+      } else if (billingCycle === 'annually') {
+        nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
+      }
+
+      user.nextBillingDate = nextBillingDate;
+      await user.save();
+      updated++;
+    }
+
+    res.json({
+      success: true,
+      message: `Migration completed. Updated ${updated} organizations with billing dates`,
+      updated: updated
+    });
+  } catch (error) {
+    console.error('Error migrating billing dates:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to migrate billing dates',
       error: error.message
     });
   }

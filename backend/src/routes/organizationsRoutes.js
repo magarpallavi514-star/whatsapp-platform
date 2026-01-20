@@ -9,7 +9,8 @@ import {
   createOrganization,
   getOrganizationById,
   updateOrganization,
-  deleteOrganization
+  deleteOrganization,
+  migrateBillingDates
 } from '../controllers/organizationsController.js';
 
 const router = express.Router();
@@ -27,6 +28,13 @@ router.get('/', getAllOrganizations);
  * @access  Admin only (requires JWT auth)
  */
 router.post('/', createOrganization);
+
+/**
+ * @route   POST /api/admin/organizations/migrate/billing-dates
+ * @desc    Migrate existing organizations with missing billing dates
+ * @access  Admin only (requires JWT auth)
+ */
+router.post('/migrate/billing-dates', migrateBillingDates);
 
 /**
  * @route   GET /api/admin/organizations/:id

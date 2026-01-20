@@ -1,6 +1,7 @@
 "use client"
 
-import { Building2, Plus, Search, MoreVertical, Users, TrendingUp, DollarSign, Activity, X } from "lucide-react"
+import { Building2, Plus, Search, MoreVertical, Users, TrendingUp, DollarSign, Activity, X, Bell, Mail } from "lucide-react"
+import { FaWhatsapp } from "react-icons/fa"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useState, useEffect } from "react"
@@ -12,13 +13,18 @@ export default function OrganizationsPage() {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false)
+  const [selectedOrg, setSelectedOrg] = useState<any>(null)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editData, setEditData] = useState<any>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     countryCode: "+91",
     phoneNumber: "",
     plan: "free",
-    status: "active"
+    status: "active",
+    billingCycle: "monthly"
   })
 
   useEffect(() => {
@@ -60,13 +66,31 @@ export default function OrganizationsPage() {
     e.preventDefault()
     try {
       const token = localStorage.getItem("token")
+      
+      // Calculate next billing date based on billing cycle
+      const signupDate = new Date()
+      let nextBillingDate = new Date(signupDate)
+      
+      if (formData.billingCycle === "monthly") {
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
+      } else if (formData.billingCycle === "quarterly") {
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 3)
+      } else if (formData.billingCycle === "annually") {
+        nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1)
+      }
+      
+      const dataToSend = {
+        ...formData,
+        nextBillingDate: nextBillingDate.toISOString()
+      }
+      
       const response = await fetch(`${API_URL}/admin/organizations`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(dataToSend)
       })
 
       if (!response.ok) {
@@ -76,11 +100,65 @@ export default function OrganizationsPage() {
       // Refresh organizations list
       const data = await response.json()
       setOrganizations([...organizations, data.data])
-      setFormData({ name: "", email: "", countryCode: "+91", phoneNumber: "", plan: "free", status: "active" })
+      setFormData({ name: "", email: "", countryCode: "+91", phoneNumber: "", plan: "free", status: "active", billingCycle: "monthly" })
       setIsDrawerOpen(false)
     } catch (err) {
       console.error("Error creating organization:", err)
       alert("Failed to create organization")
+    }
+  }
+
+  const handleOpenDetails = (org: any) => {
+    setSelectedOrg(org)
+    setEditData({ ...org })
+    setIsDetailDrawerOpen(true)
+    setIsEditMode(false)
+  }
+
+  const handleUpdateOrganization = async (e: React.FormEvent) => {
+    e.preventDefault()
+    console.log("Update form submitted")
+    try {
+      const token = localStorage.getItem("token")
+      
+      // Calculate next billing date based on signup date + billing cycle
+      let dataToSend = { ...editData }
+      
+      const signupDate = new Date(selectedOrg.createdAt || new Date())
+      let nextBillingDate = new Date(signupDate)
+      
+      if (editData.billingCycle === "monthly") {
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
+      } else if (editData.billingCycle === "quarterly") {
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 3)
+      } else if (editData.billingCycle === "annually") {
+        nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1)
+      }
+      
+      dataToSend.nextBillingDate = nextBillingDate.toISOString()
+      
+      const response = await fetch(`${API_URL}/admin/organizations/${selectedOrg._id}`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(dataToSend)
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to update organization")
+      }
+
+      const data = await response.json()
+      setOrganizations(organizations.map(org => org._id === selectedOrg._id ? data.data : org))
+      setSelectedOrg(data.data)
+      setEditData({ ...data.data })
+      setIsEditMode(false)
+      alert("Organization updated successfully")
+    } catch (err) {
+      console.error("Error updating organization:", err)
+      alert("Failed to update organization")
     }
   }
 
@@ -197,7 +275,10 @@ export default function OrganizationsPage() {
                 </thead>
                 <tbody>
                   {filteredOrganizations.map((org, index) => (
-                    <tr key={index} className="border-b last:border-0 hover:bg-gray-50">
+                    <tr 
+                      key={index} 
+                      className="border-b last:border-0 hover:bg-gray-50"
+                    >
                       <td className="py-4 px-4">
                         <p className="text-sm text-gray-900">{org.email || "N/A"}</p>
                       </td>
@@ -225,9 +306,28 @@ export default function OrganizationsPage() {
                       <td className="py-4 px-4 text-sm text-gray-600">
                         {org.createdAt ? new Date(org.createdAt).toLocaleDateString() : "N/A"}
                       </td>
-                      <td className="py-4 px-4">
-                        <button className="text-gray-600 hover:text-gray-900">
-                          <MoreVertical className="h-5 w-5" />
+                      <td className="py-4 px-4 flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedOrg(org)
+                            setEditData({ ...org })
+                            setIsEditMode(false)
+                            setIsDetailDrawerOpen(true)
+                          }}
+                          className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                        >
+                          View
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedOrg(org)
+                            setEditData({ ...org })
+                            setIsEditMode(true)
+                            setIsDetailDrawerOpen(true)
+                          }}
+                          className="text-green-600 hover:text-green-800 font-medium text-sm"
+                        >
+                          Edit
                         </button>
                       </td>
                     </tr>
@@ -344,6 +444,21 @@ export default function OrganizationsPage() {
                   </select>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Billing Cycle
+                  </label>
+                  <select
+                    value={formData.billingCycle}
+                    onChange={(e) => setFormData({ ...formData, billingCycle: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"
+                  >
+                    <option value="monthly">Monthly</option>
+                    <option value="quarterly">Quarterly</option>
+                    <option value="annually">Annually</option>
+                  </select>
+                </div>
+
                 <div className="flex gap-3 mt-6">
                   <button
                     type="submit"
@@ -360,6 +475,243 @@ export default function OrganizationsPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Drawer - Professional View/Edit Organization */}
+      {isDetailDrawerOpen && selectedOrg && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Glass Blur Background */}
+          <div 
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            onClick={() => {
+              setIsDetailDrawerOpen(false)
+              setIsEditMode(false)
+            }}
+          />
+          
+          {/* Drawer */}
+          <div className="relative w-[550px] h-full bg-white shadow-2xl flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white px-8 py-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  {isEditMode ? "Edit Organization" : "Organization Details"}
+                </h2>
+                <p className="text-sm text-gray-200 mt-1">{selectedOrg.name || "N/A"}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => console.log('Send notification to ' + selectedOrg.email)}
+                  className="text-white hover:text-gray-300 transition-colors p-2 hover:bg-slate-700 rounded-lg"
+                  title="Send Email Notification"
+                >
+                  <Bell className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => console.log('Send WhatsApp to ' + selectedOrg.phoneNumber)}
+                  className="text-white hover:text-gray-300 transition-colors p-2 hover:bg-slate-700 rounded-lg"
+                  title="Send WhatsApp Message"
+                >
+                  <FaWhatsapp className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => {
+                    setIsDetailDrawerOpen(false)
+                    setIsEditMode(false)
+                  }}
+                  className="text-gray-300 hover:text-white transition-colors p-2 hover:bg-slate-700 rounded-lg"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto">
+              {isEditMode ? (
+                <form id="editForm" onSubmit={handleUpdateOrganization} onKeyDown={(e) => e.key === "Enter" && e.preventDefault()} className="p-8 space-y-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-3">Organization Name</label>
+                    <input
+                      type="text"
+                      value={editData?.name || ""}
+                      onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-3">Email</label>
+                    <input
+                      type="email"
+                      value={editData?.email || ""}
+                      onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-3">Phone Number</label>
+                    <input
+                      type="tel"
+                      value={editData?.phoneNumber || ""}
+                      onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-3">Plan</label>
+                    <select
+                      value={editData?.plan || ""}
+                      onChange={(e) => setEditData({ ...editData, plan: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                    >
+                      <option value="free">Free</option>
+                      <option value="starter">Starter</option>
+                      <option value="pro">Pro</option>
+                      <option value="enterprise">Enterprise</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-3">Status</label>
+                    <select
+                      value={editData?.status || ""}
+                      onChange={(e) => setEditData({ ...editData, status: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-3">Billing Cycle</label>
+                    <select
+                      value={editData?.billingCycle || "monthly"}
+                      onChange={(e) => setEditData({ ...editData, billingCycle: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                    >
+                      <option value="monthly">Monthly</option>
+                      <option value="quarterly">Quarterly</option>
+                      <option value="annually">Annually</option>
+                    </select>
+                  </div>
+                </form>
+              ) : (
+                <div className="p-8 space-y-8">
+                  {/* Organization Info */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Organization Info</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Name</p>
+                        <p className="text-sm font-semibold text-gray-900 mt-1">{selectedOrg.name || "N/A"}</p>
+                      </div>
+                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Email</p>
+                        <p className="text-sm font-semibold text-gray-900 mt-1">{selectedOrg.email || "N/A"}</p>
+                      </div>
+                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Phone</p>
+                        <p className="text-sm font-semibold text-gray-900 mt-1">{selectedOrg.phoneNumber || "N/A"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Plan Info */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Plan & Billing</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Plan</p>
+                        <p className="text-sm font-semibold text-gray-900 mt-1 capitalize">{selectedOrg.plan || "N/A"}</p>
+                      </div>
+                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Tenure</p>
+                        <p className="text-sm font-semibold text-gray-900 mt-1 capitalize">{selectedOrg.billingCycle || "N/A"}</p>
+                      </div>
+                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Status</p>
+                        <span className={`inline-block text-xs font-bold mt-1 px-3 py-1 rounded-full ${
+                          selectedOrg.status === "active"
+                            ? "bg-green-200 text-green-800"
+                            : "bg-amber-200 text-amber-800"
+                        }`}>
+                          {selectedOrg.status || "N/A"}
+                        </span>
+                      </div>
+                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Signup Date</p>
+                        <p className="text-sm font-semibold text-gray-900 mt-1">
+                          {selectedOrg.createdAt ? new Date(selectedOrg.createdAt).toLocaleDateString('en-IN') : "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Billing Info */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Billing Details</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Next Billing Date</p>
+                        <p className="text-sm font-semibold text-gray-900 mt-1">
+                          {selectedOrg.nextBillingDate ? new Date(selectedOrg.nextBillingDate).toLocaleDateString('en-IN') : "Not Set"}
+                        </p>
+                      </div>
+                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Total Payments</p>
+                        <p className="text-sm font-semibold text-gray-900 mt-1">₹{selectedOrg.totalPayments || "0"}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-gray-200 bg-gray-50 px-8 py-4 flex gap-3">
+              {isEditMode ? (
+                <>
+                  <button
+                    type="submit"
+                    form="editForm"
+                    className="flex-1 bg-slate-900 text-white py-2.5 rounded-lg hover:bg-slate-800 transition-colors font-semibold text-sm"
+                  >
+                    Save Changes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditMode(false)}
+                    className="flex-1 bg-gray-300 text-gray-900 py-2.5 rounded-lg hover:bg-gray-400 transition-colors font-semibold text-sm"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setIsEditMode(true)}
+                    className="flex-1 bg-slate-900 text-white py-2.5 rounded-lg hover:bg-slate-800 transition-colors font-semibold text-sm"
+                  >
+                    Edit Details
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsDetailDrawerOpen(false)
+                      setIsEditMode(false)
+                    }}
+                    className="flex-1 bg-gray-300 text-gray-900 py-2.5 rounded-lg hover:bg-gray-400 transition-colors font-semibold text-sm"
+                  >
+                    Close
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

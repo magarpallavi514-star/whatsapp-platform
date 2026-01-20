@@ -50,6 +50,23 @@ const userSchema = new mongoose.Schema({
     default: 'free'
   },
 
+  // Billing info
+  phoneNumber: String,
+  countryCode: {
+    type: String,
+    default: '+91'
+  },
+  billingCycle: {
+    type: String,
+    enum: ['monthly', 'quarterly', 'annually'],
+    default: 'monthly'
+  },
+  nextBillingDate: Date,
+  totalPayments: {
+    type: Number,
+    default: 0
+  },
+
   // Metadata
   lastLogin: Date,
   loginCount: {
