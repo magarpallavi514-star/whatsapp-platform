@@ -1,17 +1,43 @@
 "use client"
 
-import { MessageSquare, Megaphone, Users, FileText, Bot, Building2, Activity, DollarSign } from "lucide-react"
+import { MessageSquare, Megaphone, Users, FileText, Bot, Building2, Activity, DollarSign, CheckCircle, Clock, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { authService, UserRole } from "@/lib/auth"
+import { API_URL } from "@/lib/config/api"
 
 export default function DashboardPage() {
   const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const [subscription, setSubscription] = useState<any>(null)
+  const [loadingSubscription, setLoadingSubscription] = useState(true)
 
   useEffect(() => {
     const user = authService.getCurrentUser()
     setUserRole(user?.role || null)
+    
+    // Fetch subscription status
+    fetchSubscription()
   }, [])
+
+  const fetchSubscription = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
+      const response = await fetch(`${API_URL}/subscriptions/my-subscription`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSubscription(data.data)
+      }
+    } catch (err) {
+      console.error("Failed to fetch subscription:", err)
+    } finally {
+      setLoadingSubscription(false)
+    }
+  }
 
   const isSuperAdmin = userRole === UserRole.SUPERADMIN
 
@@ -42,6 +68,40 @@ export default function DashboardPage() {
             : "Welcome back! Here's what's happening with your WhatsApp campaigns."}
         </p>
       </div>
+
+      {/* DYNAMIC: Subscription Status Card */}
+      {!isSuperAdmin && !loadingSubscription && subscription && (
+        <div className={`mb-8 rounded-xl p-6 border-2 ${
+          subscription.status === 'active' 
+            ? 'bg-green-50 border-green-200' 
+            : 'bg-yellow-50 border-yellow-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {subscription.status === 'active' ? (
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              ) : (
+                <Clock className="h-8 w-8 text-yellow-600" />
+              )}
+              <div>
+                <h3 className="font-semibold text-gray-900">
+                  {subscription.planId?.name || 'Premium Plan'} - {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {subscription.status === 'active' 
+                    ? `Renews on ${new Date(subscription.renewalDate).toLocaleDateString()}`
+                    : 'Your subscription is not active'}
+                </p>
+              </div>
+            </div>
+            <Link href="/dashboard/billing">
+              <button className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
+                Manage Billing
+              </button>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

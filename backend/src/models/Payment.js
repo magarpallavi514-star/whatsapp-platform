@@ -42,9 +42,22 @@ const paymentSchema = new mongoose.Schema({
     required: true
   },
   
+  // Order & Payment Session References
+  orderId: {
+    type: String,
+    unique: true,
+    sparse: true,
+    index: true
+  },
+  planId: {
+    type: String
+  },
+  
   // Gateway References
+  gatewayOrderId: String,
   gatewayTransactionId: String,
   gatewayPaymentId: String,
+  paymentSessionId: String, // Cashfree payment session ID
   
   // Card/Payment Details (encrypted in production)
   paymentMethod: {

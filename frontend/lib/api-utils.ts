@@ -34,11 +34,10 @@ export async function apiFetch(
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...options.headers,
   };
 
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
   const response = await fetch(url, {

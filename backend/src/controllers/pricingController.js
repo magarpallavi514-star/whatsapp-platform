@@ -25,7 +25,14 @@ export const getPublicPricingPlans = async (req, res) => {
 export const getPricingPlanDetails = async (req, res) => {
   try {
     const { planId } = req.params;
-    const plan = await PricingPlan.findOne({ planId, isActive: true });
+    
+    // Try to find by planId first, then by name (case-insensitive)
+    const plan = await PricingPlan.findOne({
+      $or: [
+        { planId, isActive: true },
+        { name: planId.charAt(0).toUpperCase() + planId.slice(1), isActive: true }
+      ]
+    });
 
     if (!plan) {
       return res.status(404).json({
@@ -51,7 +58,7 @@ export const getPricingPlanDetails = async (req, res) => {
 export const createPricingPlan = async (req, res) => {
   try {
     // Check if user is superadmin
-    if (req.account.type !== 'internal') {
+    if (req.user?.role !== 'superadmin' && req.user?.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Only superadmins can create pricing plans'
@@ -63,6 +70,7 @@ export const createPricingPlan = async (req, res) => {
       description,
       monthlyPrice,
       yearlyPrice,
+      setupFee,
       currency,
       monthlyDiscount,
       yearlyDiscount,
@@ -70,6 +78,8 @@ export const createPricingPlan = async (req, res) => {
       features,
       isPopular
     } = req.body;
+
+    console.log('📝 Create plan request:', { name, monthlyPrice, setupFee });
 
     // Validate required fields
     if (!name || monthlyPrice === undefined || yearlyPrice === undefined) {
@@ -96,16 +106,18 @@ export const createPricingPlan = async (req, res) => {
       description,
       monthlyPrice,
       yearlyPrice,
+      setupFee: setupFee || 0,
       currency: currency || 'USD',
       monthlyDiscount: monthlyDiscount || 0,
       yearlyDiscount: yearlyDiscount || 0,
       limits: limits || {},
-      features: features || [],
-      isPopular: isPopular || false,
-      updatedBy: req.account._id
+      features: features || { included: [], excluded: [] },
+      isPopular: isPopular || false
     });
 
     await newPlan.save();
+
+    console.log('✅ Plan created:', name);
 
     res.status(201).json({
       success: true,
@@ -113,10 +125,10 @@ export const createPricingPlan = async (req, res) => {
       data: newPlan
     });
   } catch (error) {
-    console.error('Error creating pricing plan:', error);
+    console.error('❌ Error creating pricing plan:', error.message);
     res.status(500).json({
       success: false,
-      message: 'Failed to create pricing plan'
+      message: 'Failed to create pricing plan: ' + error.message
     });
   }
 };
@@ -124,7 +136,7 @@ export const createPricingPlan = async (req, res) => {
 // [SUPERADMIN] Update pricing plan
 export const updatePricingPlan = async (req, res) => {
   try {
-    if (req.account.type !== 'internal') {
+    if (req.user?.role !== 'superadmin' && req.user?.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Only superadmins can update pricing plans'
@@ -134,11 +146,19 @@ export const updatePricingPlan = async (req, res) => {
     const { planId } = req.params;
     const updates = req.body;
 
+    console.log('📝 Update request:', { planId, updateFields: Object.keys(updates) });
+
+    // Capitalize plan name for lookup
+    const capitalizedName = planId.charAt(0).toUpperCase() + planId.slice(1);
+
     // Prevent changing plan name to avoid conflicts
     if (updates.name) {
       const existingPlan = await PricingPlan.findOne({
         name: updates.name,
-        planId: { $ne: planId }
+        $nor: [
+          { planId },
+          { name: capitalizedName }
+        ]
       });
       if (existingPlan) {
         return res.status(409).json({
@@ -148,22 +168,34 @@ export const updatePricingPlan = async (req, res) => {
       }
     }
 
-    const plan = await PricingPlan.findOneAndUpdate(
-      { planId },
+    // Find plan by either planId or name
+    const query = { 
+      $or: [
+        { planId },
+        { name: capitalizedName }
+      ]
+    };
+
+    console.log('🔍 Looking for plan with query:', query);
+
+    let plan = await PricingPlan.findOneAndUpdate(
+      query,
       {
         ...updates,
-        updatedBy: req.account._id,
         updatedAt: new Date()
       },
       { new: true, runValidators: true }
     );
 
     if (!plan) {
+      console.error('❌ Plan not found:', planId);
       return res.status(404).json({
         success: false,
-        message: 'Pricing plan not found'
+        message: `Pricing plan not found: ${planId}`
       });
     }
+
+    console.log('✅ Plan updated:', plan.name);
 
     res.status(200).json({
       success: true,
@@ -171,10 +203,10 @@ export const updatePricingPlan = async (req, res) => {
       data: plan
     });
   } catch (error) {
-    console.error('Error updating pricing plan:', error);
+    console.error('❌ Error updating pricing plan:', error.message);
     res.status(500).json({
       success: false,
-      message: 'Failed to update pricing plan'
+      message: 'Failed to update pricing plan: ' + error.message
     });
   }
 };
@@ -182,7 +214,7 @@ export const updatePricingPlan = async (req, res) => {
 // [SUPERADMIN] Delete pricing plan
 export const deletePricingPlan = async (req, res) => {
   try {
-    if (req.account.type !== 'internal') {
+    if (req.user?.role !== 'superadmin' && req.user?.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Only superadmins can delete pricing plans'
@@ -192,7 +224,12 @@ export const deletePricingPlan = async (req, res) => {
     const { planId } = req.params;
 
     const plan = await PricingPlan.findOneAndUpdate(
-      { planId },
+      { 
+        $or: [
+          { planId },
+          { name: planId.charAt(0).toUpperCase() + planId.slice(1) }
+        ]
+      },
       { isActive: false, updatedAt: new Date() },
       { new: true }
     );
@@ -247,7 +284,7 @@ export const getAllPricingPlans = async (req, res) => {
 // [SUPERADMIN] Add feature to plan
 export const addFeatureToPlan = async (req, res) => {
   try {
-    if (req.account.type !== 'internal') {
+    if (req.user?.role !== 'superadmin' && req.user?.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Only superadmins can modify plan features'
@@ -275,8 +312,7 @@ export const addFeatureToPlan = async (req, res) => {
             limit: limit || null
           }
         },
-        updatedAt: new Date(),
-        updatedBy: req.account._id
+        updatedAt: new Date()
       },
       { new: true }
     );
@@ -305,7 +341,7 @@ export const addFeatureToPlan = async (req, res) => {
 // [SUPERADMIN] Remove feature from plan
 export const removeFeatureFromPlan = async (req, res) => {
   try {
-    if (req.account.type !== 'internal') {
+    if (req.user?.role !== 'superadmin' && req.user?.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Only superadmins can modify plan features'
@@ -318,8 +354,7 @@ export const removeFeatureFromPlan = async (req, res) => {
       { planId },
       {
         $pull: { features: { _id: featureId } },
-        updatedAt: new Date(),
-        updatedBy: req.account._id
+        updatedAt: new Date()
       },
       { new: true }
     );

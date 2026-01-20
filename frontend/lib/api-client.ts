@@ -23,14 +23,13 @@ export async function fetchAPI(
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...fetchOptions.headers,
   };
 
   // Add JWT token if not skipped
   if (!skipAuth) {
     const token = authService.getToken();
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
     }
   }
 

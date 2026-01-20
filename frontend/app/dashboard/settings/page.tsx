@@ -55,6 +55,7 @@ export default function SettingsPage() {
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([])
   const [apiKeys, setApiKeys] = useState<ApiKeyData[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showApiKeyModal, setShowApiKeyModal] = useState(false)
   const [newApiKey, setNewApiKey] = useState('')

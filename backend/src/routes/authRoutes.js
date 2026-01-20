@@ -12,6 +12,7 @@ const router = express.Router();
 
 // Public routes - Email/Password
 router.post('/login', authController.login);
+router.post('/signup', authController.signup);
 router.post('/logout', authController.logout);
 
 // Public routes - Google OAuth

@@ -55,11 +55,10 @@ class ApiClient {
     const token = this.getToken();
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      ...options.headers,
     };
 
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
     }
 
     try {

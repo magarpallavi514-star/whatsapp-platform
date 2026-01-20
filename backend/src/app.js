@@ -24,6 +24,8 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import campaignRoutes from './routes/campaignRoutes.js';
 import pricingRoutes from './routes/pricingRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
+import billingRoutes from './routes/billingRoutes.js';
+import paymentWebhookRoutes from './routes/paymentWebhookRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -179,6 +181,12 @@ app.use('/api/pricing', pricingRoutes);
 
 // Mount subscription routes (JWT AUTH for user subscriptions)
 app.use('/api/subscription', requireJWT, subscriptionRoutes);
+
+// Mount payment webhook routes (PUBLIC for Cashfree webhooks, JWT AUTH for status checks)
+app.use('/api/payments', paymentWebhookRoutes);
+
+// Mount billing routes (JWT AUTH for billing and invoices)
+app.use('/api/billing', requireJWT, billingRoutes);
 
 // Mount self-service account routes (JWT AUTH - for dashboard users)
 app.use('/api/account', requireJWT, accountRoutes);

@@ -356,3 +356,188 @@ export const resumeSubscription = async (req, res) => {
     });
   }
 };
+
+// Create Cashfree order for checkout
+export const createOrder = async (req, res) => {
+  try {
+    const { plan, amount, paymentGateway } = req.body;
+    const accountId = req.account._id;
+
+    console.log('📝 Creating order:', { plan, amount, paymentGateway, accountId });
+
+    if (!plan || !amount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing plan or amount'
+      });
+    }
+
+    // Get the Cashfree credentials from environment
+    const CASHFREE_CLIENT_ID = process.env.CASHFREE_CLIENT_ID;
+    const CASHFREE_CLIENT_SECRET = process.env.CASHFREE_CLIENT_SECRET;
+    const CASHFREE_API_URL = process.env.CASHFREE_API_URL || 'https://sandbox.cashfree.com/pg';
+
+    if (!CASHFREE_CLIENT_ID || !CASHFREE_CLIENT_SECRET) {
+      console.error('❌ Cashfree credentials not configured');
+      return res.status(500).json({
+        success: false,
+        message: 'Payment gateway not configured'
+      });
+    }
+
+    // Create unique order ID
+    const orderId = `ORDER_${plan.toUpperCase()}_${Date.now()}`;
+
+    // Get account email for Cashfree
+    const account = await Account.findById(accountId);
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found'
+      });
+    }
+
+    // Prepare Cashfree payment session request
+    const sessionPayload = {
+      orderId: orderId,
+      orderAmount: Math.round(amount * 100) / 100,
+      orderCurrency: 'INR',
+      customerDetails: {
+        customerId: accountId.toString(),
+        customerEmail: account.email || 'customer@example.com',
+        customerPhone: account.phone || '9999999999'
+      },
+      orderMeta: {
+        returnUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/checkout?status=success&orderId=${orderId}`,
+        notifyUrl: `${process.env.BACKEND_URL || 'http://localhost:5050'}/api/webhooks/cashfree`
+      },
+      orderNote: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan Subscription`
+    };
+
+    console.log('🔄 Calling Cashfree API:', CASHFREE_API_URL);
+
+    // Call Cashfree API to create payment session
+    const cashfreeResponse = await fetch(`${CASHFREE_API_URL}/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-version': '2023-08-01',
+        'x-client-id': CASHFREE_CLIENT_ID,
+        'x-client-secret': CASHFREE_CLIENT_SECRET
+      },
+      body: JSON.stringify(sessionPayload)
+    });
+
+    if (!cashfreeResponse.ok) {
+      const errorData = await cashfreeResponse.text();
+      console.error('❌ Cashfree API Error:', cashfreeResponse.status, errorData);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create payment session with Cashfree',
+        error: errorData
+      });
+    }
+
+    const cashfreeData = await cashfreeResponse.json();
+    console.log('✅ Cashfree order created:', cashfreeData);
+
+    // Store payment record in our database
+    const payment = new Payment({
+      accountId,
+      orderId,
+      amount: Math.round(amount * 100) / 100,
+      currency: 'INR',
+      paymentGateway: 'cashfree',
+      status: 'pending',
+      planId: plan,
+      gatewayOrderId: cashfreeData.orderId,
+      paymentSessionId: cashfreeData.paymentSessionId,
+      metadata: {
+        plan,
+        amount,
+        cashfreeResponse: cashfreeData
+      }
+    });
+
+    await payment.save();
+    console.log('✅ Payment record saved:', payment._id);
+
+    res.status(201).json({
+      success: true,
+      orderId: orderId,
+      paymentSessionId: cashfreeData.paymentSessionId,
+      amount: Math.round(amount * 100) / 100,
+      currency: 'INR',
+      message: 'Order created successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error creating order:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create order',
+      error: error.message
+    });
+  }
+};
+
+// Verify Cashfree payment
+export const verifyPayment = async (req, res) => {
+  try {
+    const { orderId, paymentId, paymentSignature } = req.body;
+    const accountId = req.account._id;
+
+    if (!orderId || !paymentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing payment verification details'
+      });
+    }
+
+    // Find the payment record
+    const payment = await Payment.findOne({ orderId, accountId });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment record not found'
+      });
+    }
+
+    // Mark payment as successful
+    payment.status = 'completed';
+    payment.transactionId = paymentId;
+    payment.paymentSignature = paymentSignature;
+    await payment.save();
+
+    // Create subscription
+    const subscription = new Subscription({
+      accountId,
+      planId: payment.metadata.plan,
+      paymentId: payment._id,
+      status: 'active',
+      autoRenew: true,
+      currentBillingCycle: {
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+      }
+    });
+
+    await subscription.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment verified and subscription created',
+      data: {
+        subscriptionId: subscription._id,
+        status: subscription.status
+      }
+    });
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to verify payment',
+      error: error.message
+    });
+  }
+};

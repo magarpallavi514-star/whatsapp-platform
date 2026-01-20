@@ -4,9 +4,10 @@ import {
   MessageSquare, LayoutDashboard, Send, Users, BarChart3, Settings, 
   Bell, Search, ChevronDown, Menu, X, Megaphone, Bot, Calendar,
   FileText, LogOut, User, ChevronLeft, ChevronRight, Building2, 
-  Activity, DollarSign
+  Activity, DollarSign, Sliders
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { API_URL } from "@/lib/config/api"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
@@ -41,7 +42,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
         }
         
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/notifications`,
+          `${API_URL}/notifications`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -88,6 +89,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     { name: "Organizations", icon: Building2, href: "/dashboard/organizations", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     { name: "System Health", icon: Activity, href: "/dashboard/system-health", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     { name: "Platform Billing", icon: DollarSign, href: "/dashboard/platform-billing", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
+    { name: "Website Settings", icon: Sliders, href: "/dashboard/website-settings", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     
     // Regular pages
     { name: "Broadcasts", icon: Megaphone, href: "/dashboard/broadcasts", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT] },

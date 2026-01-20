@@ -237,6 +237,10 @@ export const login = async (req, res) => {
  * POST /api/auth/logout
  * Logout (JWT is stateless - just clear on client side)
  */
+/**
+ * POST /api/auth/logout
+ * Logout user (clear token)
+ */
 export const logout = async (req, res) => {
   try {
     // JWT is stateless, no session to destroy
@@ -257,8 +261,103 @@ export const logout = async (req, res) => {
 };
 
 /**
- * GET /api/auth/me
- * Get current logged-in user (requires JWT token)
+ * POST /api/auth/signup
+ * Register a new user account
+ */
+export const signup = async (req, res) => {
+  try {
+    const { name, email, password, company, phone } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, email, and password are required'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a valid email address'
+      });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters'
+      });
+    }
+
+    // Check if email already exists
+    const existingAccount = await Account.findOne({ email });
+    if (existingAccount) {
+      return res.status(409).json({
+        success: false,
+        message: 'Email already registered. Please login instead.'
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Generate unique accountId
+    const accountId = `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Create new account
+    const newAccount = new Account({
+      accountId,
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password: hashedPassword,
+      company: company?.trim() || undefined,
+      phone: phone?.trim() || undefined,
+      type: 'client',
+      plan: 'free', // Start with free plan, upgrade on checkout
+      status: 'active'
+    });
+
+    await newAccount.save();
+
+    console.log('✅ New account created:');
+    console.log('  AccountId:', accountId);
+    console.log('  Email:', email);
+    console.log('  Name:', name);
+
+    // Create user object for token
+    const user = {
+      accountId,
+      email: newAccount.email,
+      name: newAccount.name,
+      role: 'user' // Regular user role
+    };
+
+    // Generate JWT token
+    const token = generateToken(user);
+
+    res.status(201).json({
+      success: true,
+      message: 'Account created successfully',
+      token,
+      user
+    });
+  } catch (error) {
+    console.error('❌ Signup error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create account. Please try again.'
+    });
+  }
+};
+
+/**
+ * POST /api/auth/login
+ * Login with email and password
+ * Demo mode: superadmin@test.com accepts any password
  */
 export const getCurrentUser = async (req, res) => {
   try {
@@ -285,6 +384,7 @@ export const getCurrentUser = async (req, res) => {
 
 export default {
   login,
+  signup,
   logout,
   getCurrentUser
 };

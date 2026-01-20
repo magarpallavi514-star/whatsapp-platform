@@ -82,6 +82,48 @@ export const authService = {
     }
   },
 
+  // Signup/Register
+  signup: async (name: string, email: string, password: string, company?: string, phone?: string): Promise<{ success: boolean; user?: User; token?: string; error?: string }> => {
+    try {
+      const response = await fetch(`${API_URL}/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, email, password, company, phone })
+      })
+
+      const data = await response.json()
+      console.log('📝 Signup response:', { status: response.status, success: data.success, hasToken: !!data.token });
+
+      if (response.ok && data.success && data.token) {
+        const user: User = {
+          id: data.user.accountId || '1',
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role === 'superadmin' ? UserRole.SUPERADMIN : 
+                data.user.role === 'admin' ? UserRole.ADMIN : UserRole.USER,
+          accountId: data.user.accountId
+        }
+
+        // Store JWT token instead of session
+        localStorage.setItem("isAuthenticated", "true")
+        localStorage.setItem("user", JSON.stringify(user))
+        localStorage.setItem("token", data.token)
+        
+        console.log('✅ Account created and logged in');
+
+        return { success: true, user, token: data.token }
+      } else {
+        console.log('❌ Signup failed:', data.message);
+        return { success: false, error: data.message || "Signup failed" }
+      }
+    } catch (error) {
+      console.error('Signup error:', error)
+      return { success: false, error: "Signup failed. Please try again." }
+    }
+  },
+
   // Get JWT token
   getToken: (): string | null => {
     if (typeof window === "undefined") return null
@@ -118,6 +160,16 @@ export const authService = {
     if (!user) return false
     return allowedRoles.includes(user.role)
   },
+}
+
+// Standalone login function for easy import
+export const login = async (email: string, password: string) => {
+  return authService.login(email, password)
+}
+
+// Standalone signup function
+export const signup = async (name: string, email: string, password: string, company?: string, phone?: string) => {
+  return authService.signup(name, email, password, company, phone)
 }
 
 // Role-based permissions

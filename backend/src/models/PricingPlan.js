@@ -14,7 +14,7 @@ const featureSchema = new mongoose.Schema({
     type: Number,
     default: null // null = unlimited
   }
-});
+}, { _id: false });
 
 const pricingPlanSchema = new mongoose.Schema({
   planId: {
@@ -41,6 +41,11 @@ const pricingPlanSchema = new mongoose.Schema({
   yearlyPrice: {
     type: Number,
     required: true,
+    min: 0
+  },
+  setupFee: {
+    type: Number,
+    default: 0,
     min: 0
   },
   currency: {
@@ -99,8 +104,15 @@ const pricingPlanSchema = new mongoose.Schema({
     }
   },
   
-  // Features
-  features: [featureSchema],
+  // Features (included and excluded lists)
+  features: {
+    included: [{
+      type: String
+    }],
+    excluded: [{
+      type: String
+    }]
+  },
   
   // Billing Period
   billingCycle: {

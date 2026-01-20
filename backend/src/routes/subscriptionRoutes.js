@@ -8,6 +8,10 @@ const router = express.Router();
  * PROTECTED ROUTES - Requires JWT
  */
 
+// Payment/Checkout routes
+router.post('/create-order', requireJWT, subscriptionController.createOrder);
+router.post('/verify-payment', requireJWT, subscriptionController.verifyPayment);
+
 // User subscription routes
 router.get('/my-subscription', requireJWT, subscriptionController.getMySubscription);
 router.post('/create', requireJWT, subscriptionController.createSubscription);
