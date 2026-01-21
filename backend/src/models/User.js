@@ -26,9 +26,10 @@ const userSchema = new mongoose.Schema({
 
   // Account & Role
   accountId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Account',
-    required: true
+    type: String,
+    required: true,
+    unique: true,
+    index: true
   },
   role: {
     type: String,

@@ -4,7 +4,7 @@ import {
   MessageSquare, LayoutDashboard, Send, Users, BarChart3, Settings, 
   Bell, Search, ChevronDown, Menu, X, Megaphone, Bot, Calendar,
   FileText, LogOut, User, ChevronLeft, ChevronRight, Building2, 
-  Activity, DollarSign, Sliders, CreditCard
+  Activity, DollarSign, Sliders, CreditCard, Receipt
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { API_URL } from "@/lib/config/api"
@@ -94,6 +94,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     { name: "Website Settings", icon: Sliders, href: "/dashboard/website-settings", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     
     // Regular pages
+    { name: "Invoices", icon: Receipt, href: "/dashboard/invoices", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER] },
     { name: "Broadcasts", icon: Megaphone, href: "/dashboard/broadcasts", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT] },
     { name: "Contacts", icon: Users, href: "/dashboard/contacts", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT] },
     { name: "Templates", icon: FileText, href: "/dashboard/templates", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER] },

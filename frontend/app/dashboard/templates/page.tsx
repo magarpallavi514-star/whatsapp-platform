@@ -45,6 +45,8 @@ export default function TemplatesPage() {
     hasMedia: false,
     mediaType: 'IMAGE' as 'IMAGE' | 'VIDEO' | 'DOCUMENT',
     mediaUrl: '',
+    mediaFile: null as File | null,
+    mediaInputType: 'url' as 'url' | 'file', // 'url' or 'file'
     headerText: '',
     footerText: '',
     buttons: [] as Array<{ type: string; text: string; url?: string; phone?: string }>
@@ -113,19 +115,53 @@ export default function TemplatesPage() {
   // Create template
   const createTemplate = async () => {
     try {
-      const response = await fetch(`${API_URL}/templates`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(formData),
-      })
+      let finalData: any = { ...formData }
+      
+      // If using file upload, create FormData to send file
+      if (formData.hasMedia && formData.mediaInputType === 'file' && formData.mediaFile) {
+        const formDataToSend = new FormData()
+        formDataToSend.append('name', formData.name)
+        formDataToSend.append('language', formData.language)
+        formDataToSend.append('category', formData.category)
+        formDataToSend.append('content', formData.content)
+        formDataToSend.append('hasMedia', String(formData.hasMedia))
+        formDataToSend.append('mediaType', formData.mediaType)
+        formDataToSend.append('headerText', formData.headerText)
+        formDataToSend.append('footerText', formData.footerText)
+        formDataToSend.append('mediaFile', formData.mediaFile)
+        
+        const response = await fetch(`${API_URL}/templates`, {
+          method: 'POST',
+          headers: {
+            ...(authService.getToken() && { 'Authorization': `Bearer ${authService.getToken()}` })
+          },
+          body: formDataToSend,
+        })
 
-      const result = await response.json()
-      if (response.ok) {
-        alert(result.message)
-        fetchTemplates()
-        closeModal()
+        const result = await response.json()
+        if (response.ok) {
+          alert(result.message)
+          fetchTemplates()
+          closeModal()
+        } else {
+          alert(result.message || "Failed to create template")
+        }
       } else {
-        alert(result.message || "Failed to create template")
+        // Send as JSON if using URL
+        const response = await fetch(`${API_URL}/templates`, {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify(finalData),
+        })
+
+        const result = await response.json()
+        if (response.ok) {
+          alert(result.message)
+          fetchTemplates()
+          closeModal()
+        } else {
+          alert(result.message || "Failed to create template")
+        }
       }
     } catch (error) {
       console.error("Error creating template:", error)
@@ -189,6 +225,8 @@ export default function TemplatesPage() {
       hasMedia: false,
       mediaType: 'IMAGE',
       mediaUrl: '',
+      mediaFile: null,
+      mediaInputType: 'url',
       headerText: '',
       footerText: '',
       buttons: []
@@ -404,20 +442,27 @@ export default function TemplatesPage() {
         </div>
       </div>
 
-      {/* Create Modal */}
+      {/* Create Modal - Right Drawer with Glass Blur */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white">
-              <h2 className="text-xl font-semibold text-gray-900">Create WhatsApp Template</h2>
-              <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
+        <div className="fixed inset-0 z-50">
+          {/* Glass Blur Background */}
+          <div 
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            onClick={closeModal}
+          />
+          
+          {/* Right Drawer */}
+          <div className="absolute right-0 top-0 bottom-0 w-full max-w-2xl bg-white shadow-2xl overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white/95 backdrop-blur-sm">
+              <h2 className="text-2xl font-bold text-gray-900">Create WhatsApp Template</h2>
+              <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition">
+                <X className="h-6 w-6 text-gray-600" />
               </button>
             </div>
             
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-6">
               {/* Info Box */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-lg p-4">
                 <h3 className="font-semibold text-blue-900 mb-2">📋 Template Guidelines</h3>
                 <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
                   <li>Templates must be approved by Meta before use</li>
@@ -487,7 +532,7 @@ export default function TemplatesPage() {
 
               {/* Media Configuration */}
               {formData.hasMedia && (
-                <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50">
+                <div className="border border-gray-200 rounded-lg p-4 space-y-4 bg-gray-50">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Media Type</label>
                     <select
@@ -500,21 +545,102 @@ export default function TemplatesPage() {
                       <option value="DOCUMENT">Document</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Media URL (Sample) *
+
+                  {/* Input Type Toggle: File or URL */}
+                  <div className="flex gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="mediaInputType"
+                        value="file"
+                        checked={formData.mediaInputType === 'file'}
+                        onChange={(e) => setFormData({ ...formData, mediaInputType: 'file' })}
+                        className="h-4 w-4 text-green-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">📎 Upload File</span>
                     </label>
-                    <input
-                      type="url"
-                      value={formData.mediaUrl}
-                      onChange={(e) => setFormData({ ...formData, mediaUrl: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-                      placeholder="https://example.com/image.jpg"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Sample URL for Meta approval. Actual media URL will be provided when sending.
-                    </p>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="mediaInputType"
+                        value="url"
+                        checked={formData.mediaInputType === 'url'}
+                        onChange={(e) => setFormData({ ...formData, mediaInputType: 'url' })}
+                        className="h-4 w-4 text-green-600"
+                      />
+                      <span className="text-sm font-medium text-gray-700">🔗 Use URL</span>
+                    </label>
                   </div>
+
+                  {/* File Upload Input */}
+                  {formData.mediaInputType === 'file' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Attach {formData.mediaType.charAt(0) + formData.mediaType.slice(1).toLowerCase()} *
+                      </label>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-500 transition cursor-pointer bg-white">
+                        <input
+                          type="file"
+                          accept={
+                            formData.mediaType === 'IMAGE' 
+                              ? 'image/jpeg,image/png,image/gif,image/webp' 
+                              : formData.mediaType === 'VIDEO' 
+                              ? 'video/mp4,video/quicktime'
+                              : 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                          }
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              setFormData({ ...formData, mediaFile: e.target.files[0] })
+                            }
+                          }}
+                          className="hidden"
+                          id="mediaFileInput"
+                        />
+                        <label htmlFor="mediaFileInput" className="cursor-pointer">
+                          {formData.mediaFile ? (
+                            <div className="text-sm">
+                              <p className="text-green-600 font-semibold">✓ {formData.mediaFile.name}</p>
+                              <p className="text-gray-500 text-xs mt-1">
+                                ({(formData.mediaFile.size / 1024 / 1024).toFixed(2)} MB)
+                              </p>
+                            </div>
+                          ) : (
+                            <div>
+                              <p className="text-gray-500">
+                                {formData.mediaType === 'IMAGE' 
+                                  ? '📷 Click to upload image (JPG, PNG, GIF, WebP)'
+                                  : formData.mediaType === 'VIDEO'
+                                  ? '🎥 Click to upload video (MP4, MOV)'
+                                  : '📄 Click to upload document (PDF, DOC, DOCX)'}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">Max 16 MB</p>
+                            </div>
+                          )}
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* URL Input */}
+                  {formData.mediaInputType === 'url' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Media URL (Sample) *
+                      </label>
+                      <input
+                        type="url"
+                        value={formData.mediaUrl}
+                        onChange={(e) => setFormData({ ...formData, mediaUrl: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+                        placeholder="https://example.com/image.jpg"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Sample URL for Meta approval. Actual media URL will be provided when sending.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Header Text for Video/Document */}
                   {formData.mediaType !== 'IMAGE' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -549,6 +675,85 @@ export default function TemplatesPage() {
                 </p>
               </div>
 
+              {/* Variable Mappings - Show when there are variables */}
+              {extractVariables(formData.content) > 0 && (
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-300 rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <p className="text-base font-bold text-indigo-900">
+                      🔗 Variable to Field Mapping
+                    </p>
+                    <span className="bg-indigo-300 text-indigo-900 text-xs px-3 py-1 rounded-full font-bold">
+                      {extractVariables(formData.content)} variables
+                    </span>
+                  </div>
+                  <p className="text-sm text-indigo-800 mb-4">
+                    Define which contact field each variable will use:
+                  </p>
+                  
+                  {/* Mapping Display */}
+                  <div className="space-y-3">
+                    {Array.from({ length: extractVariables(formData.content) }, (_, i) => (
+                      <div key={i + 1} className="bg-white rounded-lg border-2 border-indigo-200 p-4 hover:border-indigo-400 transition">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="flex items-center justify-center w-8 h-8 bg-indigo-600 text-white rounded-lg font-bold text-sm">
+                            {i + 1}
+                          </div>
+                          <p className="font-semibold text-gray-900">Variable {i + 1}</p>
+                          <span className="bg-indigo-100 text-indigo-700 px-2 py-1 text-xs rounded font-mono">
+                            Variable#{i + 1}
+                          </span>
+                        </div>
+                        
+                        <div className="ml-11 space-y-2">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">
+                              What does this variable represent?
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g., Customer Name, Order ID, Amount, Email"
+                              className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-700 mb-1">
+                              Which contact field to use?
+                            </label>
+                            <select className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white font-medium">
+                              <option value="">-- Select contact field --</option>
+                              <option value="name">👤 Name</option>
+                              <option value="email">📧 Email</option>
+                              <option value="phone">📱 Phone</option>
+                              <option value="whatsappNumber">💬 WhatsApp Number</option>
+                              <option value="type">🏷️ Contact Type</option>
+                              <option value="custom">⚙️ Custom Field</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Example */}
+                  <div className="mt-4 bg-indigo-100 border-l-4 border-indigo-600 p-3 rounded">
+                    <p className="text-xs font-semibold text-indigo-900 mb-2">📌 Example:</p>
+                    <p className="text-xs text-indigo-800">
+                      If Variable 1 = Name (from name field) and Variable 2 = Order ID (from custom_order_id field), the message will auto-fill values for each contact
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Show hint when no variables */}
+              {extractVariables(formData.content) === 0 && formData.content && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-xs text-yellow-800">
+                    ℹ️ Add variables like {'{'}'{'{'}1{'}'}, {'{'}'{'{'}2{'}}{'}') to enable field mappings
+                  </p>
+                </div>
+              )}
+
               {/* Footer Text */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -576,10 +781,12 @@ export default function TemplatesPage() {
               )}
             </div>
 
-            <div className="flex gap-2 p-6 border-t justify-end sticky bottom-0 bg-white">
-              <Button variant="outline" onClick={closeModal}>Cancel</Button>
+            <div className="flex gap-2 p-6 border-t justify-end sticky bottom-0 bg-white/95 backdrop-blur-sm">
+              <Button variant="outline" onClick={closeModal} className="border-gray-300">
+                Cancel
+              </Button>
               <Button 
-                className="bg-green-600 hover:bg-green-700" 
+                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold" 
                 onClick={createTemplate}
                 disabled={!formData.name || !formData.content}
               >

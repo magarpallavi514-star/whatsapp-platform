@@ -18,6 +18,44 @@ export function generatePrefixedId(prefix) {
 }
 
 /**
+ * Generate account ID (Universal Identifier)
+ * Format: YYXXXXX (7 digits)
+ * YY = last 2 digits of year (26 for 2026, 27 for 2027)
+ * XXXXX = 5-digit sequential number (00001-99999)
+ * @returns {string} Account ID (e.g., '2600001', '2600002', '2700001')
+ */
+export async function generateAccountId(AccountCounter = null) {
+  try {
+    // If AccountCounter model is provided, use database sequence
+    if (AccountCounter) {
+      const counter = await AccountCounter.findByIdAndUpdate(
+        'account_id',
+        { $inc: { sequence: 1 } },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      );
+      
+      const year = new Date().getFullYear();
+      const yearSuffix = year.toString().slice(-2); // "26" for 2026, "27" for 2027
+      const sequencePadded = String(counter.sequence).padStart(5, '0'); // "00001"
+      return `${yearSuffix}${sequencePadded}`;
+    }
+    
+    // Fallback: Generate random 5-digit number if no database access
+    const year = new Date().getFullYear();
+    const yearSuffix = year.toString().slice(-2);
+    const randomSequence = Math.floor(Math.random() * 99999).toString().padStart(5, '0');
+    return `${yearSuffix}${randomSequence}`;
+  } catch (error) {
+    console.error('Error generating account ID:', error);
+    // Fallback to random
+    const year = new Date().getFullYear();
+    const yearSuffix = year.toString().slice(-2);
+    const randomSequence = Math.floor(Math.random() * 99999).toString().padStart(5, '0');
+    return `${yearSuffix}${randomSequence}`;
+  }
+}
+
+/**
  * Generate invoice number
  * Format: INV-YYYY-XXXXXX
  * @returns {string} Invoice number

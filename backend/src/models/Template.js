@@ -32,10 +32,37 @@ const templateSchema = new mongoose.Schema({
     type: [String], // ["1", "2"]
     default: []
   },
+  // Variable to field mappings
+  variableMappings: {
+    type: Map,
+    of: new mongoose.Schema({
+      variableNumber: String,  // "1", "2", "3"
+      fieldName: String,       // "name", "email", "phone", "order_id", etc.
+      fieldLabel: String,      // "Customer Name", "Email Address", etc.
+      description: String      // Optional description
+    }, { _id: false }),
+    default: {}
+  },
   components: {
     type: Array, // Full Meta components
     default: []
   },
+  
+  // Media/Header support
+  hasMedia: {
+    type: Boolean,
+    default: false
+  },
+  mediaType: {
+    type: String,
+    enum: ['IMAGE', 'VIDEO', 'DOCUMENT'],
+    default: 'IMAGE'
+  },
+  mediaUrl: String,              // For URL-based media
+  mediaFilePath: String,         // For uploaded files (stored path)
+  mediaFileName: String,         // Original filename
+  headerText: String,            // For video/document headers
+  footerText: String,
   
   // Status
   status: {

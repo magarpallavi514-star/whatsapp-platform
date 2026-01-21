@@ -3,6 +3,7 @@ import Subscription from '../models/Subscription.js';
 import Invoice from '../models/Invoice.js';
 import Account from '../models/Account.js';
 import crypto from 'crypto';
+import { generateAndUploadInvoicePDF } from '../services/invoicePDFService.js';
 
 /**
  * Handle Cashfree webhook for payment confirmation
@@ -130,19 +131,69 @@ async function activateSubscription(payment) {
     }
 
     // Generate invoice
-    const invoice = new Invoice({
+    const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    
+    const invoiceData = {
+      invoiceNumber,
       accountId,
       subscriptionId: subscription._id,
-      amount: payment.amount,
-      currency: payment.currency || 'INR',
-      status: 'paid',
-      issueDate: new Date(),
+      invoiceDate: new Date(),
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      paymentDate: new Date(),
-      items: [{
+      billTo: {
+        name: 'Customer', // Will be populated from Account
+        email: '',
+        company: '',
+        address: ''
+      },
+      lineItems: [{
         description: `${planId} Plan - Monthly Subscription`,
+        quantity: 1,
+        unitPrice: payment.amount,
+        amount: payment.amount
+      }],
+      subtotal: payment.amount,
+      taxRate: 0,
+      taxAmount: 0,
+      discountAmount: 0,
+      totalAmount: payment.amount,
+      paidAmount: payment.amount,
+      status: 'paid',
+      currency: payment.currency || 'INR'
+    };
+
+    // Generate PDF and upload to S3
+    let pdfUrl = null;
+    try {
+      const { s3Url } = await generateAndUploadInvoicePDF(invoiceData, accountId.toString());
+      pdfUrl = s3Url;
+      console.log('✅ Invoice PDF generated and uploaded to S3');
+    } catch (pdfError) {
+      console.error('⚠️ Failed to generate PDF:', pdfError.message);
+      // Continue even if PDF generation fails
+    }
+
+    const invoice = new Invoice({
+      invoiceNumber,
+      accountId,
+      subscriptionId: subscription._id,
+      invoiceDate: invoiceData.invoiceDate,
+      dueDate: invoiceData.dueDate,
+      billTo: invoiceData.billTo,
+      lineItems: invoiceData.lineItems,
+      subtotal: invoiceData.subtotal,
+      totalAmount: invoiceData.totalAmount,
+      paidAmount: invoiceData.paidAmount,
+      dueAmount: 0,
+      currency: invoiceData.currency,
+      status: 'paid',
+      pdfUrl: pdfUrl,
+      payments: [{
+        paymentId: payment._id.toString(),
         amount: payment.amount,
-        quantity: 1
+        date: new Date(),
+        method: payment.paymentGateway,
+        transactionId: payment.gatewayTransactionId,
+        status: 'success'
       }]
     });
     await invoice.save();

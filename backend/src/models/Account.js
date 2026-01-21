@@ -2,7 +2,10 @@ import mongoose from 'mongoose';
 import crypto from 'crypto';
 
 const accountSchema = new mongoose.Schema({
-  // Account Identity
+  // Account Identity (Universal Identifier)
+  // Format: YYXXXXX (7 digits)
+  // YY = last 2 digits of year (26 for 2026, 27 for 2027)
+  // XXXXX = 5-digit sequential number (00001-99999)
   accountId: {
     type: String,
     required: true,

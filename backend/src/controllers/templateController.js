@@ -92,6 +92,18 @@ export const createTemplate = async (req, res) => {
     const accountId = req.accountId;
     const { name, language, category, content, variables, components, hasMedia, mediaType, mediaUrl, headerText, footerText } = req.body;
     
+    // Handle file upload
+    let finalMediaUrl = mediaUrl;
+    let mediaFilePath = null;
+    let mediaFileName = null;
+    
+    if (req.file) {
+      // File was uploaded
+      mediaFileName = req.file.originalname;
+      mediaFilePath = `/uploads/templates/${req.file.filename}`;
+      finalMediaUrl = `${process.env.API_URL || 'http://localhost:5050/api'}${mediaFilePath}`;
+    }
+    
     if (!name || !content) {
       return res.status(400).json({
         success: false,
@@ -117,7 +129,7 @@ export const createTemplate = async (req, res) => {
     let templateComponents = components || [];
     
     // Add HEADER component if media is included
-    if (hasMedia && mediaUrl) {
+    if (hasMedia && (finalMediaUrl || req.file)) {
       const headerComponent = {
         type: 'HEADER',
         format: mediaType || 'IMAGE',
@@ -125,15 +137,15 @@ export const createTemplate = async (req, res) => {
       
       if (mediaType === 'IMAGE') {
         headerComponent.example = {
-          header_handle: [mediaUrl]
+          header_handle: [finalMediaUrl || mediaUrl]
         };
       } else if (mediaType === 'VIDEO') {
         headerComponent.example = {
-          header_handle: [mediaUrl]
+          header_handle: [finalMediaUrl || mediaUrl]
         };
       } else if (mediaType === 'DOCUMENT') {
         headerComponent.example = {
-          header_handle: [mediaUrl]
+          header_handle: [finalMediaUrl || mediaUrl]
         };
         if (headerText) {
           headerComponent.text = headerText;
@@ -182,7 +194,14 @@ export const createTemplate = async (req, res) => {
       content,
       variables: variables || [...new Set(variableMatches.map(v => v.replace(/[{}]/g, '')))],
       components: templateComponents,
-      status: 'draft'
+      status: 'draft',
+      hasMedia: hasMedia || false,
+      mediaType: mediaType || 'IMAGE',
+      mediaUrl: finalMediaUrl || mediaUrl,
+      mediaFilePath: mediaFilePath,
+      mediaFileName: mediaFileName,
+      headerText: headerText || '',
+      footerText: footerText || ''
     });
     
     res.json({

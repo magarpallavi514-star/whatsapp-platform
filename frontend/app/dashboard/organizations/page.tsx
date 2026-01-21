@@ -108,11 +108,33 @@ export default function OrganizationsPage() {
     }
   }
 
-  const handleOpenDetails = (org: any) => {
+  const handleOpenDetails = async (org: any) => {
     setSelectedOrg(org)
     setEditData({ ...org })
     setIsDetailDrawerOpen(true)
     setIsEditMode(false)
+    
+    // Fetch invoices for this organization
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_URL}/billing/invoices?accountId=${org._id}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setSelectedOrg((prev: any) => ({
+          ...prev,
+          _invoices: data.data || []
+        }))
+      }
+    } catch (err) {
+      console.error("Error fetching invoices:", err)
+      // Continue without invoices - they'll show "No invoices" message
+    }
   }
 
   const handleUpdateOrganization = async (e: React.FormEvent) => {
@@ -667,6 +689,63 @@ export default function OrganizationsPage() {
                       <div className="px-4 py-3 border border-gray-200 rounded-lg">
                         <p className="text-xs font-semibold text-gray-600 uppercase">Total Payments</p>
                         <p className="text-sm font-semibold text-gray-900 mt-1">₹{selectedOrg.totalPayments || "0"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Invoices Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Recent Invoices</h3>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-700">Invoice #</th>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-700">Date</th>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-700">Amount</th>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
+                            <th className="px-4 py-3 text-center font-semibold text-gray-700">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedOrg._invoices && selectedOrg._invoices.length > 0 ? (
+                            selectedOrg._invoices.slice(0, 3).map((invoice: any, idx: number) => (
+                              <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
+                                <td className="px-4 py-3 text-gray-900 font-medium">{invoice.invoiceNumber}</td>
+                                <td className="px-4 py-3 text-gray-600">
+                                  {new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}
+                                </td>
+                                <td className="px-4 py-3 text-gray-900 font-medium">₹{invoice.totalAmount?.toFixed(2) || '0'}</td>
+                                <td className="px-4 py-3">
+                                  <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full ${
+                                    invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                                  }`}>
+                                    {invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1)}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <a 
+                                    href={invoice.pdfUrl || '#'} 
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 font-semibold text-xs"
+                                  >
+                                    Download
+                                  </a>
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={5} className="px-4 py-6 text-center text-gray-500 text-sm">
+                                📄 No invoices yet. They will appear after payment confirmation.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                      <div className="px-4 py-3 bg-gray-50 text-center text-xs text-gray-600 border-t border-gray-200">
+                        💡 View all invoices in <a href="/dashboard/invoices" className="text-blue-600 hover:underline font-semibold">Invoices page</a>
                       </div>
                     </div>
                   </div>

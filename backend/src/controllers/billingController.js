@@ -524,6 +524,57 @@ export const getBillingStats = async (req, res) => {
   }
 };
 
+/**
+ * Download invoice PDF
+ * Returns S3 signed URL for invoice download
+ */
+export const downloadInvoice = async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+
+    const invoice = await Invoice.findById(invoiceId);
+    if (!invoice) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invoice not found'
+      });
+    }
+
+    // Check authorization
+    if (invoice.accountId.toString() !== req.accountId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized'
+      });
+    }
+
+    // If invoice has S3 URL, redirect to it
+    if (invoice.pdfUrl) {
+      return res.status(200).json({
+        success: true,
+        message: 'Invoice PDF available',
+        data: {
+          invoiceNumber: invoice.invoiceNumber,
+          pdfUrl: invoice.pdfUrl,
+          downloadUrl: invoice.pdfUrl // Direct S3 URL with pre-signed access
+        }
+      });
+    }
+
+    // If no PDF yet, return error
+    res.status(400).json({
+      success: false,
+      message: 'Invoice PDF not yet generated'
+    });
+  } catch (error) {
+    console.error('Error downloading invoice:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download invoice'
+    });
+  }
+};
+
 export default {
   createSubscription,
   getMySubscriptions,
@@ -531,5 +582,6 @@ export default {
   changePlan,
   cancelSubscription,
   getInvoice,
+  downloadInvoice,
   getBillingStats
 };

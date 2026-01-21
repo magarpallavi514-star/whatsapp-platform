@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import path from 'path';
 
 // Import middleware
 import { authenticate } from './middlewares/auth.js';
@@ -77,6 +78,9 @@ app.use(cors({
 // JSON and URL-encoded body parsing (JWT is stateless - no session needed)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static files (uploads)
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Basic health check route
 app.get('/', (req, res) => {

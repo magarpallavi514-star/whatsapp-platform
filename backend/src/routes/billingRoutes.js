@@ -34,14 +34,8 @@ router.get('/invoices', requireJWT, billingController.getBillingHistory);
 // Get specific invoice
 router.get('/invoices/:invoiceId', requireJWT, billingController.getInvoice);
 
-// Download invoice as PDF
-router.get('/invoices/:invoiceId/download', requireJWT, (req, res) => {
-  // TODO: Implement PDF generation and download
-  res.status(501).json({
-    success: false,
-    message: 'PDF download feature coming soon'
-  });
-});
+// Download invoice (redirect to S3 signed URL)
+router.get('/invoices/:invoiceId/download', requireJWT, billingController.downloadInvoice);
 
 /**
  * Billing Dashboard

@@ -4,6 +4,8 @@
  */
 
 import User from '../models/User.js';
+import Counter from '../models/Counter.js';
+import { generateAccountId } from '../utils/idGenerator.js';
 import mongoose from 'mongoose';
 
 /**
@@ -13,13 +15,14 @@ import mongoose from 'mongoose';
 export const getAllOrganizations = async (req, res) => {
   try {
     const users = await User.find({})
-      .select('_id email name phone phoneNumber countryCode status role plan billingCycle nextBillingDate totalPayments createdAt')
+      .select('_id accountId email name phone phoneNumber countryCode status role plan billingCycle nextBillingDate totalPayments createdAt')
       .sort({ createdAt: -1 });
 
     res.json({
       success: true,
       data: users.map(user => ({
         _id: user._id,
+        accountId: user.accountId,
         email: user.email,
         name: user.name || user.email,
         phoneNumber: user.phoneNumber || user.phone || '',
@@ -67,6 +70,9 @@ export const createOrganization = async (req, res) => {
       });
     }
 
+    // Generate new account ID (7-digit: YYXXXXX format)
+    const accountId = await generateAccountId(Counter);
+
     // Create new user
     const newUser = new User({
       name,
@@ -80,7 +86,7 @@ export const createOrganization = async (req, res) => {
       nextBillingDate: nextBillingDate ? new Date(nextBillingDate) : null,
       role: 'user',
       totalPayments: 0,
-      accountId: new mongoose.Types.ObjectId() // Create new account ID
+      accountId: accountId // Use the new 7-digit account ID
     });
 
     await newUser.save();
@@ -90,6 +96,7 @@ export const createOrganization = async (req, res) => {
       message: 'Organization created successfully',
       data: {
         _id: newUser._id,
+        accountId: newUser.accountId,
         email: newUser.email,
         name: newUser.name,
         phoneNumber: newUser.phoneNumber,
