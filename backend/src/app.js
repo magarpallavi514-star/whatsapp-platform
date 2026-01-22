@@ -46,8 +46,9 @@ const allowedOrigins = [
   'https://whatsapp-platform-nine.vercel.app',
   'https://mpiyush15-whatsapp-platform.vercel.app',
   'https://mpiyush15-whatsapp-platform-57rcl0koq-piyushs-projects-5d893f5f.vercel.app',
-  process.env.FRONTEND_URL,
-  process.env.FRONTEND_URL && `https://www.${process.env.FRONTEND_URL.replace('https://', '')}`
+  'https://replysys.com',
+  'https://www.replysys.com',
+  process.env.FRONTEND_URL
 ].filter(Boolean);
 
 app.use(cors({
