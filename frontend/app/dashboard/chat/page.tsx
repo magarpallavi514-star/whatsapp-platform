@@ -269,7 +269,10 @@ export default function ChatPage() {
       } else {
         const error = await response.json()
         console.error('❌ Send failed:', error)
-        alert(`Failed to send: ${error.message || "Unknown error"}`)
+        console.error('Response status:', response.status)
+        console.error('Response headers:', Object.fromEntries(response.headers.entries()))
+        const errorMsg = error.message || error.error || "Unknown error"
+        alert(`Failed to send: ${errorMsg} (${response.status})`)
       }
     } catch (error) {
       console.error("Error sending message:", error)

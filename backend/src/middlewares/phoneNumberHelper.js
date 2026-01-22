@@ -77,10 +77,17 @@ export const resolvePhoneNumber = async (req, res, next) => {
     
   } catch (error) {
     console.error('❌ Phone number resolution error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code
+    });
     res.status(500).json({
       success: false,
       message: 'Failed to resolve phone number',
-      error: error.message
+      error: error.message,
+      details: error.stack
     });
   }
 };

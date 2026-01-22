@@ -62,9 +62,17 @@ export const sendTextMessage = async (req, res) => {
     
   } catch (error) {
     console.error('❌ Send text message error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code
+    });
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || 'Failed to send message',
+      error: error.message,
+      errorType: error.name
     });
   }
 };
