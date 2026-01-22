@@ -361,15 +361,15 @@ export const resumeSubscription = async (req, res) => {
 // Create Cashfree order for checkout
 export const createOrder = async (req, res) => {
   try {
-    const { plan, amount, paymentGateway } = req.body;
+    const { plan, paymentGateway } = req.body;
     const accountId = req.accountId; // From JWT middleware (string)
 
-    console.log('📝 Creating order:', { plan, amount, paymentGateway, accountId });
+    console.log('📝 Creating order:', { plan, paymentGateway, accountId });
 
-    if (!plan || !amount) {
+    if (!plan) {
       return res.status(400).json({
         success: false,
-        message: 'Missing plan or amount'
+        message: 'Missing plan'
       });
     }
 
@@ -386,11 +386,7 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Create unique order ID
-    const orderId = `ORDER_${plan.toUpperCase()}_${Date.now()}`;
-
-    // Get account email for Cashfree
-    // accountId from JWT is a string (accountId field), not MongoDB _id
+    // Get account - accountId from JWT is a string (accountId field), not MongoDB _id
     const account = await Account.findOne({ accountId });
     if (!account) {
       return res.status(404).json({
@@ -399,10 +395,48 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    // Fetch pricing plan dynamically from database (more secure than trusting frontend)
+    // Map plan names: starter -> Starter, pro -> Pro
+    const planNameMapping = {
+      'starter': 'Starter',
+      'pro': 'Pro',
+      'enterprise': 'Enterprise'
+    };
+    
+    const pricingPlanName = planNameMapping[plan.toLowerCase()] || plan;
+    const pricingPlan = await PricingPlan.findOne({ name: pricingPlanName, isActive: true });
+    
+    if (!pricingPlan) {
+      console.error('❌ Pricing plan not found:', pricingPlanName);
+      return res.status(404).json({
+        success: false,
+        message: 'Pricing plan not found'
+      });
+    }
+
+    // Calculate total amount (monthly price + setup fee)
+    const amount = pricingPlan.monthlyPrice + (pricingPlan.setupFee || 0);
+    
+    console.log('💰 Amount calculated:', { 
+      monthlyPrice: pricingPlan.monthlyPrice, 
+      setupFee: pricingPlan.setupFee,
+      totalAmount: amount 
+    });
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid plan pricing'
+      });
+    }
+
+    // Create unique order ID
+    const orderId = `ORDER_${plan.toUpperCase()}_${Date.now()}`;
+
     // Prepare Cashfree payment session request
     const sessionPayload = {
       orderId: orderId,
-      orderAmount: Math.round(amount * 100) / 100,
+      orderAmount: amount,
       orderCurrency: 'INR',
       customerDetails: {
         customerId: accountId.toString(),
@@ -410,13 +444,18 @@ export const createOrder = async (req, res) => {
         customerPhone: account.phone || '9999999999'
       },
       orderMeta: {
-        returnUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/checkout?status=success&orderId=${orderId}`,
-        notifyUrl: `${process.env.BACKEND_URL || 'http://localhost:5050'}/api/webhooks/cashfree`
+        returnUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-success?orderId=${orderId}`,
+        notifyUrl: `${process.env.BACKEND_URL || 'http://localhost:5050'}/api/payments/cashfree`
       },
-      orderNote: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan Subscription`
+      orderNote: `${pricingPlanName} Plan Subscription`
     };
 
-    console.log('🔄 Calling Cashfree API:', CASHFREE_API_URL);
+    console.log('🔄 Calling Cashfree API with payload:', {
+      orderId: sessionPayload.orderId,
+      orderAmount: sessionPayload.orderAmount,
+      orderCurrency: sessionPayload.orderCurrency,
+      customerId: sessionPayload.customerDetails.customerId
+    });
 
     // Call Cashfree API to create payment session
     const cashfreeResponse = await fetch(`${CASHFREE_API_URL}/orders`, {
@@ -430,17 +469,28 @@ export const createOrder = async (req, res) => {
       body: JSON.stringify(sessionPayload)
     });
 
+    const responseText = await cashfreeResponse.text();
+    
     if (!cashfreeResponse.ok) {
-      const errorData = await cashfreeResponse.text();
-      console.error('❌ Cashfree API Error:', cashfreeResponse.status, errorData);
+      console.error('❌ Cashfree API Error:', cashfreeResponse.status, responseText);
       return res.status(500).json({
         success: false,
         message: 'Failed to create payment session with Cashfree',
-        error: errorData
+        error: responseText
       });
     }
 
-    const cashfreeData = await cashfreeResponse.json();
+    let cashfreeData;
+    try {
+      cashfreeData = JSON.parse(responseText);
+    } catch (e) {
+      console.error('❌ Failed to parse Cashfree response:', responseText);
+      return res.status(500).json({
+        success: false,
+        message: 'Invalid response from Cashfree'
+      });
+    }
+
     console.log('✅ Cashfree order created:', cashfreeData);
 
     // Store payment record in our database
@@ -448,7 +498,7 @@ export const createOrder = async (req, res) => {
     const payment = new Payment({
       accountId: account._id,
       orderId,
-      amount: Math.round(amount * 100) / 100,
+      amount: amount,
       currency: 'INR',
       paymentGateway: 'cashfree',
       status: 'pending',
@@ -457,6 +507,7 @@ export const createOrder = async (req, res) => {
       paymentSessionId: cashfreeData.paymentSessionId,
       metadata: {
         plan,
+        planName: pricingPlanName,
         amount,
         cashfreeResponse: cashfreeData
       }
@@ -469,7 +520,7 @@ export const createOrder = async (req, res) => {
       success: true,
       orderId: orderId,
       paymentSessionId: cashfreeData.paymentSessionId,
-      amount: Math.round(amount * 100) / 100,
+      amount: amount,
       currency: 'INR',
       message: 'Order created successfully'
     });

@@ -86,9 +86,7 @@ function CheckoutContent() {
         return
       }
 
-      const totalAmount = plan.monthlyPrice + plan.setupFee
-
-      // Create order from backend
+      // Create order from backend (backend will calculate amount dynamically for security)
       const response = await fetch(`${API_URL}/subscriptions/create-order`, {
         method: 'POST',
         headers: {
@@ -97,7 +95,6 @@ function CheckoutContent() {
         },
         body: JSON.stringify({
           plan: planId,
-          amount: totalAmount,
           paymentGateway: 'cashfree'
         }),
       })

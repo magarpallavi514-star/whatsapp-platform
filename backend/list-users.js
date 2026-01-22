@@ -1,27 +1,27 @@
-import mongoose from 'mongoose';
-import User from './src/models/User.js';
+import Account from './src/models/Account.js'
+import Payment from './src/models/Payment.js'
+import db from './src/config/database.js'
 
-const MONGODB_URI = 'mongodb+srv://pixelsagency:Pm02072023@pixelsagency.664wxw1.mongodb.net/pixelswhatsapp';
+console.log('\n📊 === REGISTERED USERS & PLANS ===\n')
 
-async function listUsers() {
-  try {
-    await mongoose.connect(MONGODB_URI);
-    
-    const users = await User.find().select('email name accountId').limit(20);
-    
-    console.log('=== ALL USERS ===\n');
-    users.forEach(u => {
-      console.log(`Email: ${u.email}`);
-      console.log(`Name: ${u.name}`);
-      console.log(`Account: ${u.accountId}`);
-      console.log('---');
-    });
-    
-    process.exit(0);
-  } catch (error) {
-    console.error('Error:', error.message);
-    process.exit(1);
+const accounts = await Account.find({}).lean()
+console.log(`✅ Total Registered Users: ${accounts.length}\n`)
+
+for (const acc of accounts) {
+  console.log(`👤 ${acc.name} (${acc.email})`)
+  console.log(`   Account ID: ${acc.accountId || acc._id}`)
+  console.log(`   Plan: ${acc.plan}`)
+  console.log(`   Status: ${acc.status}`)
+  
+  const payments = await Payment.find({ accountId: acc._id }).lean()
+  if (payments.length > 0) {
+    console.log(`   💳 Payments: ${payments.length}`)
+    payments.forEach(p => {
+      console.log(`      - ₹${p.amount} (${p.paymentGateway}) - ${p.status}`)
+    })
   }
+  
+  console.log('')
 }
 
-listUsers();
+process.exit(0)
