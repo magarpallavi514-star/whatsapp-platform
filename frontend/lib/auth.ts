@@ -13,6 +13,7 @@ export interface User {
   email: string
   name: string
   role: UserRole
+  type?: string // 'internal' for superadmin, 'client' for users
   phoneNumber?: string
   company?: string
   accountId?: string

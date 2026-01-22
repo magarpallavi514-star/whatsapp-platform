@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { FileText, Download, Eye, Search, Filter, Calendar, DollarSign, CheckCircle, Clock, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { API_URL } from "@/lib/config/api"
-import { authService } from "@/lib/auth"
+import { authService, UserRole } from "@/lib/auth"
 
 interface Invoice {
   _id: string
@@ -36,7 +36,7 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     const user = authService.getCurrentUser()
-    setIsSuperAdmin(user?.type === 'internal')
+    setIsSuperAdmin(user?.type === 'internal' || user?.role === UserRole.SUPERADMIN)
     fetchInvoices()
     
     // Refresh invoices every 30 seconds for real-time updates
@@ -51,7 +51,7 @@ export default function InvoicesPage() {
       
       // Check if user is superadmin
       const user = authService.getCurrentUser()
-      const endpoint = user?.type === 'internal' 
+      const endpoint = (user?.type === 'internal' || user?.role === UserRole.SUPERADMIN)
         ? `${API_URL}/billing/admin/invoices` // All invoices for superadmin
         : `${API_URL}/billing/invoices` // User's invoices only
       
