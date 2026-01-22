@@ -1,6 +1,6 @@
 'use client'
 
-import { Home, TrendingUp, MapPin, CheckCircle, AlertCircle, Users, DollarSign, ArrowRight, FileText } from 'lucide-react'
+import { Home, TrendingUp, MapPin, CheckCircle, AlertCircle, Users, DollarSign, ArrowRight, FileText, Zap } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
