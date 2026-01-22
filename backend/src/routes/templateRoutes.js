@@ -53,6 +53,7 @@ router.get('/', templateController.getTemplates);
 router.get('/:id', templateController.getTemplate);
 router.post('/', upload.single('mediaFile'), templateController.createTemplate);
 router.post('/sync', templateController.syncTemplates);
+router.post('/:id/submit', templateController.submitTemplateToMeta);
 router.put('/:id', templateController.updateTemplate);
 router.delete('/:id', templateController.deleteTemplate);
 

@@ -312,11 +312,106 @@ export const deleteTemplate = async (req, res) => {
 };
 
 /**
+ * POST /api/templates/:id/submit - Submit template to Meta for approval
+ */
+export const submitTemplateToMeta = async (req, res) => {
+  try {
+    const accountId = req.accountId;
+    const { id } = req.params;
+
+    // Get template
+    const template = await Template.findOne({ 
+      _id: id, 
+      accountId,
+      deleted: false 
+    });
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        message: 'Template not found'
+      });
+    }
+
+    if (template.status !== 'draft') {
+      return res.status(400).json({
+        success: false,
+        message: `Template is already ${template.status}. Only draft templates can be submitted.`
+      });
+    }
+
+    // Get phone number config to get WABA ID and access token
+    const phoneConfig = await PhoneNumber.findOne({ 
+      accountId: req.account._id, 
+      isActive: true 
+    }).select('+accessToken');
+
+    if (!phoneConfig || !phoneConfig.wabaId) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp Business Account not configured. Please add your phone number first.'
+      });
+    }
+
+    const wabaId = phoneConfig.wabaId;
+    const accessToken = phoneConfig.accessToken;
+
+    // Build Meta template request
+    const metaTemplate = {
+      name: template.name,
+      language: template.language,
+      category: template.category,
+      components: template.components
+    };
+
+    // Submit to Meta
+    const response = await axios.post(
+      `${GRAPH_API_URL}/${wabaId}/message_templates`,
+      metaTemplate,
+      {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      }
+    );
+
+    const metaId = response.data?.id;
+
+    // Update template status and store Meta ID
+    template.status = 'pending';
+    template.metaTemplateId = metaId;
+    template.submittedAt = new Date();
+    await template.save();
+
+    console.log(`✅ Template submitted to Meta: ${template.name} (${metaId})`);
+
+    res.json({
+      success: true,
+      message: 'Template submitted to Meta for approval. This usually takes 1-2 hours.',
+      template: {
+        _id: template._id,
+        name: template.name,
+        status: template.status,
+        metaTemplateId: metaId,
+        submittedAt: template.submittedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Submit template error:', error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      message: error.response?.data?.error?.message || error.message
+    });
+  }
+};
+
+/**
  * POST /api/templates/sync - Sync templates from WhatsApp Manager
  */
 export const syncTemplates = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    // Use req.account._id (ObjectId) instead of req.accountId (string)
+    // Phone numbers are stored with ObjectId accountId in database
+    const accountId = req.account._id;
     
     // Get phone number config to get WABA ID and access token
     const phoneConfig = await PhoneNumber.findOne({ 
@@ -461,5 +556,6 @@ export default {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  submitTemplateToMeta,
   syncTemplates
 };

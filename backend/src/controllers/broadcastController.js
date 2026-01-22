@@ -4,7 +4,8 @@ import PhoneNumber from '../models/PhoneNumber.js';
 
 export const createBroadcast = async (req, res) => {
   try {
-    // Get accountId from JWT middleware or params
+    // Get accountId from JWT middleware (use ObjectId for PhoneNumber queries)
+    const accountObjectId = req.account._id;
     const accountId = req.accountId || req.params.accountId;
     let phoneNumberId = req.params.phoneNumberId || req.body.phoneNumberId;
     const data = req.body;
@@ -12,7 +13,7 @@ export const createBroadcast = async (req, res) => {
     // If phoneNumberId not provided, fetch the first active phone number for the account
     if (!phoneNumberId || phoneNumberId === 'default') {
       const activePhone = await PhoneNumber.findOne({
-        accountId,
+        accountId: accountObjectId,  // Use ObjectId for database query
         isActive: true
       });
 

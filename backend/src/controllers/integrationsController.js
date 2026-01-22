@@ -38,7 +38,7 @@ export const sendMessageViaIntegration = async (req, res) => {
 
     // Get default/active phone number for this account
     const phoneNumber = await PhoneNumber.findOne({
-      accountId,
+      accountId: req.account._id,  // Use ObjectId for database query
       isActive: true
     }).sort({ createdAt: -1 });
 
