@@ -38,7 +38,7 @@ const paymentSchema = new mongoose.Schema({
   // Payment Method
   paymentGateway: {
     type: String,
-    enum: ['stripe', 'razorpay', 'paypal', 'manual_transfer'],
+    enum: ['stripe', 'razorpay', 'paypal', 'cashfree', 'manual_transfer'],
     required: true
   },
   
