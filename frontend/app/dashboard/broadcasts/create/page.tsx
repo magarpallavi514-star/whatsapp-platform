@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Send, AlertCircle, X, Search, CheckCircle } from "lucide-react"
+import { ArrowLeft, Send, AlertCircle, X, Search, CheckCircle, Loader } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { authService } from "@/lib/auth"
@@ -52,6 +52,8 @@ export default function CreateBroadcastPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [recipientMode, setRecipientMode] = useState<"manual" | "contacts">("contacts")
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
+  const [hasWABA, setHasWABA] = useState<boolean | null>(null)
+  const [checkingWABA, setCheckingWABA] = useState(true)
 
   const [formData, setFormData] = useState<BroadcastFormData>({
     name: "",
@@ -68,11 +70,48 @@ export default function CreateBroadcastPage() {
     throttleRate: 50
   })
 
-  // Fetch contacts and templates on mount
+  // Check WABA connection first, then fetch contacts and templates
   useEffect(() => {
-    fetchContacts()
-    fetchTemplates()
+    checkWABAConnection()
   }, [])
+
+  const checkWABAConnection = async () => {
+    try {
+      setCheckingWABA(true)
+      const token = localStorage.getItem("token")
+      
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/settings/phone-numbers`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        }
+      )
+
+      if (!response.ok) {
+        setHasWABA(false)
+        setCheckingWABA(false)
+        return
+      }
+
+      const data = await response.json()
+      const hasPhones = data.phoneNumbers && data.phoneNumbers.length > 0
+      setHasWABA(hasPhones)
+
+      // Only fetch contacts and templates if WABA is connected
+      if (hasPhones) {
+        fetchContacts()
+        fetchTemplates()
+      }
+    } catch (err) {
+      console.error("Error checking WABA:", err)
+      setHasWABA(false)
+    } finally {
+      setCheckingWABA(false)
+    }
+  }
 
   const fetchTemplates = async () => {
     try {
@@ -304,21 +343,38 @@ export default function CreateBroadcastPage() {
       )
 
       if (!phoneResponse.ok) {
-        const errorData = await phoneResponse.json()
-        throw new Error(errorData.message || "No active phone number found. Please configure a WhatsApp account first.")
+        const status = phoneResponse.status
+        let errorMessage = "Failed to fetch phone number configuration. "
+        
+        if (status === 401) {
+          errorMessage += "Please login again."
+        } else if (status === 403) {
+          errorMessage += "You don't have permission to access WhatsApp settings."
+        } else if (status === 404) {
+          errorMessage += "WhatsApp phone number not found. Please configure one in Settings > WhatsApp Setup."
+        } else {
+          const errorData = await phoneResponse.json().catch(() => ({}))
+          errorMessage += errorData.message || "Please check your WhatsApp configuration."
+        }
+        
+        throw new Error(errorMessage)
       }
 
       const phoneData = await phoneResponse.json()
       
-      if (!phoneData.success || !phoneData.phoneNumbers || phoneData.phoneNumbers.length === 0) {
-        throw new Error("No phone numbers configured. Please add a WhatsApp account first.")
+      if (!phoneData.success) {
+        throw new Error(phoneData.message || "Failed to load phone number configuration")
+      }
+
+      if (!phoneData.phoneNumbers || phoneData.phoneNumbers.length === 0) {
+        throw new Error("❌ No WhatsApp phone numbers configured.\n\nPlease:\n1. Go to Settings > WhatsApp Setup\n2. Add your WhatsApp Business Account\n3. Complete Phone Number verification")
       }
 
       // Find active phone number or use first one
       const activePhone = phoneData.phoneNumbers.find((p: any) => p.isActive) || phoneData.phoneNumbers[0]
 
       if (!activePhone?.phoneNumberId) {
-        throw new Error("Invalid phone number configuration. Please check your WhatsApp account settings.")
+        throw new Error("❌ Invalid phone number configuration.\n\nPlease check that your phone number has:\n1. Valid Phone Number ID\n2. Valid WABA ID\n3. Valid Access Token\n4. Active status enabled")
       }
 
       const response = await fetch(
@@ -367,6 +423,78 @@ export default function CreateBroadcastPage() {
     }
   }
 
+  // Show blocking message if WABA not connected
+  if (checkingWABA) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200">
+          <div className="p-6">
+            <div className="flex items-center gap-4">
+              <Link href="/dashboard/broadcasts">
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <ArrowLeft className="h-5 w-5 text-gray-600" />
+                </button>
+              </Link>
+              <h1 className="text-2xl font-bold text-gray-900">Create Broadcast</h1>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-2xl mx-auto p-6">
+          <div className="p-8 text-center">
+            <Loader className="h-8 w-8 text-gray-600 animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Checking WhatsApp connection...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (hasWABA === false) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200">
+          <div className="p-6">
+            <div className="flex items-center gap-4">
+              <Link href="/dashboard/broadcasts">
+                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <ArrowLeft className="h-5 w-5 text-gray-600" />
+                </button>
+              </Link>
+              <h1 className="text-2xl font-bold text-gray-900">Create Broadcast</h1>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-2xl mx-auto p-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-8">
+            <div className="flex gap-4">
+              <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-1" />
+              <div>
+                <h2 className="text-xl font-bold text-red-900 mb-3">WhatsApp Business Account Not Connected</h2>
+                <p className="text-red-700 mb-4">
+                  You must connect a WhatsApp Business Account (WABA) before creating broadcasts.
+                </p>
+                <div className="bg-white rounded p-4 mb-4 text-sm text-gray-700">
+                  <p className="font-semibold mb-3">To connect your WhatsApp account:</p>
+                  <ol className="space-y-2 list-decimal list-inside">
+                    <li>Go to <strong>Dashboard → Settings</strong></li>
+                    <li>Click <strong>"Add Phone Number"</strong></li>
+                    <li>Enter your <strong>Phone Number ID</strong>, <strong>WABA ID</strong>, and <strong>Access Token</strong></li>
+                    <li>Click <strong>"Add"</strong> to complete setup</li>
+                  </ol>
+                </div>
+                <Link href="/dashboard/settings?tab=whatsapp">
+                  <Button className="bg-green-600 hover:bg-green-700 text-white">
+                    Go to WhatsApp Setup
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -392,8 +520,14 @@ export default function CreateBroadcastPage() {
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
             <div>
-              <h3 className="font-medium text-red-900">Error</h3>
-              <p className="text-red-700 text-sm mt-1">{error}</p>
+              <h3 className="font-medium text-red-900">Configuration Issue</h3>
+              <p className="text-red-700 text-sm mt-2 whitespace-pre-line">{error}</p>
+              <a 
+                href="/dashboard/settings" 
+                className="text-red-600 hover:text-red-700 text-sm font-medium mt-2 inline-block underline"
+              >
+                → Go to Settings
+              </a>
             </div>
           </div>
         )}

@@ -29,7 +29,15 @@ class WhatsAppService {
     }).select('+accessToken'); // CRITICAL: explicitly select encrypted field
     
     if (!config) {
-      throw new Error('Phone number not configured or inactive');
+      throw new Error(
+        '🚨 WhatsApp Business Account not connected!\n\n' +
+        'Please connect your WhatsApp account in Settings first:\n' +
+        '1. Go to Dashboard > Settings\n' +
+        '2. Click "Add Phone Number"\n' +
+        '3. Enter your Phone Number ID, WABA ID, and Access Token\n' +
+        '4. Click "Add" to complete setup\n\n' +
+        'Error: No active phone number configured for this account'
+      );
     }
     
     return config;

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import Link from "next/link"
 import {
   MessageSquare,
   Search,
@@ -65,6 +66,8 @@ export default function ChatPage() {
   const [isSending, setIsSending] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [hasWABA, setHasWABA] = useState<boolean | null>(null)
+  const [checkingWABA, setCheckingWABA] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -401,9 +404,60 @@ export default function ChatPage() {
 
   // Load conversations on mount
   useEffect(() => {
-    fetchConversations()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    checkWABAConnection()
   }, [])
+
+  const checkWABAConnection = async () => {
+    try {
+      setCheckingWABA(true)
+      const token = authService.getToken()
+      
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/settings/phone-numbers`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        }
+      )
+
+      if (!response.ok) {
+        setHasWABA(false)
+        setCheckingWABA(false)
+        return
+      }
+
+      const data = await response.json()
+      const hasPhones = data.phoneNumbers && data.phoneNumbers.length > 0
+      setHasWABA(hasPhones)
+
+      // Only fetch conversations if WABA is connected
+      if (hasPhones) {
+        fetchConversations()
+      }
+    } catch (err) {
+      console.error("Error checking WABA:", err)
+      setHasWABA(false)
+    } finally {
+      setCheckingWABA(false)
+    }
+  }
+
+  useEffect(() => {
+    // Only fetch if we don't need to check WABA (already checked)
+    if (checkingWABA || hasWABA === null) return
+    
+    if (hasWABA) {
+      // Already called in checkWABAConnection if WABA exists
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasWABA])
+
+  // OLD: useEffect(() => {
+  //   fetchConversations()
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [])
 
   // Initialize Socket.io and listen for real-time updates
   useEffect(() => {
@@ -741,6 +795,50 @@ export default function ChatPage() {
     conv.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     conv.phone?.includes(searchQuery)
   )
+
+  // Show blocking message if WABA not connected
+  if (checkingWABA) {
+    return (
+      <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-[#f0f2f5]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking WhatsApp connection...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (hasWABA === false) {
+    return (
+      <div className="h-[calc(100vh-4rem)] flex items-center justify-center bg-[#f0f2f5]">
+        <div className="max-w-md">
+          <div className="bg-white rounded-lg border border-red-200 p-8">
+            <div className="text-center">
+              <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-red-900 mb-3">WhatsApp Business Account Not Connected</h2>
+              <p className="text-red-700 mb-4">
+                You must connect a WhatsApp Business Account (WABA) before using Live Chat.
+              </p>
+              <div className="bg-red-50 rounded p-4 mb-6 text-sm text-gray-700 text-left">
+                <p className="font-semibold mb-3">To connect your WhatsApp account:</p>
+                <ol className="space-y-2 list-decimal list-inside">
+                  <li>Go to <strong>Dashboard → Settings</strong></li>
+                  <li>Click <strong>"Add Phone Number"</strong></li>
+                  <li>Enter your <strong>Phone Number ID</strong>, <strong>WABA ID</strong>, and <strong>Access Token</strong></li>
+                  <li>Click <strong>"Add"</strong> to complete setup</li>
+                </ol>
+              </div>
+              <Link href="/dashboard/settings?tab=whatsapp">
+                <button className="w-full px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition">
+                  Go to WhatsApp Setup
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-[calc(100vh-4rem)] flex bg-[#f0f2f5]">

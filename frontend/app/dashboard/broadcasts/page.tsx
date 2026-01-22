@@ -1,6 +1,6 @@
 "use client"
 
-import { Megaphone, Plus, Calendar, Users, Send, MoreVertical, Loader, Edit, Trash2, Clock, CheckCircle, Eye, X, Copy } from "lucide-react"
+import { Megaphone, Plus, Calendar, Users, Send, MoreVertical, Loader, Edit, Trash2, Clock, CheckCircle, Eye, X, Copy, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -54,6 +54,141 @@ export default function BroadcastsPage() {
   const [viewingBroadcast, setViewingBroadcast] = useState<BroadcastDetail | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null)
+  const [hasWABA, setHasWABA] = useState<boolean | null>(null)
+  const [checkingWABA, setCheckingWABA] = useState(true)
+
+  useEffect(() => {
+    // Check WABA connection first
+    checkWABAConnection()
+  }, [])
+
+  const checkWABAConnection = async () => {
+    try {
+      setCheckingWABA(true)
+      const token = localStorage.getItem("token")
+      
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/settings/phone-numbers`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        }
+      )
+
+      if (!response.ok) {
+        setHasWABA(false)
+        setCheckingWABA(false)
+        return
+      }
+
+      const data = await response.json()
+      const hasPhones = data.phoneNumbers && data.phoneNumbers.length > 0
+      setHasWABA(hasPhones)
+
+      // Only fetch broadcasts if WABA is connected
+      if (hasPhones) {
+        fetchBroadcastsData()
+      }
+    } catch (err) {
+      console.error("Error checking WABA:", err)
+      setHasWABA(false)
+    } finally {
+      setCheckingWABA(false)
+    }
+  }
+
+  const fetchBroadcastsData = async () => {
+    if (!user?.accountId) return
+
+    let isMounted = true
+
+    try {
+      setLoading(true)
+      setError("")
+      const token = localStorage.getItem("token")
+      
+      // Check if token exists
+      if (!token) {
+        console.warn('⚠️ No token in localStorage, unable to fetch broadcasts');
+        setError("Please login to view broadcasts")
+        setLoading(false)
+        return;
+      }
+      
+      // Fetch broadcasts - first try to get all broadcasts for the account
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/broadcasts`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        }
+      )
+
+      if (!response.ok) {
+        console.error('Broadcasts fetch failed:', response.status, response.statusText);
+        setError(`Failed to fetch broadcasts (${response.status})`);
+        setLoading(false);
+        return;
+      }
+
+      const data = await response.json()
+      
+      if (!isMounted) return
+
+      // Check if response is successful, regardless of HTTP status
+      if (data.success || (data.data && !response.ok === false)) {
+        const broadcastsList: Broadcast[] = (data.data?.broadcasts || []).map((broadcast: any) => ({
+          id: broadcast._id,
+          name: broadcast.name,
+          status: broadcast.status,
+          sent: broadcast.stats?.sent || 0,
+          delivered: broadcast.stats?.delivered || broadcast.stats?.sent || 0,
+          read: broadcast.stats?.read || 0,
+          date: new Date(broadcast.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          })
+        }))
+
+        setBroadcasts(broadcastsList)
+
+        // Calculate stats
+        const totalSent = broadcastsList.reduce((sum: number, b: Broadcast) => sum + b.sent, 0)
+        const totalDelivered = broadcastsList.reduce((sum: number, b: Broadcast) => sum + b.delivered, 0)
+        const scheduledCount = broadcastsList.filter((b: Broadcast) => b.status === 'scheduled').length
+        const readRateValue = totalSent > 0 ? parseFloat(((totalDelivered / totalSent) * 100).toFixed(1)) : 0
+
+        setStats({
+          totalSent,
+          totalDelivered,
+          readRate: readRateValue,
+          scheduled: scheduledCount
+        })
+      } else if (!response.ok) {
+        // Only treat as error if HTTP response is not OK
+        throw new Error(data.error || data.message || "Failed to fetch broadcasts")
+      }
+    } catch (err) {
+      console.error("Error fetching broadcasts:", err)
+      if (isMounted) {
+        setError(err instanceof Error ? err.message : "Failed to load broadcasts")
+      }
+    } finally {
+      if (isMounted) {
+        setLoading(false)
+      }
+    }
+
+    // Cleanup function
+    return () => {
+      isMounted = false
+    }
+  }
 
   useEffect(() => {
     if (!user?.accountId) return
@@ -244,6 +379,62 @@ export default function BroadcastsPage() {
     navigator.clipboard.writeText(text)
     setCopiedPhone(phone)
     setTimeout(() => setCopiedPhone(null), 2000)
+  }
+
+  // Show blocking message if WABA not connected
+  if (checkingWABA) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Broadcasts</h1>
+          </div>
+        </div>
+        <div className="p-8 text-center bg-white rounded-lg border border-gray-200">
+          <Loader className="h-8 w-8 text-gray-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Checking WhatsApp connection...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (hasWABA === false) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Broadcasts</h1>
+            <p className="text-gray-600 mt-1">Send bulk messages to your contacts</p>
+          </div>
+        </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-lg p-8">
+          <div className="flex gap-4">
+            <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-1" />
+            <div>
+              <h2 className="text-xl font-bold text-red-900 mb-3">WhatsApp Business Account Not Connected</h2>
+              <p className="text-red-700 mb-4">
+                You must connect a WhatsApp Business Account (WABA) before creating broadcasts.
+              </p>
+              <div className="bg-white rounded p-4 mb-4 text-sm text-gray-700">
+                <p className="font-semibold mb-3">To connect your WhatsApp account:</p>
+                <ol className="space-y-2 list-decimal list-inside">
+                  <li>Go to <strong>Dashboard → Settings</strong></li>
+                  <li>Click <strong>"Add Phone Number"</strong></li>
+                  <li>Enter your <strong>Phone Number ID</strong>, <strong>WABA ID</strong>, and <strong>Access Token</strong></li>
+                  <li>Click <strong>"Add"</strong> to complete setup</li>
+                </ol>
+              </div>
+              <Link href="/dashboard/settings?tab=whatsapp">
+                <Button className="bg-green-600 hover:bg-green-700 text-white">
+                  Go to WhatsApp Setup
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -174,8 +174,10 @@ app.use('/api/webhooks', webhookRoutes);
 // Mount auth routes (NO AUTH - public login/logout)
 app.use('/api/auth', authRoutes);
 
+// Mount settings routes (JWT AUTH only - users need to configure phones even without subscription)
+app.use('/api/settings', requireJWT, settingsRoutes);
+
 // Mount dashboard routes (JWT AUTH + SUBSCRIPTION REQUIRED - for logged-in dashboard users)
-app.use('/api/settings', requireJWT, requireSubscription, settingsRoutes);
 app.use('/api/templates', requireJWT, requireSubscription, templateRoutes);
 app.use('/api/chatbots', requireJWT, requireSubscription, chatbotRoutes);
 app.use('/api/messages', requireJWT, requireSubscription, messageRoutes);
@@ -183,7 +185,7 @@ app.use('/api/conversations', requireJWT, requireSubscription, conversationRoute
 app.use('/api/contacts', requireJWT, requireSubscription, contactRoutes);
 app.use('/api/broadcasts', requireJWT, requireSubscription, broadcastRoutes);
 app.use('/api/campaigns', requireJWT, requireSubscription, campaignRoutes);
-app.use('/api/notifications', requireJWT, requireSubscription, notificationRoutes);
+app.use('/api/notifications', requireJWT, notificationRoutes); // Notifications accessible without subscription
 
 // Mount pricing routes (PUBLIC for public plans, JWT AUTH for admin)
 app.use('/api/pricing', pricingRoutes);

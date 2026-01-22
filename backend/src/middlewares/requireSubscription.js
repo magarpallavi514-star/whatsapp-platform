@@ -4,6 +4,7 @@ import Account from '../models/Account.js';
 /**
  * Middleware to require active subscription/payment
  * Blocks dashboard access if user hasn't completed payment
+ * EXCEPT: Superadmins (type='internal') can always access
  */
 export const requireSubscription = async (req, res, next) => {
   try {
@@ -25,6 +26,12 @@ export const requireSubscription = async (req, res, next) => {
         message: 'Account not found',
         redirectTo: '/login'
       });
+    }
+
+    // ALLOW: Superadmins (internal accounts) skip subscription check
+    if (account.type === 'internal') {
+      console.log(`✅ Superadmin ${accountId} bypasses subscription check`);
+      return next();
     }
 
     // Check if account has active subscription

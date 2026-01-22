@@ -3,10 +3,22 @@ import crypto from 'crypto';
 
 const phoneNumberSchema = new mongoose.Schema({
   // Multi-tenant isolation
+  // Can be either string (e.g., "pixels_internal") or MongoDB ObjectId
+  // Stored as ObjectId by addPhoneNumber, but queried with both formats
   accountId: {
-    type: String,
+    type: mongoose.Schema.Types.Mixed,  // ✅ Support both String and ObjectId
     required: true,
-    index: true
+    index: true,
+    set: function(value) {
+      // If it's a string, check if it's a valid ObjectId format
+      // If not, store as-is; if yes, convert to ObjectId
+      if (typeof value === 'string') {
+        if (mongoose.Types.ObjectId.isValid(value) && value.length === 24) {
+          return new mongoose.Types.ObjectId(value);
+        }
+      }
+      return value;
+    }
   },
   
   // WABA Credentials

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { FileText, Download, Eye, Search, Filter, Calendar, DollarSign, CheckCircle, Clock, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { API_URL } from "@/lib/config/api"
+import { authService } from "@/lib/auth"
 
 interface Invoice {
   _id: string
@@ -18,6 +19,8 @@ interface Invoice {
     name: string
     email: string
   }
+  accountId?: string
+  accountName?: string
 }
 
 export default function InvoicesPage() {
@@ -28,9 +31,17 @@ export default function InvoicesPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date')
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  const [totalRevenue, setTotalRevenue] = useState(0)
 
   useEffect(() => {
+    const user = authService.getCurrentUser()
+    setIsSuperAdmin(user?.type === 'internal')
     fetchInvoices()
+    
+    // Refresh invoices every 30 seconds for real-time updates
+    const interval = setInterval(fetchInvoices, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   const fetchInvoices = async () => {
@@ -38,7 +49,13 @@ export default function InvoicesPage() {
       setIsLoading(true)
       const token = localStorage.getItem("token")
       
-      const response = await fetch(`${API_URL}/billing/invoices`, {
+      // Check if user is superadmin
+      const user = authService.getCurrentUser()
+      const endpoint = user?.type === 'internal' 
+        ? `${API_URL}/billing/admin/invoices` // All invoices for superadmin
+        : `${API_URL}/billing/invoices` // User's invoices only
+      
+      const response = await fetch(endpoint, {
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
@@ -47,7 +64,26 @@ export default function InvoicesPage() {
 
       if (response.ok) {
         const data = await response.json()
-        setInvoices(data.data || [])
+        const invoiceList = data.data || data.invoices || []
+        setInvoices(invoiceList)
+        
+        // Calculate total revenue from paid invoices
+        const revenue = invoiceList
+          .filter((inv: Invoice) => inv.status === 'paid')
+          .reduce((sum: number, inv: Invoice) => sum + (inv.totalAmount ?? 0), 0)
+        setTotalRevenue(revenue)
+      } else if (response.status === 404) {
+        // Fallback to user invoices if admin endpoint doesn't exist
+        const fallbackResponse = await fetch(`${API_URL}/billing/invoices`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        })
+        if (fallbackResponse.ok) {
+          const data = await fallbackResponse.json()
+          setInvoices(data.data || [])
+        }
       }
     } catch (error) {
       console.error("Error fetching invoices:", error)
@@ -119,12 +155,20 @@ export default function InvoicesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Invoices</h1>
-          <p className="text-gray-600 mt-1">Manage and download your invoices</p>
+          <p className="text-gray-600 mt-1">
+            {isSuperAdmin ? 'All invoices from customers' : 'Manage and download your invoices'}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="bg-blue-100 text-blue-800 text-sm font-semibold px-4 py-2 rounded-lg">
+        <div className="flex items-center gap-3">
+          {isSuperAdmin && (
+            <div className="bg-green-100 text-green-800 px-4 py-2 rounded-lg">
+              <div className="text-xs font-semibold text-green-600 uppercase">Total Revenue (Paid)</div>
+              <div className="text-2xl font-bold text-green-900">₹{totalRevenue.toLocaleString('en-IN')}</div>
+            </div>
+          )}
+          <div className="bg-blue-100 text-blue-800 text-sm font-semibold px-4 py-2 rounded-lg">
             Total Invoices: {invoices.length}
-          </span>
+          </div>
         </div>
       </div>
 
@@ -195,6 +239,9 @@ export default function InvoicesPage() {
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Invoice #</th>
+                  {isSuperAdmin && (
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Account</th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Customer</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Amount</th>
@@ -211,6 +258,11 @@ export default function InvoicesPage() {
                         <span className="font-semibold text-gray-900">{invoice.invoiceNumber}</span>
                       </div>
                     </td>
+                    {isSuperAdmin && (
+                      <td className="px-6 py-4 text-gray-900">
+                        <span className="font-medium">{invoice.accountName || invoice.billTo?.name || 'N/A'}</span>
+                      </td>
+                    )}
                     <td className="px-6 py-4 text-gray-900">
                       <div>
                         <p className="font-medium">{invoice.billTo?.name || 'N/A'}</p>
@@ -222,8 +274,7 @@ export default function InvoicesPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1 font-semibold text-gray-900">
-                        <DollarSign className="h-4 w-4" />
-                        ₹{(invoice.totalAmount ?? 0).toFixed(2)}
+                        ₹{(invoice.totalAmount ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -326,17 +377,17 @@ export default function InvoicesPage() {
                 <div className="space-y-2 border-t pt-4">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Total Amount:</span>
-                    <span className="text-lg font-semibold text-gray-900">₹{(selectedInvoice.totalAmount ?? 0).toFixed(2)}</span>
+                    <span className="text-lg font-semibold text-gray-900">₹{(selectedInvoice.totalAmount ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Paid Amount:</span>
-                    <span className="text-lg font-semibold text-gray-900">₹{(selectedInvoice.paidAmount ?? 0).toFixed(2)}</span>
+                    <span className="text-lg font-semibold text-gray-900">₹{(selectedInvoice.paidAmount ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                   </div>
                   {(selectedInvoice.totalAmount ?? 0) > (selectedInvoice.paidAmount ?? 0) && (
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Due Amount:</span>
                       <span className="text-lg font-semibold text-gray-900">
-                        ₹{((selectedInvoice.totalAmount ?? 0) - (selectedInvoice.paidAmount ?? 0)).toFixed(2)}
+                        ₹{(((selectedInvoice.totalAmount ?? 0) - (selectedInvoice.paidAmount ?? 0))).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </span>
                     </div>
                   )}

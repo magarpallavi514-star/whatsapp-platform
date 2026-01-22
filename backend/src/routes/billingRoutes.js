@@ -28,6 +28,9 @@ router.post('/subscriptions/:subscriptionId/cancel', requireJWT, billingControll
  * Invoices & Billing History
  */
 
+// Get all invoices (superadmin only)
+router.get('/admin/invoices', requireJWT, billingController.getAllInvoices);
+
 // Get billing history
 router.get('/invoices', requireJWT, billingController.getBillingHistory);
 

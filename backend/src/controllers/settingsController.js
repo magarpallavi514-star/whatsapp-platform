@@ -31,7 +31,28 @@ export const getPhoneNumbers = async (req, res) => {
       });
     }
     
-    const phoneNumbers = await PhoneNumber.find({ accountId })
+    // Build query to find phone numbers by:
+    // 1. String accountId (from JWT token)
+    // 2. MongoDB ObjectId (if account has both accountId and _id)
+    let mongoAccountId = null;
+    
+    // Try to find the account's MongoDB _id if we only have the accountId string
+    try {
+      const account = await Account.findOne({ accountId }).select('_id');
+      if (account) {
+        mongoAccountId = account._id;
+        console.log('  Found MongoDB ID:', mongoAccountId);
+      }
+    } catch (e) {
+      console.log('  Note: Could not lookup account._id:', e.message);
+    }
+    
+    // Query using both possible IDs
+    const query = mongoAccountId 
+      ? { $or: [{ accountId }, { accountId: mongoAccountId }] }
+      : { accountId };
+    
+    const phoneNumbers = await PhoneNumber.find(query)
       .select('-accessToken') // Don't expose token
       .sort({ isActive: -1, createdAt: -1 })
       .lean();
@@ -67,21 +88,42 @@ export const addPhoneNumber = async (req, res) => {
       });
     }
     
-    // Check if phone number already exists
-    const existing = await PhoneNumber.findOne({ phoneNumberId });
+    // Get the account's MongoDB _id
+    const account = await Account.findOne({ accountId }).select('_id');
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found'
+      });
+    }
+    
+    const mongoAccountId = account._id;
+    
+    // Check if phone number already exists FOR THIS ACCOUNT (check both IDs)
+    const existing = await PhoneNumber.findOne({ 
+      $or: [
+        { accountId: mongoAccountId, phoneNumberId },
+        { accountId, phoneNumberId }
+      ]
+    });
     if (existing) {
       return res.status(400).json({
         success: false,
-        message: 'This phone number is already registered'
+        message: 'This phone number is already connected to your account'
       });
     }
     
     // Check if this is the first phone number for this account
-    const count = await PhoneNumber.countDocuments({ accountId });
+    const count = await PhoneNumber.countDocuments({ 
+      $or: [
+        { accountId: mongoAccountId },
+        { accountId }
+      ]
+    });
     const isFirst = count === 0;
     
     const phoneNumber = await PhoneNumber.create({
-      accountId,
+      accountId: mongoAccountId,  // Store MongoDB ObjectId, NOT string
       phoneNumberId,
       wabaId,
       accessToken,

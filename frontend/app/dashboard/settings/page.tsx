@@ -153,18 +153,43 @@ export default function SettingsPage() {
         })
         
         setPhoneNumbers(data.phoneNumbers || [])
+        setError("") // Clear any previous errors
         console.log('✅ State updated with', (data.phoneNumbers || []).length, 'phone numbers')
-      } else {
-        let errorMessage = `HTTP ${response.status} ${response.statusText || ''}`
-        try {
-          const contentType = response.headers.get('content-type')
-          if (contentType?.includes('application/json')) {
-            const errorBody = await response.json()
-            errorMessage = errorBody.message || errorBody.error || errorMessage
-          }
-        } catch (e) {
-          console.error('Could not parse error response:', e)
+        
+        // If no phones, show helpful message
+        if (!data.phoneNumbers || data.phoneNumbers.length === 0) {
+          setError("⚠️ No WhatsApp Business Account connected\n\nPlease connect your WhatsApp account to start sending messages\n\nSteps:\n1. Go to Meta Business Dashboard\n2. Get your Phone Number ID\n3. Get your WABA ID\n4. Get your Access Token\n5. Click 'Add Phone Number' below and enter the details")
         }
+      } else {
+        let errorMessage = ""
+        const status = response.status
+        
+        if (status === 401) {
+          errorMessage = "❌ Session expired. Please login again."
+        } else if (status === 403) {
+          errorMessage = "❌ You don't have permission to access WhatsApp settings."
+        } else if (status === 404) {
+          errorMessage = "✅ No WhatsApp phone numbers configured yet.\n\nClick 'Add WhatsApp Account' button to get started.\n\nSteps to add:\n1. Get Phone Number ID from Meta Dashboard\n2. Get WABA ID from Meta Dashboard\n3. Get Access Token from Meta Dashboard\n4. Enter all details and click Add"
+        } else if (status === 500) {
+          errorMessage = "❌ Server error. Please contact support if this persists.\n\nServer is temporarily unavailable. This could be due to:\n1. Database connection issues\n2. API service down\n3. Configuration problems"
+        } else if (status === 429) {
+          errorMessage = "⚠️ Too many requests. Please wait a moment and try again."
+        } else if (status === 503) {
+          errorMessage = "⚠️ Service temporarily unavailable. Please try again in a few moments."
+        } else {
+          try {
+            const contentType = response.headers.get('content-type')
+            if (contentType?.includes('application/json')) {
+              const errorBody = await response.json()
+              errorMessage = errorBody.message || errorBody.error || `HTTP ${status} Error`
+            } else {
+              errorMessage = `HTTP ${status} Error`
+            }
+          } catch (e) {
+            errorMessage = `Failed to load phone numbers (${status})`
+          }
+        }
+        
         console.error("❌ Failed to fetch phone numbers:", { 
           status: response.status, 
           message: errorMessage,
@@ -173,8 +198,19 @@ export default function SettingsPage() {
         setError(errorMessage)
       }
     } catch (error: any) {
-      console.error("❌ Error fetching phone numbers:", error?.message || String(error), error)
-      setError(error?.message || "Failed to fetch phone numbers")
+      const errorMsg = error?.message || String(error)
+      console.error("❌ Error fetching phone numbers:", errorMsg, error)
+      
+      let displayError = errorMsg
+      if (errorMsg.includes('Failed to fetch')) {
+        displayError = "⚠️ Network error. Please check your internet connection:\n\n1. Verify your internet is working\n2. Try refreshing the page\n3. Check if WhatsApp API is reachable"
+      } else if (errorMsg.includes('abort')) {
+        displayError = "⚠️ Request timeout. The server took too long to respond:\n\n1. Please wait a moment\n2. Try refreshing the page\n3. If problem persists, contact support"
+      } else if (errorMsg.includes('CORS')) {
+        displayError = "⚠️ Access error. The browser blocked the request:\n\n1. Check if you're using a VPN\n2. Try incognito mode\n3. Contact support if issue continues"
+      }
+      
+      setError(displayError)
     } finally {
       setIsLoading(false)
       console.log('📱 FETCH PHONE NUMBERS END');
@@ -323,6 +359,38 @@ export default function SettingsPage() {
     }
   }
 
+  // Fetch profile data from backend
+  const fetchProfile = async () => {
+    try {
+      const token = authService.getToken()
+      const response = await fetch(`${API_URL}/settings/profile`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ Profile fetched:', data.profile)
+        
+        // Populate form with fetched data
+        setProfileData({
+          name: data.profile?.name || '',
+          email: data.profile?.email || '',
+          company: data.profile?.company || '',
+          phone: data.profile?.phone || '',
+          timezone: data.profile?.timezone || 'Asia/Kolkata'
+        })
+      } else {
+        console.error('Failed to fetch profile:', response.status)
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+    }
+  }
+
   // Profile handlers
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -334,6 +402,7 @@ export default function SettingsPage() {
       })
       if (response.ok) {
         alert('Profile updated successfully')
+        fetchProfile() // Refresh the data
       } else {
         alert('Failed to update profile')
       }
@@ -586,9 +655,12 @@ export default function SettingsPage() {
 
   // Reload data when tab changes
   useEffect(() => {
-    fetchPhoneNumbers()
-    if (activeTab === 'api-keys') {
+    if (activeTab === 'whatsapp') {
+      fetchPhoneNumbers()
+    } else if (activeTab === 'api-keys') {
       fetchApiKeys()
+    } else if (activeTab === 'profile') {
+      fetchProfile()
     }
   }, [activeTab])
 
@@ -643,6 +715,39 @@ export default function SettingsPage() {
                   Add Number
                 </Button>
               </div>
+
+              {/* Available Connection Summary */}
+              {!isLoading && phoneNumbers.length > 0 && (
+                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-green-900">✅ Available Connection</h3>
+                      <p className="text-sm text-green-700 mt-1">
+                        {phoneNumbers.length} WhatsApp Business {phoneNumbers.length === 1 ? 'account' : 'accounts'} connected
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-green-600">{phoneNumbers.length}</div>
+                      <div className="text-xs text-green-600">
+                        {phoneNumbers.filter(p => p.isActive).length} Active
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Message Display */}
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Phone className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h3 className="font-semibold text-red-900">Configuration Issue</h3>
+                      <p className="text-red-700 text-sm mt-1 whitespace-pre-line">{error}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {isLoading ? (
                 <div className="text-center py-12">

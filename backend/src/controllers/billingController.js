@@ -303,6 +303,74 @@ export const getBillingHistory = async (req, res) => {
 };
 
 /**
+ * Get all invoices for superadmin (real-time dashboard)
+ */
+export const getAllInvoices = async (req, res) => {
+  try {
+    // Check if user is superadmin (type === 'internal')
+    const account = await Account.findById(req.accountId);
+    
+    if (!account || account.type !== 'internal') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only superadmins can access this resource'
+      });
+    }
+
+    const { limit = 50, skip = 0, status, accountId } = req.query;
+
+    // Build filter
+    const filter = {};
+    if (status) filter.status = status;
+    if (accountId) filter.accountId = accountId;
+
+    // Fetch all invoices with account details
+    const invoices = await Invoice.find(filter)
+      .populate('accountId', 'name email company phone accountId')
+      .sort({ invoiceDate: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(skip));
+
+    const total = await Invoice.countDocuments(filter);
+
+    // Format response with account name
+    const formatted = invoices.map(inv => ({
+      _id: inv._id,
+      invoiceNumber: inv.invoiceNumber,
+      accountId: inv.accountId?._id,
+      accountName: inv.accountId?.name,
+      accountEmail: inv.accountId?.email,
+      accountCompany: inv.accountId?.company,
+      date: inv.invoiceDate,
+      dueDate: inv.dueDate,
+      amount: inv.totalAmount,
+      status: inv.status,
+      paidAmount: inv.paidAmount,
+      billTo: inv.billTo,
+      downloadUrl: `/api/billing/invoices/${inv._id}/download`
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formatted,
+      pagination: { 
+        total, 
+        limit: parseInt(limit), 
+        skip: parseInt(skip),
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching all invoices:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch invoices',
+      error: error.message
+    });
+  }
+};
+
+/**
  * Upgrade/Downgrade subscription
  */
 export const changePlan = async (req, res) => {

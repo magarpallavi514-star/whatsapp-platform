@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { AlertCircle } from 'lucide-react';
 import { authService } from '@/lib/auth';
 
 interface Campaign {
@@ -45,6 +46,8 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [hasWABA, setHasWABA] = useState<boolean | null>(null);
+  const [checkingWABA, setCheckingWABA] = useState(true);
   
   // Filters
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
@@ -58,46 +61,89 @@ export default function CampaignsPage() {
 
   // Fetch campaigns
   useEffect(() => {
+    checkWABAConnection();
+  }, []);
+
+  const checkWABAConnection = async () => {
+    try {
+      setCheckingWABA(true);
+      const token = authService.getToken();
+      
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/settings/phone-numbers`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      if (!response.ok) {
+        setHasWABA(false);
+        setCheckingWABA(false);
+        return;
+      }
+
+      const data = await response.json();
+      const hasPhones = data.phoneNumbers && data.phoneNumbers.length > 0;
+      setHasWABA(hasPhones);
+
+      // Only fetch campaigns if WABA is connected
+      if (hasPhones && user?.accountId) {
+        fetchCampaignsData();
+      }
+    } catch (err) {
+      console.error("Error checking WABA:", err);
+      setHasWABA(false);
+    } finally {
+      setCheckingWABA(false);
+    }
+  };
+
+  const fetchCampaignsData = async () => {
     if (!user?.accountId) return;
 
-    const fetchCampaigns = async () => {
-      try {
-        setLoading(true);
-        setError('');
+    try {
+      setLoading(true);
+      setError('');
 
-        const params = new URLSearchParams({
-          limit: limit.toString(),
-          skip: ((page - 1) * limit).toString(),
-          ...(statusFilter && { status: statusFilter }),
-          ...(typeFilter && { type: typeFilter }),
-          ...(searchQuery && { search: searchQuery })
-        });
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+        skip: ((page - 1) * limit).toString(),
+        ...(statusFilter && { status: statusFilter }),
+        ...(typeFilter && { type: typeFilter }),
+        ...(searchQuery && { search: searchQuery })
+      });
 
-        const token = authService.getToken();
-        const response = await fetch(
-          `/api/campaigns?${params}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+      const token = authService.getToken();
+      const response = await fetch(
+        `/api/campaigns?${params}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
           }
-        );
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch campaigns');
         }
+      );
 
-        const data = await response.json();
-        setCampaigns(data.campaigns || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch campaigns');
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error('Failed to fetch campaigns');
       }
-    };
 
-    fetchCampaigns();
-  }, [user?.accountId, page, statusFilter, typeFilter, searchQuery, limit]);
+      const data = await response.json();
+      setCampaigns(data.campaigns || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch campaigns');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user?.accountId || !hasWABA) return;
+
+    fetchCampaignsData();
+  }, [user?.accountId, page, statusFilter, typeFilter, searchQuery, limit, hasWABA]);
 
   // Handle delete
   const handleDelete = async (campaignId: string) => {
@@ -183,6 +229,56 @@ export default function CampaignsPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
+
+  // Show blocking message if WABA not connected
+  if (checkingWABA) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">Campaigns</h1>
+          <div className="p-8 text-center bg-white rounded-lg border border-gray-200">
+            <p className="text-gray-600">Checking WhatsApp connection...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (hasWABA === false) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">Campaigns</h1>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-8">
+            <div className="flex gap-4">
+              <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-1" />
+              <div>
+                <h2 className="text-xl font-bold text-red-900 mb-3">WhatsApp Business Account Not Connected</h2>
+                <p className="text-red-700 mb-4">
+                  You must connect a WhatsApp Business Account (WABA) before creating campaigns.
+                </p>
+                <div className="bg-white rounded p-4 mb-4 text-sm text-gray-700">
+                  <p className="font-semibold mb-3">To connect your WhatsApp account:</p>
+                  <ol className="space-y-2 list-decimal list-inside">
+                    <li>Go to <strong>Dashboard → Settings</strong></li>
+                    <li>Click <strong>"Add Phone Number"</strong></li>
+                    <li>Enter your <strong>Phone Number ID</strong>, <strong>WABA ID</strong>, and <strong>Access Token</strong></li>
+                    <li>Click <strong>"Add"</strong> to complete setup</li>
+                  </ol>
+                </div>
+                <Link
+                  href="/dashboard/settings?tab=whatsapp"
+                  className="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition"
+                >
+                  Go to WhatsApp Setup
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

@@ -19,7 +19,7 @@ export const createBroadcast = async (req, res) => {
       if (!activePhone) {
         return res.status(400).json({
           success: false,
-          error: 'No active phone number configured for this account'
+          error: '🚨 WhatsApp Business Account not connected!\n\nPlease connect your WhatsApp account in Settings first:\n1. Go to Dashboard > Settings\n2. Click "Add Phone Number"\n3. Enter your Phone Number ID, WABA ID, and Access Token\n4. Click "Add" to complete setup'
         });
       }
 
