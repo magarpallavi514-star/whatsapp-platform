@@ -3,6 +3,7 @@ import Payment from '../models/Payment.js';
 import Invoice from '../models/Invoice.js';
 import Account from '../models/Account.js';
 import PricingPlan from '../models/PricingPlan.js';
+import { emailService } from '../services/emailService.js';
 import { generateId } from '../utils/idGenerator.js';
 
 // Get subscription for current account
@@ -524,12 +525,71 @@ export const verifyPayment = async (req, res) => {
 
     await subscription.save();
 
+    // 📋 Create Invoice for paid subscription
+    console.log('📋 Creating invoice for subscription:', subscription._id);
+    try {
+      const account = await Account.findById(accountId);
+      const invoiceId = `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const invoiceNumber = `INV-${account?.accountId || accountId}-${Date.now()}`;
+      
+      const newInvoice = new Invoice({
+        invoiceId: invoiceId,
+        invoiceNumber: invoiceNumber,
+        accountId: account?.accountId || accountId.toString(),
+        subscriptionId: subscription._id,
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        billTo: {
+          name: account?.name || 'Customer',
+          email: account?.email
+        },
+        subtotal: payment.amount,
+        tax: 0,
+        totalAmount: payment.amount,
+        dueAmount: 0,
+        status: 'paid',
+        items: [
+          {
+            description: `${payment.metadata.plan.charAt(0).toUpperCase() + payment.metadata.plan.slice(1)} Plan Subscription`,
+            quantity: 1,
+            unitPrice: payment.amount,
+            amount: payment.amount
+          }
+        ],
+        notes: `Paid subscription - Order ID: ${orderId}`,
+        paidAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      await newInvoice.save();
+      console.log('✅ Invoice created:', invoiceNumber);
+
+      // Send invoice email
+      try {
+        const pdfUrl = `${process.env.FRONTEND_URL}/dashboard/invoices`;
+        await emailService.sendInvoiceEmail(
+          account?.email,
+          invoiceNumber,
+          pdfUrl,
+          payment.amount,
+          account?.name || 'Valued Customer'
+        );
+        console.log('✅ Invoice email sent to:', account?.email);
+      } catch (emailError) {
+        console.warn('⚠️  Invoice email failed:', emailError.message);
+      }
+
+    } catch (invoiceError) {
+      console.warn('⚠️  Invoice creation failed (but payment successful):', invoiceError.message);
+    }
+
     res.status(200).json({
       success: true,
       message: 'Payment verified and subscription created',
       data: {
         subscriptionId: subscription._id,
-        status: subscription.status
+        status: subscription.status,
+        invoiceCreated: true
       }
     });
   } catch (error) {

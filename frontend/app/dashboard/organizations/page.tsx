@@ -255,6 +255,68 @@ export default function OrganizationsPage() {
     }
   }
 
+  // 📋 Create Free Invoice for Client
+  const handleCreateInvoice = async () => {
+    try {
+      setIsGeneratingPaymentLink(true)
+      const token = localStorage.getItem("token")
+      
+      console.log("📋 Creating invoice for:", selectedOrg?.name, "ID:", selectedOrg?._id)
+      console.log("🔑 Token present:", !!token)
+
+      const response = await fetch(`${API_URL}/admin/organizations/${selectedOrg._id}/create-invoice`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          amount: 0,
+          description: "Free account invoice"
+        })
+      })
+
+      console.log("📡 Response status:", response.status, response.statusText)
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`
+        try {
+          const errorData = await response.json()
+          console.error("❌ API Error Response:", response.status, errorData)
+          errorMessage = errorData.message || errorData.error || errorMessage
+        } catch (e) {
+          console.error("❌ Could not parse error response")
+        }
+        throw new Error(errorMessage)
+      }
+
+      const data = await response.json()
+      console.log("✅ Invoice created:", data)
+      
+      alert(`✅ Free invoice created!\n\nInvoice: ${data.data.invoiceNumber}\nAmount: ₹${data.data.amount}`)
+      
+      setIsDetailDrawerOpen(false)
+      
+      // Refresh organizations list
+      const orgResponse = await fetch(`${API_URL}/admin/organizations`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      })
+      if (orgResponse.ok) {
+        const orgData = await orgResponse.json()
+        setOrganizations(orgData.data || [])
+      }
+    } catch (err) {
+      console.error("Error creating invoice:", err)
+      alert(`❌ ${err instanceof Error ? err.message : "Failed to create invoice"}`)
+    } finally {
+      setIsGeneratingPaymentLink(false)
+    }
+  }
+
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -847,14 +909,22 @@ export default function OrganizationsPage() {
                 <>
                   <button
                     onClick={() => setIsPaymentLinkModal(true)}
-                    className="flex-1 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 transition-colors font-semibold text-sm"
+                    className="flex-1 bg-green-600 text-white py-1.5 px-2 rounded-lg hover:bg-green-700 transition-colors font-semibold text-xs"
                     title="Generate payment link and create invoice"
                   >
                     💳 Generate Payment Link
                   </button>
                   <button
+                    onClick={handleCreateInvoice}
+                    disabled={isGeneratingPaymentLink}
+                    className="flex-1 bg-blue-600 text-white py-1.5 px-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Create a free invoice for this client"
+                  >
+                    {isGeneratingPaymentLink ? "Creating..." : "📋 Create Invoice"}
+                  </button>
+                  <button
                     onClick={() => setIsEditMode(true)}
-                    className="flex-1 bg-slate-900 text-white py-2.5 rounded-lg hover:bg-slate-800 transition-colors font-semibold text-sm"
+                    className="flex-1 bg-slate-900 text-white py-1.5 px-2 rounded-lg hover:bg-slate-800 transition-colors font-semibold text-xs"
                   >
                     Edit Details
                   </button>
@@ -863,7 +933,7 @@ export default function OrganizationsPage() {
                       setIsDetailDrawerOpen(false)
                       setIsEditMode(false)
                     }}
-                    className="flex-1 bg-gray-300 text-gray-900 py-2.5 rounded-lg hover:bg-gray-400 transition-colors font-semibold text-sm"
+                    className="flex-1 bg-gray-300 text-gray-900 py-1.5 px-2 rounded-lg hover:bg-gray-400 transition-colors font-semibold text-xs"
                   >
                     Close
                   </button>

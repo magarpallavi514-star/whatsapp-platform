@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { generateToken } from '../middlewares/jwtAuth.js';
 import Account from '../models/Account.js';
 import User from '../models/User.js';
+import Invoice from '../models/Invoice.js';
 
 /**
  * Auth Controller
@@ -301,13 +302,21 @@ export const logout = async (req, res) => {
  */
 export const signup = async (req, res) => {
   try {
-    const { name, email, password, company, phone } = req.body;
+    const { name, email, password, company, phone, selectedPlan } = req.body;
 
     // Validate required fields
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
         message: 'Name, email, and password are required'
+      });
+    }
+
+    // Validate plan selection (Starter or Pro)
+    if (!selectedPlan || !['starter', 'pro'].includes(selectedPlan.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please select a plan: Starter or Pro'
       });
     }
 
@@ -352,7 +361,7 @@ export const signup = async (req, res) => {
       company: company?.trim() || undefined,
       phone: phone?.trim() || undefined,
       type: 'client',
-      plan: 'free', // Start with free plan, upgrade on checkout
+      plan: selectedPlan.toLowerCase(), // Set to selected plan (starter or pro)
       status: 'active'
     });
 
@@ -362,6 +371,11 @@ export const signup = async (req, res) => {
     console.log('  AccountId:', accountId);
     console.log('  Email:', email);
     console.log('  Name:', name);
+    console.log('  Plan:', selectedPlan.toLowerCase());
+
+    // 📝 NOTE: NO AUTO INVOICE CREATION
+    // Invoice will be created after user completes payment for selected plan
+    // User will be redirected to checkout to pay for plan
 
     // Create user object for token
     const user = {
@@ -376,9 +390,11 @@ export const signup = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Account created successfully',
+      message: 'Account created successfully! Redirecting to checkout...',
       token,
-      user
+      user,
+      selectedPlan: selectedPlan.toLowerCase(),
+      redirectTo: `/checkout?plan=${selectedPlan.toLowerCase()}`
     });
   } catch (error) {
     console.error('❌ Signup error:', error);

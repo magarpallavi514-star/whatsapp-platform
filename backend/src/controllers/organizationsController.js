@@ -97,7 +97,43 @@ export const createOrganization = async (req, res) => {
 
     await newUser.save();
 
-    // 📧 Send welcome email (independent of payment)
+    // � Create invoice record for free clients (even if $0)
+    // This ensures proper multi-tenant billing tracking
+    let invoiceCreated = false;
+    try {
+      const newInvoice = new Invoice({
+        accountId: accountId,
+        customerId: newUser._id,
+        invoiceNumber: `INV-${accountId}-${Date.now()}`,
+        amount: 0, // Free client
+        currency: 'INR',
+        status: 'completed', // Auto-completed for free clients
+        description: 'Free account - No payment required',
+        planName: plan || 'free',
+        billingCycle: billingCycle || 'monthly',
+        issueDate: new Date(),
+        dueDate: new Date(),
+        paidDate: new Date(), // Auto-marked as paid
+        notes: 'Automatically created for free client registration',
+        items: [
+          {
+            description: `${plan || 'free'} plan subscription`,
+            quantity: 1,
+            amount: 0,
+            rate: 0
+          }
+        ]
+      });
+
+      await newInvoice.save();
+      invoiceCreated = true;
+      console.log(`✅ [INVOICE] Created $0 invoice for free client: ${accountId}`);
+    } catch (invoiceError) {
+      console.warn('⚠️  Invoice creation error (non-critical):', invoiceError.message);
+      // Don't fail the request if invoice creation fails
+    }
+
+    // �📧 Send welcome email (independent of payment)
     let emailSent = false;
     try {
       console.log(`\n📧 [ORGANIZATION] Creating user: ${newUser.email}`);
@@ -127,9 +163,12 @@ export const createOrganization = async (req, res) => {
         nextBillingDate: newUser.nextBillingDate,
         totalPayments: newUser.totalPayments,
         createdAt: newUser.createdAt,
-        emailSent: emailSent
+        emailSent: emailSent,
+        invoiceCreated: invoiceCreated
       },
-      note: '💡 Client created FREE. Click "Generate Payment Link" to create invoice and send payment link.'
+      note: invoiceCreated 
+        ? '✅ Free account created with $0 invoice for tracking. Click "Generate Payment Link" to create paid invoice.'
+        : '💡 Client created FREE (invoice creation pending). Click "Generate Payment Link" to create invoice.'
     });
   } catch (error) {
     console.error('Error creating organization:', error);
@@ -327,6 +366,86 @@ export const migrateBillingDates = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to migrate billing dates',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Create Invoice for a Client (Retroactive or Free)
+ * @route POST /api/admin/organizations/:id/create-invoice
+ * @desc Creates a simple invoice for free clients or retroactive invoices
+ * Called from frontend to create $0 invoice for tracking
+ */
+export const createInvoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { amount = 0, description = 'Free account invoice' } = req.body;
+
+    // Get the organization
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Organization not found'
+      });
+    }
+
+    // Check if invoice already exists for this account
+    const existingInvoice = await Invoice.findOne({ accountId: user.accountId });
+    if (existingInvoice && amount === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Free invoice already exists for this client'
+      });
+    }
+
+    // Create invoice
+    const invoiceNumber = await generateInvoiceNumber();
+    const invoice = new Invoice({
+      accountId: user.accountId,
+      customerId: user._id,
+      invoiceNumber,
+      amount: amount,
+      currency: 'INR',
+      status: amount === 0 ? 'completed' : 'pending',
+      description: description,
+      planName: user.plan || 'free',
+      billingCycle: user.billingCycle || 'monthly',
+      issueDate: new Date(),
+      dueDate: new Date(),
+      paidDate: amount === 0 ? new Date() : null,
+      notes: amount === 0 ? 'Free account invoice for tracking' : 'Payment pending',
+      items: [
+        {
+          description: `${user.plan || 'free'} plan subscription`,
+          quantity: 1,
+          amount: amount,
+          rate: amount
+        }
+      ]
+    });
+
+    await invoice.save();
+
+    res.status(201).json({
+      success: true,
+      message: amount === 0 
+        ? 'Free invoice created for tracking'
+        : 'Invoice created successfully',
+      data: {
+        invoiceId: invoice._id,
+        invoiceNumber: invoice.invoiceNumber,
+        amount: invoice.amount,
+        status: invoice.status,
+        createdAt: invoice.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Error creating invoice:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create invoice',
       error: error.message
     });
   }

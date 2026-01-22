@@ -18,7 +18,8 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: ''
+    password: '',
+    selectedPlan: '' // Add plan selection
   })
 
   // 🔐 SESSION GUARD: Check if user is already logged in
@@ -98,6 +99,10 @@ export default function RegisterPage() {
       setError('Password must be at least 6 characters')
       return false
     }
+    if (!formData.selectedPlan) {
+      setError('Please select a plan (Starter or Pro)')
+      return false
+    }
     return true
   }
 
@@ -118,7 +123,8 @@ export default function RegisterPage() {
         body: JSON.stringify({
           name: formData.name.trim(),
           email: formData.email.trim(),
-          password: formData.password
+          password: formData.password,
+          selectedPlan: formData.selectedPlan // Include selected plan
         })
       })
 
@@ -142,9 +148,10 @@ export default function RegisterPage() {
         }
       }
 
-      // Redirect to pricing to continue with purchase
+      // Redirect to checkout with selected plan
       setTimeout(() => {
-        router.push('/?registered=true')
+        const redirectUrl = data.redirectTo || `/checkout?plan=${formData.selectedPlan}`
+        router.push(redirectUrl)
       }, 1500)
     } catch (err) {
       console.error('Registration error:', err)
@@ -240,6 +247,44 @@ export default function RegisterPage() {
               />
             </div>
 
+            {/* Plan Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Select Your Plan
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Starter Plan */}
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, selectedPlan: 'starter' }))}
+                  disabled={loading || success}
+                  className={`p-4 rounded-lg border-2 transition font-medium text-sm ${
+                    formData.selectedPlan === 'starter'
+                      ? 'border-green-600 bg-green-50 text-green-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                  } disabled:opacity-50`}
+                >
+                  <div className="font-bold text-base">Starter</div>
+                  <div className="text-xs mt-1">₹2,499/month</div>
+                </button>
+
+                {/* Pro Plan */}
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, selectedPlan: 'pro' }))}
+                  disabled={loading || success}
+                  className={`p-4 rounded-lg border-2 transition font-medium text-sm ${
+                    formData.selectedPlan === 'pro'
+                      ? 'border-green-600 bg-green-50 text-green-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                  } disabled:opacity-50`}
+                >
+                  <div className="font-bold text-base">Pro</div>
+                  <div className="text-xs mt-1">₹4,999/month</div>
+                </button>
+              </div>
+            </div>
+
             {/* Submit Button */}
             <button
               type="submit"
@@ -247,7 +292,7 @@ export default function RegisterPage() {
               className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-2.5 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
             >
               {loading && <Loader className="w-4 h-4 animate-spin" />}
-              {loading ? 'Creating Account...' : success ? 'Redirecting...' : 'Create Account'}
+              {loading ? 'Creating Account...' : success ? 'Redirecting...' : 'Continue to Payment'}
             </button>
           </form>
 
