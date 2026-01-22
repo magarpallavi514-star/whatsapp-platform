@@ -320,6 +320,13 @@ export const signup = async (req, res) => {
       });
     }
 
+    // Map frontend plan names to backend enum values
+    const planMapping = {
+      'starter': 'basic',  // frontend "Starter" maps to backend "basic" plan
+      'pro': 'pro'         // frontend "Pro" maps to backend "pro" plan
+    };
+    const mappedPlan = planMapping[selectedPlan.toLowerCase()];
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -361,7 +368,7 @@ export const signup = async (req, res) => {
       company: company?.trim() || undefined,
       phone: phone?.trim() || undefined,
       type: 'client',
-      plan: selectedPlan.toLowerCase(), // Set to selected plan (starter or pro)
+      plan: mappedPlan, // Set to mapped plan (basic or pro)
       status: 'active'
     });
 
@@ -371,7 +378,8 @@ export const signup = async (req, res) => {
     console.log('  AccountId:', accountId);
     console.log('  Email:', email);
     console.log('  Name:', name);
-    console.log('  Plan:', selectedPlan.toLowerCase());
+    console.log('  Selected Plan (Frontend):', selectedPlan.toLowerCase());
+    console.log('  Mapped Plan (Backend):', mappedPlan);
 
     // 📝 NOTE: NO AUTO INVOICE CREATION
     // Invoice will be created after user completes payment for selected plan

@@ -191,101 +191,149 @@ function CheckoutContent() {
         </div>
       </nav>
 
-      {/* Header */}
-      <div className="pt-32 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-green-50 to-white">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">Complete Your Purchase</h1>
-          <p className="text-lg text-gray-600">Secure payment powered by Cashfree</p>
+      {/* Minimal Header */}
+      <div className="pt-6 pb-8 px-4 sm:px-6 lg:px-8 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Secure Checkout</h1>
+          <p className="text-sm text-gray-500 mt-1">Powered by Cashfree</p>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid md:grid-cols-2 gap-12">
-          {/* Order Summary */}
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
-
-            {/* Plan Details */}
-            <div className="bg-white border-2 border-green-600 rounded-xl p-8 mb-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name} Plan</h3>
-              <p className="text-gray-600 mb-6">{plan.description}</p>
-
-              <div className="space-y-4 mb-6 pb-6 border-b border-gray-200">
-                <div className="flex justify-between text-gray-700">
-                  <span>Monthly Fee</span>
-                  <span className="font-semibold">₹{plan.monthlyPrice.toLocaleString()}</span>
+      {/* Main Content - Two Column Layout */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* Left Column - Product Details (2/3 width) */}
+          <div className="md:col-span-2">
+            <div className="space-y-8">
+              {/* Plan Header with Badge */}
+              <div>
+                <div className="flex items-center gap-4 mb-2">
+                  <h2 className="text-3xl font-bold text-gray-900">{plan.name} Plan</h2>
+                  {plan.name === 'Pro' && (
+                    <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                      MOST POPULAR
+                    </span>
+                  )}
                 </div>
-                <div className="flex justify-between text-gray-700">
-                  <span>One-time Setup Fee</span>
-                  <span className="font-semibold">₹{plan.setupFee.toLocaleString()}</span>
+                <p className="text-gray-600">{plan.description}</p>
+              </div>
+
+              {/* Pricing Section */}
+              <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-lg p-6">
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">Monthly Price</p>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-bold text-gray-900">₹{plan.monthlyPrice.toLocaleString()}</span>
+                      <span className="text-gray-500">/month</span>
+                    </div>
+                  </div>
+
+                  {plan.setupFee > 0 && (
+                    <div className="pt-4 border-t border-gray-200">
+                      <p className="text-sm text-gray-600 mb-2">One-time Setup</p>
+                      <p className="text-lg font-semibold text-gray-900">₹{plan.setupFee.toLocaleString()}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="flex justify-between text-lg">
-                <span className="font-bold text-gray-900">Total Today</span>
-                <span className="text-3xl font-bold text-green-600">
-                  ₹{(plan.monthlyPrice + plan.setupFee).toLocaleString()}
-                </span>
+              {/* What's Included */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">What's Included</h3>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-3">
+                    <Zap className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700">Instant setup & activation</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Shield className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700">Enterprise-grade security</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Clock className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <span className="text-gray-700">7-day money back guarantee</span>
+                  </li>
+                </ul>
               </div>
 
-              <p className="text-xs text-gray-500 mt-4">
-                Then ₹{plan.monthlyPrice.toLocaleString()} per month. Cancel anytime.
-              </p>
-            </div>
-
-            {/* What's Included */}
-            <div className="bg-gray-50 rounded-xl p-6">
-              <h3 className="font-bold text-gray-900 mb-4">What's Included</h3>
-              <ul className="space-y-3">
-                <li className="flex items-start gap-3 text-gray-700 text-sm">
-                  <Zap className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span>Instant setup & activation</span>
-                </li>
-                <li className="flex items-start gap-3 text-gray-700 text-sm">
-                  <Shield className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span>Enterprise-grade security</span>
-                </li>
-                <li className="flex items-start gap-3 text-gray-700 text-sm">
-                  <Clock className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span>7-day money back guarantee</span>
-                </li>
-              </ul>
+              {/* Payment Info Box */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-6">
+                <p className="text-sm text-amber-900">
+                  <span className="font-semibold">💡 Tip:</span> Use UPI for fastest processing (instant confirmation)
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Payment Form */}
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Payment Method</h2>
+          {/* Right Column - Order Summary (1/3 width) - STICKY */}
+          <div className="md:col-span-1">
+            <div className="sticky top-8 bg-gray-50 border border-gray-200 rounded-lg p-6">
+              {/* Order Summary Header */}
+              <h3 className="text-lg font-bold text-gray-900 mb-6 pb-4 border-b border-gray-200">Order Summary</h3>
 
-            <div className="bg-white border border-gray-200 rounded-xl p-8 mb-6">
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Payment Option
-                </label>
-                <div className="bg-blue-50 border-2 border-blue-600 rounded-lg p-4 flex items-center">
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">Cashfree Payments</p>
-                    <p className="text-sm text-gray-600">UPI, Credit Card, Debit Card, Net Banking, Wallets</p>
+              {/* Line Items */}
+              <div className="space-y-4 mb-6 pb-6 border-b border-gray-200">
+                <div className="flex justify-between">
+                  <span className="text-gray-700">
+                    {plan.name} Plan
+                    <span className="block text-xs text-gray-500 mt-1">/month, billed monthly</span>
+                  </span>
+                  <span className="font-semibold text-gray-900">₹{plan.monthlyPrice.toLocaleString()}</span>
+                </div>
+                {plan.setupFee > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">One-time Setup Fee</span>
+                    <span className="font-semibold text-gray-900">₹{plan.setupFee.toLocaleString()}</span>
                   </div>
-                  <CheckCircle className="h-6 w-6 text-blue-600 flex-shrink-0" />
+                )}
+              </div>
+
+              {/* Subtotal */}
+              <div className="flex justify-between mb-4">
+                <span className="text-gray-700">Subtotal</span>
+                <span className="font-semibold text-gray-900">₹{(plan.monthlyPrice + plan.setupFee).toLocaleString()}</span>
+              </div>
+
+              {/* Tax/Notices */}
+              <div className="mb-6 pb-6 border-b border-gray-200 text-xs text-gray-500">
+                <p>GST/Tax may apply based on your location</p>
+              </div>
+
+              {/* Coupon Code Input */}
+              <div className="mb-6">
+                <label className="text-sm font-medium text-gray-700 block mb-2">Promo Code (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="Enter code"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Total */}
+              <div className="mb-6 pb-6 border-b border-gray-200">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-gray-900 font-semibold">Total Due Today</span>
+                  <div className="text-right">
+                    <span className="text-3xl font-bold text-gray-900">₹{(plan.monthlyPrice + plan.setupFee).toLocaleString()}</span>
+                    <p className="text-xs text-gray-500 mt-1">Then ₹{plan.monthlyPrice.toLocaleString()}/mo</p>
+                  </div>
                 </div>
               </div>
 
+              {/* Error Message */}
               {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold text-red-900">Payment Error</p>
-                    <p className="text-sm text-red-700">{error}</p>
-                  </div>
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                  <p className="text-sm text-red-700">{error}</p>
                 </div>
               )}
 
+              {/* Continue Button */}
               <button
                 onClick={handlePayment}
                 disabled={isLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-lg"
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base mb-4"
               >
                 {isLoading ? (
                   <>
@@ -294,52 +342,50 @@ function CheckoutContent() {
                   </>
                 ) : (
                   <>
-                    Pay ₹{(plan.monthlyPrice + plan.setupFee).toLocaleString()}
+                    Continue to Payment
                     <ArrowLeft className="h-5 w-5 transform rotate-180" />
                   </>
                 )}
               </button>
 
-              <p className="text-xs text-gray-500 text-center mt-4">
-                Secured by Cashfree. Your payment information is encrypted.
-              </p>
-            </div>
+              {/* Money Back Guarantee */}
+              <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
+                <p className="text-xs text-gray-600">
+                  <span className="block font-semibold text-gray-900 mb-1">✓ 7-Day Money-Back</span>
+                  Not happy? Full refund, no questions.
+                </p>
+              </div>
 
-            {/* Security Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-900">
-                <span className="font-semibold">🔒 100% Secure:</span> All payments are processed through Cashfree's secure payment gateway with SSL encryption.
+              {/* Security Badge */}
+              <p className="text-xs text-center text-gray-500 mt-4">
+                🔒 Payments secured by <span className="font-semibold">Cashfree</span>
               </p>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* FAQ Section */}
-        <div className="mt-16 pt-12 border-t border-gray-200">
-          <h3 className="text-2xl font-bold text-gray-900 mb-8">Questions?</h3>
-          <div className="grid md:grid-cols-2 gap-8">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Is this secure?</h4>
-              <p className="text-gray-600 text-sm">
-                Yes. We use Cashfree, India's most trusted payment gateway. All transactions are encrypted with bank-level security.
+      {/* FAQ Section */}
+      <div className="bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 mt-12">
+        <div className="max-w-7xl mx-auto">
+          <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">Common Questions</h3>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-2">🔒 Is it secure?</h4>
+              <p className="text-sm text-gray-600">
+                100% secure. Cashfree is PCI-DSS certified with bank-level encryption.
               </p>
             </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Can I get a refund?</h4>
-              <p className="text-gray-600 text-sm">
-                Yes. We offer a 7-day money-back guarantee if you're not satisfied. No questions asked.
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-2">💰 Any hidden charges?</h4>
+              <p className="text-sm text-gray-600">
+                No. What you see is what you pay. GST may apply based on location.
               </p>
             </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">What payment methods do you accept?</h4>
-              <p className="text-gray-600 text-sm">
-                We accept UPI, Credit Cards, Debit Cards, Net Banking, and Digital Wallets through Cashfree.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">When does my subscription start?</h4>
-              <p className="text-gray-600 text-sm">
-                Immediately after payment verification. You'll get access to your dashboard within seconds.
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <h4 className="font-semibold text-gray-900 mb-2">🚀 When do I get access?</h4>
+              <p className="text-sm text-gray-600">
+                Immediately after payment. Dashboard access within seconds of confirmation.
               </p>
             </div>
           </div>
@@ -347,9 +393,9 @@ function CheckoutContent() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-12 px-4 mt-16">
+      <footer className="bg-gray-900 text-gray-400 py-8 px-4 mt-8">
         <div className="max-w-7xl mx-auto text-center">
-          <p>© 2026 Replysys. All rights reserved.</p>
+          <p className="text-sm">© 2024 Pixels. All rights reserved.</p>
         </div>
       </footer>
     </div>
