@@ -60,6 +60,8 @@ export default function SettingsPage() {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false)
   const [newApiKey, setNewApiKey] = useState('')
   const [testingId, setTestingId] = useState<string | null>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [formData, setFormData] = useState({
@@ -259,10 +261,65 @@ export default function SettingsPage() {
       if (response.ok) {
         alert('Phone number deleted successfully')
         fetchPhoneNumbers()
+      } else {
+        const data = await response.json()
+        alert(data.message || 'Failed to delete phone number')
       }
     } catch (error) {
       console.error("Error deleting phone number:", error)
       alert('Failed to delete phone number')
+    }
+  }
+
+  const openEditModal = (phone: PhoneNumber) => {
+    setEditingPhoneId(phone._id)
+    setFormData({
+      phoneNumberId: phone.phoneNumberId,
+      wabaId: phone.wabaId,
+      accessToken: '',
+      displayName: phone.displayName,
+      displayPhone: phone.displayPhone
+    })
+    setShowEditModal(true)
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingPhoneId) return
+    try {
+      const payload: any = {
+        phoneNumberId: formData.phoneNumberId,
+        wabaId: formData.wabaId,
+        displayName: formData.displayName,
+        displayPhone: formData.displayPhone
+      }
+      if (formData.accessToken.trim()) {
+        payload.accessToken = formData.accessToken
+      }
+      const response = await fetch(`${API_URL}/settings/phone-numbers/${editingPhoneId}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(payload)
+      })
+      if (response.ok) {
+        alert('Phone number updated successfully')
+        setShowEditModal(false)
+        setEditingPhoneId(null)
+        setFormData({
+          phoneNumberId: '',
+          wabaId: '',
+          accessToken: '',
+          displayName: '',
+          displayPhone: ''
+        })
+        fetchPhoneNumbers()
+      } else {
+        const data = await response.json()
+        alert(data.message || 'Failed to update phone number')
+      }
+    } catch (error) {
+      console.error("Error updating phone number:", error)
+      alert('Failed to update phone number')
     }
   }
 
@@ -640,6 +697,7 @@ export default function SettingsPage() {
                             variant="outline"
                             onClick={() => testConnection(phone._id)}
                             disabled={testingId === phone._id}
+                            title="Test connection"
                           >
                             <RefreshCw className={`h-4 w-4 ${testingId === phone._id ? 'animate-spin' : ''}`} />
                           </Button>
@@ -648,14 +706,25 @@ export default function SettingsPage() {
                             variant="outline"
                             onClick={() => toggleActive(phone._id, phone.isActive)}
                             className={phone.isActive ? 'border-green-600 text-green-600' : ''}
+                            title={phone.isActive ? 'Deactivate' : 'Activate'}
                           >
                             {phone.isActive ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
+                            onClick={() => openEditModal(phone)}
+                            className="text-blue-600 hover:bg-blue-50"
+                            title="Edit configuration"
+                          >
+                            <Key className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={() => deletePhoneNumber(phone._id)}
                             className="text-red-600 hover:bg-red-50"
+                            title="Delete"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -994,6 +1063,92 @@ export default function SettingsPage() {
                 Add Phone Number
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">Edit WhatsApp Configuration</h2>
+              <button onClick={() => {
+                setShowEditModal(false)
+                setEditingPhoneId(null)
+              }} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number ID *</label>
+                <input
+                  type="text"
+                  value={formData.phoneNumberId}
+                  onChange={(e) => setFormData({ ...formData, phoneNumberId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-gray-50"
+                  disabled
+                />
+                <p className="text-xs text-gray-500 mt-1">Cannot change Phone Number ID</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">WABA ID *</label>
+                <input
+                  type="text"
+                  value={formData.wabaId}
+                  onChange={(e) => setFormData({ ...formData, wabaId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  placeholder="1536545574042607"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Access Token</label>
+                <textarea
+                  value={formData.accessToken}
+                  onChange={(e) => setFormData({ ...formData, accessToken: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 font-mono text-xs"
+                  placeholder="Leave empty to keep current token. Paste new token to update..."
+                  rows={3}
+                />
+                <p className="text-xs text-gray-500 mt-1">Only fill this if you want to update the token</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Display Name (Optional)</label>
+                <input
+                  type="text"
+                  value={formData.displayName}
+                  onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  placeholder="My Business WhatsApp"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Display Phone (Optional)</label>
+                <input
+                  type="text"
+                  value={formData.displayPhone}
+                  onChange={(e) => setFormData({ ...formData, displayPhone: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  placeholder="+1 234 567 8900"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-6 border-t justify-end">
+                <Button variant="outline" onClick={() => {
+                  setShowEditModal(false)
+                  setEditingPhoneId(null)
+                }}>Cancel</Button>
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                  Save Changes
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}
