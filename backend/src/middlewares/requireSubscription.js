@@ -8,7 +8,7 @@ import Account from '../models/Account.js';
  */
 export const requireSubscription = async (req, res, next) => {
   try {
-    const accountId = req.accountId; // From JWT middleware
+    const accountId = req.accountId; // From JWT middleware (STRING like 'pixels_internal')
     
     if (!accountId) {
       return res.status(401).json({
@@ -35,8 +35,9 @@ export const requireSubscription = async (req, res, next) => {
     }
 
     // Check if account has active subscription
+    // NOTE: Subscription stores accountId as STRING, not ObjectId
     const subscription = await Subscription.findOne({
-      accountId: account._id,
+      accountId: accountId,  // Use STRING accountId, not account._id
       status: 'active'
     });
 
