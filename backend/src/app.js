@@ -7,6 +7,7 @@ import path from 'path';
 // Import middleware
 import { authenticate } from './middlewares/auth.js';
 import { requireJWT } from './middlewares/jwtAuth.js';
+import requireSubscription from './middlewares/requireSubscription.js';
 
 // Import routes
 import webhookRoutes from './routes/webhookRoutes.js';
@@ -173,16 +174,16 @@ app.use('/api/webhooks', webhookRoutes);
 // Mount auth routes (NO AUTH - public login/logout)
 app.use('/api/auth', authRoutes);
 
-// Mount dashboard routes (JWT AUTH - for logged-in dashboard users)
-app.use('/api/settings', requireJWT, settingsRoutes);
-app.use('/api/templates', requireJWT, templateRoutes);
-app.use('/api/chatbots', requireJWT, chatbotRoutes);
-app.use('/api/messages', requireJWT, messageRoutes);
-app.use('/api/conversations', requireJWT, conversationRoutes);
-app.use('/api/contacts', requireJWT, contactRoutes);
-app.use('/api/broadcasts', requireJWT, broadcastRoutes);
-app.use('/api/campaigns', requireJWT, campaignRoutes);
-app.use('/api/notifications', requireJWT, notificationRoutes);
+// Mount dashboard routes (JWT AUTH + SUBSCRIPTION REQUIRED - for logged-in dashboard users)
+app.use('/api/settings', requireJWT, requireSubscription, settingsRoutes);
+app.use('/api/templates', requireJWT, requireSubscription, templateRoutes);
+app.use('/api/chatbots', requireJWT, requireSubscription, chatbotRoutes);
+app.use('/api/messages', requireJWT, requireSubscription, messageRoutes);
+app.use('/api/conversations', requireJWT, requireSubscription, conversationRoutes);
+app.use('/api/contacts', requireJWT, requireSubscription, contactRoutes);
+app.use('/api/broadcasts', requireJWT, requireSubscription, broadcastRoutes);
+app.use('/api/campaigns', requireJWT, requireSubscription, campaignRoutes);
+app.use('/api/notifications', requireJWT, requireSubscription, notificationRoutes);
 
 // Mount pricing routes (PUBLIC for public plans, JWT AUTH for admin)
 app.use('/api/pricing', pricingRoutes);
