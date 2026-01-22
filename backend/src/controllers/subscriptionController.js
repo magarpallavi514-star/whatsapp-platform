@@ -362,7 +362,7 @@ export const resumeSubscription = async (req, res) => {
 export const createOrder = async (req, res) => {
   try {
     const { plan, amount, paymentGateway } = req.body;
-    const accountId = req.account._id;
+    const accountId = req.accountId; // From JWT middleware (string)
 
     console.log('📝 Creating order:', { plan, amount, paymentGateway, accountId });
 
@@ -390,7 +390,8 @@ export const createOrder = async (req, res) => {
     const orderId = `ORDER_${plan.toUpperCase()}_${Date.now()}`;
 
     // Get account email for Cashfree
-    const account = await Account.findById(accountId);
+    // accountId from JWT is a string (accountId field), not MongoDB _id
+    const account = await Account.findOne({ accountId });
     if (!account) {
       return res.status(404).json({
         success: false,
@@ -443,8 +444,9 @@ export const createOrder = async (req, res) => {
     console.log('✅ Cashfree order created:', cashfreeData);
 
     // Store payment record in our database
+    // Use account._id (MongoDB ObjectId) for Payment model
     const payment = new Payment({
-      accountId,
+      accountId: account._id,
       orderId,
       amount: Math.round(amount * 100) / 100,
       currency: 'INR',
