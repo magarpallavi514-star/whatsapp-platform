@@ -1,12 +1,13 @@
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../config/jwt.js';
+import Account from '../models/Account.js';
 
 /**
  * JWT Authentication Middleware
  * For dashboard users - stateless auth with tokens
  */
 
-export const requireJWT = (req, res, next) => {
+export const requireJWT = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader?.replace('Bearer ', '');
@@ -44,6 +45,29 @@ export const requireJWT = (req, res, next) => {
       name: decoded.name,
       accountId: decoded.accountId,
       role: decoded.role
+    };
+
+    // Look up account in database to get full account object with _id
+    const account = await Account.findOne({ accountId: decoded.accountId });
+    if (!account) {
+      console.error('❌ Account not found for accountId:', decoded.accountId);
+      return res.status(401).json({
+        success: false,
+        message: 'Account not found. Please login again.',
+        redirectTo: '/login'
+      });
+    }
+
+    // Inject full account object (like auth.js middleware does)
+    req.account = {
+      id: account._id,
+      accountId: account.accountId,
+      name: account.name,
+      email: account.email,
+      type: account.type,
+      plan: account.plan,
+      status: account.status,
+      _id: account._id  // Include _id explicitly
     };
     
     next();
