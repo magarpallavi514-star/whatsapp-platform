@@ -5,7 +5,11 @@
 
 import User from '../models/User.js';
 import Counter from '../models/Counter.js';
-import { generateAccountId } from '../utils/idGenerator.js';
+import Subscription from '../models/Subscription.js';
+import Invoice from '../models/Invoice.js';
+import PricingPlan from '../models/PricingPlan.js';
+import { generateAccountId, generateId } from '../utils/idGenerator.js';
+import { emailService } from '../services/emailService.js';
 import mongoose from 'mongoose';
 
 /**
@@ -46,8 +50,10 @@ export const getAllOrganizations = async (req, res) => {
 };
 
 /**
- * Create new organization/user
+ * Create new organization/user (FREE - NO INVOICE)
  * @route POST /api/admin/organizations
+ * @desc Creates a new client with plan but NO AUTOMATIC INVOICE
+ * Invoice is created only when admin clicks "Generate Payment Link"
  */
 export const createOrganization = async (req, res) => {
   try {
@@ -91,9 +97,23 @@ export const createOrganization = async (req, res) => {
 
     await newUser.save();
 
+    // 📧 Send welcome email (independent of payment)
+    let emailSent = false;
+    try {
+      console.log(`\n📧 [ORGANIZATION] Creating user: ${newUser.email}`);
+      const emailResult = await emailService.sendWelcomeEmail(newUser.email, newUser.name);
+      emailSent = emailResult.success;
+      if (!emailSent) {
+        console.warn(`⚠️  [ORGANIZATION] Welcome email failed: ${emailResult.error}`);
+      }
+    } catch (emailError) {
+      console.warn('⚠️  Welcome email error:', emailError.message);
+      // Don't fail the request if email fails - account is created
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Organization created successfully',
+      message: `Organization created successfully${emailSent ? ' - Welcome email sent ✅' : ' - Email failed but account created'}`,
       data: {
         _id: newUser._id,
         accountId: newUser.accountId,
@@ -106,8 +126,10 @@ export const createOrganization = async (req, res) => {
         billingCycle: newUser.billingCycle,
         nextBillingDate: newUser.nextBillingDate,
         totalPayments: newUser.totalPayments,
-        createdAt: newUser.createdAt
-      }
+        createdAt: newUser.createdAt,
+        emailSent: emailSent
+      },
+      note: '💡 Client created FREE. Click "Generate Payment Link" to create invoice and send payment link.'
     });
   } catch (error) {
     console.error('Error creating organization:', error);
@@ -308,4 +330,183 @@ export const migrateBillingDates = async (req, res) => {
       error: error.message
     });
   }
+};
+
+/**
+ * Generate Payment Link for a Client
+ * @route POST /api/admin/organizations/:id/generate-payment-link
+ * @desc Creates invoice and subscription for a client with the selected plan
+ * Called when admin clicks "Generate Payment Link" button
+ */
+export const generatePaymentLink = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { planId } = req.body;
+
+    if (!planId) {
+      return res.status(400).json({
+        success: false,
+        message: 'planId is required'
+      });
+    }
+
+    // Get the organization
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Organization not found'
+      });
+    }
+
+    // Get the pricing plan
+    const plan = await PricingPlan.findById(planId);
+    if (!plan) {
+      return res.status(404).json({
+        success: false,
+        message: 'Pricing plan not found'
+      });
+    }
+
+    // Check if subscription already exists
+    let subscription = await Subscription.findOne({ accountId: user.accountId });
+    
+    if (subscription) {
+      return res.status(400).json({
+        success: false,
+        message: 'Subscription already exists for this client'
+      });
+    }
+
+    // Create subscription
+    const subscriptionId = `sub_${generateId()}`;
+    subscription = new Subscription({
+      subscriptionId,
+      accountId: user.accountId,
+      userId: user._id,
+      planId: plan._id,
+      planName: plan.name,
+      billingCycle: user.billingCycle || 'monthly',
+      status: 'pending', // Pending until payment
+      startDate: new Date(),
+      nextBillingDate: user.nextBillingDate,
+      pricing: {
+        amount: plan.monthlyPrice,
+        currency: plan.currency || 'INR',
+        frequency: 'monthly'
+      }
+    });
+
+    await subscription.save();
+
+    // Create invoice
+    const invoiceId = `inv_${generateId()}`;
+    const invoiceNumber = await generateInvoiceNumber();
+
+    const amount = plan.monthlyPrice;
+    const setupFee = plan.setupFee || 0;
+    const subtotal = amount + setupFee;
+
+    const invoice = new Invoice({
+      invoiceId,
+      invoiceNumber,
+      accountId: user.accountId,
+      subscriptionId: subscription._id,
+      billTo: {
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        company: user.name
+      },
+      lineItems: [
+        {
+          description: `${plan.name} - Monthly Plan`,
+          quantity: 1,
+          unitPrice: amount,
+          amount: amount
+        },
+        ...(setupFee > 0 ? [{
+          description: 'Setup Fee',
+          quantity: 1,
+          unitPrice: setupFee,
+          amount: setupFee
+        }] : [])
+      ],
+      subtotal: subtotal,
+      taxRate: 0,
+      taxAmount: 0,
+      discountAmount: 0,
+      totalAmount: subtotal,
+      dueAmount: subtotal,
+      currency: plan.currency || 'INR',
+      status: 'pending',
+      paymentTerms: 'Net 5',
+      dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
+    });
+
+    await invoice.save();
+
+    // Generate payment link (Cashfree)
+    let paymentLink = null;
+    try {
+      // Mock payment link - in production, integrate with Cashfree API
+      const baseUrl = process.env.FRONTEND_URL || 'https://replysys.com';
+      paymentLink = `${baseUrl}/checkout?invoice=${invoiceId}&amount=${subtotal}&customer=${user.accountId}`;
+    } catch (error) {
+      console.warn('⚠️  Could not generate payment link:', error.message);
+    }
+
+    // Send payment link email
+    try {
+      await emailService.sendPaymentLinkEmail(
+        user.email,
+        paymentLink || `Invoice #${invoiceNumber}`,
+        invoiceNumber,
+        subtotal,
+        user.name
+      );
+    } catch (emailError) {
+      console.warn('⚠️  Payment link email not sent:', emailError.message);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Payment link generated successfully',
+      data: {
+        subscriptionId: subscription.subscriptionId,
+        invoiceId: invoice.invoiceId,
+        invoiceNumber: invoice.invoiceNumber,
+        amount: invoice.totalAmount,
+        paymentLink: paymentLink,
+        dueDate: invoice.dueDate
+      },
+      note: '📧 Payment link sent to client email'
+    });
+  } catch (error) {
+    console.error('Error generating payment link:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate payment link',
+      error: error.message
+    });
+  }
+};
+
+// Helper function to generate invoice number
+const generateInvoiceNumber = async () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  
+  const lastInvoice = await Invoice.findOne({
+    invoiceNumber: new RegExp(`^INV-${year}-`)
+  }).sort({ invoiceNumber: -1 });
+
+  let sequence = 1;
+  if (lastInvoice) {
+    const lastSequence = parseInt(lastInvoice.invoiceNumber.split('-')[2]);
+    sequence = lastSequence + 1;
+  }
+
+  return `INV-${year}-${String(sequence).padStart(6, '0')}`;
 };

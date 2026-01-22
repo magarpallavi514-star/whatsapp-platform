@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, Lock, User, AlertCircle, CheckCircle, Loader, ArrowRight } from 'lucide-react'
+import { Mail, Lock, User, AlertCircle, CheckCircle, Loader, ArrowRight, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { API_URL } from '@/lib/config/api'
+import { authService } from '@/lib/auth'
 import Navbar from '@/components/Navbar'
 
 export default function RegisterPage() {
@@ -12,12 +13,60 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: ''
   })
+
+  // 🔐 SESSION GUARD: Check if user is already logged in
+  useEffect(() => {
+    const checkAuthentication = async () => {
+      // Small delay to ensure localStorage is fully loaded
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Check if user has valid session
+      const isAuthenticated = authService.isAuthenticated()
+      const token = localStorage.getItem("token")
+      const user = localStorage.getItem("user")
+      
+      console.log('🔍 Auth Check on /auth/register:', {
+        isAuthenticated,
+        hasToken: !!token,
+        hasUser: !!user,
+        tokenLength: token?.length || 0
+      })
+      
+      if (isAuthenticated && token) {
+        // User is already logged in - redirect to dashboard
+        console.log("✅ Session found - Redirecting to dashboard")
+        router.push("/dashboard")
+        return
+      } else {
+        // User is not logged in - allow access to register page
+        console.log("❌ No session found - Showing register page")
+        setIsCheckingAuth(false)
+      }
+    }
+
+    checkAuthentication()
+  }, [router])
+
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <MessageSquare className="h-6 w-6 text-green-600" />
+          </div>
+          <p className="text-gray-600 font-medium">Checking your session...</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target

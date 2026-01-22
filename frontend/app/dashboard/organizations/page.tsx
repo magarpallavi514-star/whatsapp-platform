@@ -17,6 +17,10 @@ export default function OrganizationsPage() {
   const [selectedOrg, setSelectedOrg] = useState<any>(null)
   const [isEditMode, setIsEditMode] = useState(false)
   const [editData, setEditData] = useState<any>(null)
+  const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false)
+  const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<any>(null)
+  const [availablePlans, setAvailablePlans] = useState<any[]>([])
+  const [isPaymentLinkModal, setIsPaymentLinkModal] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -54,7 +58,21 @@ export default function OrganizationsPage() {
       }
     }
 
+    // Fetch available pricing plans
+    const fetchPlans = async () => {
+      try {
+        const response = await fetch(`${API_URL}/pricing/plans/public`)
+        if (response.ok) {
+          const data = await response.json()
+          setAvailablePlans(data.data || [])
+        }
+      } catch (err) {
+        console.error("Error fetching plans:", err)
+      }
+    }
+
     fetchOrganizations()
+    fetchPlans()
   }, [])
 
   const filteredOrganizations = organizations.filter(org =>
@@ -181,6 +199,59 @@ export default function OrganizationsPage() {
     } catch (err) {
       console.error("Error updating organization:", err)
       alert("Failed to update organization")
+    }
+  }
+
+  // 💳 Generate Payment Link for Client
+  const handleGeneratePaymentLink = async () => {
+    if (!selectedPlanForPayment) {
+      alert("Please select a plan")
+      return
+    }
+
+    try {
+      setIsGeneratingPaymentLink(true)
+      const token = localStorage.getItem("token")
+
+      const response = await fetch(`${API_URL}/admin/organizations/${selectedOrg._id}/generate-payment-link`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          planId: selectedPlanForPayment._id
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Failed to generate payment link")
+      }
+
+      const data = await response.json()
+      
+      alert(`✅ Payment link generated!\n\nInvoice: ${data.data.invoiceNumber}\nAmount: ₹${data.data.amount}\n\n📧 Email sent to client`)
+      
+      setIsPaymentLinkModal(false)
+      setSelectedPlanForPayment(null)
+      
+      // Refresh organizations list
+      const orgResponse = await fetch(`${API_URL}/admin/organizations`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      })
+      if (orgResponse.ok) {
+        const orgData = await orgResponse.json()
+        setOrganizations(orgData.data || [])
+      }
+    } catch (err) {
+      console.error("Error generating payment link:", err)
+      alert(`❌ ${err instanceof Error ? err.message : "Failed to generate payment link"}`)
+    } finally {
+      setIsGeneratingPaymentLink(false)
     }
   }
 
@@ -775,6 +846,13 @@ export default function OrganizationsPage() {
               ) : (
                 <>
                   <button
+                    onClick={() => setIsPaymentLinkModal(true)}
+                    className="flex-1 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 transition-colors font-semibold text-sm"
+                    title="Generate payment link and create invoice"
+                  >
+                    💳 Generate Payment Link
+                  </button>
+                  <button
                     onClick={() => setIsEditMode(true)}
                     className="flex-1 bg-slate-900 text-white py-2.5 rounded-lg hover:bg-slate-800 transition-colors font-semibold text-sm"
                   >
@@ -791,6 +869,75 @@ export default function OrganizationsPage() {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Link Modal */}
+      {isPaymentLinkModal && selectedOrg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsPaymentLinkModal(false)} />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-gray-900">💳 Generate Payment Link</h3>
+              <button 
+                onClick={() => setIsPaymentLinkModal(false)}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-600 mb-4">
+                Select a plan to create invoice and send payment link to <strong>{selectedOrg.name}</strong>
+              </p>
+
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {availablePlans && availablePlans.length > 0 ? (
+                  availablePlans.map((plan: any) => (
+                    <div 
+                      key={plan._id}
+                      onClick={() => setSelectedPlanForPayment(plan)}
+                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        selectedPlanForPayment?._id === plan._id 
+                          ? 'border-green-500 bg-green-50' 
+                          : 'border-gray-200 hover:border-green-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{plan.name}</h4>
+                          <p className="text-sm text-gray-600">{plan.description}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-green-600">₹{plan.monthlyPrice?.toLocaleString('en-IN')}</p>
+                          <p className="text-xs text-gray-500">/month</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-500">No plans available</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleGeneratePaymentLink}
+                disabled={!selectedPlanForPayment || isGeneratingPaymentLink}
+                className="flex-1 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold text-sm"
+              >
+                {isGeneratingPaymentLink ? "Generating..." : "Generate Link"}
+              </button>
+              <button
+                onClick={() => setIsPaymentLinkModal(false)}
+                className="flex-1 bg-gray-300 text-gray-900 py-2.5 rounded-lg hover:bg-gray-400 transition-colors font-semibold text-sm"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

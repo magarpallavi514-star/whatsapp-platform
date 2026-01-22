@@ -30,6 +30,43 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     setUser(currentUser)
   }, [])
 
+  // 🔐 Setup inactivity timeout and activity tracking
+  useEffect(() => {
+    // Check for inactivity on mount
+    if (authService.checkInactivityTimeout()) {
+      router.push('/login?expired=true');
+      return;
+    }
+
+    // Track user activity
+    const handleActivity = () => {
+      authService.updateActivity();
+      console.log('📍 Activity tracked at:', new Date().toLocaleTimeString());
+    };
+
+    // Listen for user activity
+    window.addEventListener('mousedown', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('scroll', handleActivity);
+    window.addEventListener('touchstart', handleActivity);
+
+    // Check inactivity every 30 seconds
+    const inactivityCheckInterval = setInterval(() => {
+      if (authService.checkInactivityTimeout()) {
+        router.push('/login?expired=true');
+        clearInterval(inactivityCheckInterval);
+      }
+    }, 30000);
+
+    return () => {
+      window.removeEventListener('mousedown', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('scroll', handleActivity);
+      window.removeEventListener('touchstart', handleActivity);
+      clearInterval(inactivityCheckInterval);
+    };
+  }, [router])
+
   // Fetch notifications
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -93,15 +130,17 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     { name: "Transactions", icon: CreditCard, href: "/dashboard/transactions", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     { name: "Website Settings", icon: Sliders, href: "/dashboard/website-settings", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     
-    // Regular pages
+    // Regular pages - Available to clients (USER role) too
     { name: "Invoices", icon: Receipt, href: "/dashboard/invoices", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER] },
-    { name: "Broadcasts", icon: Megaphone, href: "/dashboard/broadcasts", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT] },
-    { name: "Contacts", icon: Users, href: "/dashboard/contacts", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT] },
-    { name: "Templates", icon: FileText, href: "/dashboard/templates", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER] },
+    { name: "Broadcasts", icon: Megaphone, href: "/dashboard/broadcasts", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER] },
+    { name: "Contacts", icon: Users, href: "/dashboard/contacts", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER] },
+    { name: "Templates", icon: FileText, href: "/dashboard/templates", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER] },
+    { name: "Live Chat", icon: MessageSquare, href: "/dashboard/chat", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER] },
+    { name: "Campaigns", icon: Calendar, href: "/dashboard/campaigns", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER] },
+    
+    // Admin-only pages
     { name: "Chatbot", icon: Bot, href: "/dashboard/chatbot", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER] },
-    { name: "Live Chat", icon: MessageSquare, href: "/dashboard/chat", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT] },
     { name: "Analytics", icon: BarChart3, href: "/dashboard/analytics", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER] },
-    { name: "Campaigns", icon: Calendar, href: "/dashboard/campaigns", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER] },
   ]
 
   // Filter navigation based on user role
@@ -121,7 +160,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <div className="h-8 w-8 bg-green-600 rounded-lg flex items-center justify-center">
                   <MessageSquare className="h-5 w-5 text-white" />
                 </div>
-                <span className="font-bold text-white">PixelsWhatsApp</span>
+                <span className="font-bold text-white">Replysys</span>
               </Link>
               <button onClick={() => setSidebarOpen(false)}>
                 <X className="h-6 w-6 text-gray-400" />
@@ -159,7 +198,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <div className="h-8 w-8 bg-green-600 rounded-lg flex items-center justify-center">
                   <MessageSquare className="h-5 w-5 text-white" />
                 </div>
-                <span className="font-bold text-white">PixelsWhatsApp</span>
+                <span className="font-bold text-white">Replysys</span>
               </Link>
             )}
             {sidebarCollapsed && (

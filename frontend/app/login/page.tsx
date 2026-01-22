@@ -3,7 +3,7 @@
 import { MessageSquare, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { authService } from "@/lib/auth"
 
@@ -13,16 +13,56 @@ declare global {
   }
 }
 
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+const SESSION_LOCK_KEY = 'replysys_session_lock_' + (typeof window !== 'undefined' ? Date.now() : '');
+
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const router = useRouter()
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // 🔐 SESSION GUARD: Check if user is already logged in
+  useEffect(() => {
+    const checkAuthentication = async () => {
+      // Small delay to ensure localStorage is fully loaded
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Check if user has valid session
+      const isAuthenticated = authService.isAuthenticated()
+      const token = localStorage.getItem("token")
+      const user = localStorage.getItem("user")
+      
+      console.log('🔍 Auth Check on /login:', {
+        isAuthenticated,
+        hasToken: !!token,
+        hasUser: !!user,
+        tokenLength: token?.length || 0
+      })
+      
+      if (isAuthenticated && token) {
+        // User is already logged in - redirect to dashboard
+        console.log("✅ Session found - Redirecting to dashboard")
+        router.push("/dashboard")
+        return
+      } else {
+        // User is not logged in - allow access to login page
+        console.log("❌ No session found - Showing login page")
+        setIsCheckingAuth(false)
+      }
+    }
+
+    checkAuthentication()
+  }, [router])
 
   // Load Google Sign-In script
   useEffect(() => {
+    if (isCheckingAuth) return; // Don't load Google until auth check is done
+    
     const loadGoogleScript = async () => {
       if (window.google) return;
       
@@ -54,10 +94,21 @@ export default function LoginPage() {
     };
 
     loadGoogleScript();
-  }, []);
+  }, [isCheckingAuth]);
 
   const handleGoogleSignIn = async (response: any) => {
     try {
+      // Check for multiple sessions
+      const existingSession = localStorage.getItem('replysys_session_lock');
+      if (existingSession && existingSession !== SESSION_LOCK_KEY) {
+        setError('⚠️ Another login session detected. Only one session per browser allowed.');
+        setIsLoading(false);
+        // Force logout of other session
+        localStorage.clear();
+        setTimeout(() => window.location.reload(), 1000);
+        return;
+      }
+
       setIsLoading(true);
       setError("");
 
@@ -79,6 +130,9 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (data.success && data.token) {
+        // Set session lock
+        localStorage.setItem('replysys_session_lock', SESSION_LOCK_KEY);
+        localStorage.setItem('replysys_last_activity', Date.now().toString());
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('token', data.token);
@@ -98,17 +152,45 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Check for multiple sessions
+    const existingSession = localStorage.getItem('replysys_session_lock');
+    if (existingSession && existingSession !== SESSION_LOCK_KEY) {
+      setError('⚠️ Another login session detected. Only one session per browser allowed.');
+      // Force logout of other session
+      localStorage.clear();
+      setTimeout(() => window.location.reload(), 1000);
+      return;
+    }
+
     setIsLoading(true)
     setError("")
 
     const result = await authService.login(email, password)
     
     if (result.success) {
+      // Set session lock and activity timer
+      localStorage.setItem('replysys_session_lock', SESSION_LOCK_KEY);
+      localStorage.setItem('replysys_last_activity', Date.now().toString());
       router.push("/dashboard")
     } else {
       setError(result.error || "Login failed")
       setIsLoading(false)
     }
+  }
+
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <MessageSquare className="h-6 w-6 text-green-600" />
+          </div>
+          <p className="text-gray-600 font-medium">Checking your session...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

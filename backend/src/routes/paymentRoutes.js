@@ -1,16 +1,36 @@
 import express from 'express';
 import * as paymentController from '../controllers/paymentController.js';
-import { authMiddleware } from '../middlewares/authMiddleware.js';
+import { 
+  createPaymentOrder, 
+  verifyPayment, 
+  handlePaymentWebhook,
+  getInvoice 
+} from '../controllers/cashfreePaymentController.js';
+import { requireJWT, authMiddleware } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-// Public webhook (no auth needed)
+/**
+ * PUBLIC ROUTES (no auth needed)
+ */
+
+// Cashfree webhook (called by payment gateway)
+router.post('/webhook/confirm', handlePaymentWebhook);
+
+// Legacy payment webhook (keep for backward compatibility)
 router.post('/webhook/confirm', paymentController.confirmPayment);
 
-// Protected routes
+/**
+ * PROTECTED ROUTES (require authentication)
+ */
 router.use(authMiddleware);
 
-// Payment routes
+// Cashfree payment flow
+router.post('/create-order', requireJWT, createPaymentOrder);
+router.post('/verify', requireJWT, verifyPayment);
+router.get('/invoice/:orderId', requireJWT, getInvoice);
+
+// Legacy payment routes
 router.post('/initiate', paymentController.initiatePayment);
 router.get('/my-payments', paymentController.getMyPayments);
 router.get('/:paymentId', paymentController.getPaymentDetails);

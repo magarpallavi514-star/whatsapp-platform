@@ -148,10 +148,40 @@ export const authService = {
       console.error('Logout error:', error)
     } finally {
       if (typeof window !== "undefined") {
+        // Clear session lock and activity tracking
         localStorage.removeItem("isAuthenticated")
         localStorage.removeItem("user")
         localStorage.removeItem("token")
+        localStorage.removeItem("replysys_session_lock")
+        localStorage.removeItem("replysys_last_activity")
+        console.log('✅ All sessions cleared');
       }
+    }
+  },
+
+  // Check inactivity timeout (5 minutes)
+  checkInactivityTimeout: () => {
+    if (typeof window === "undefined") return false
+    const lastActivity = localStorage.getItem("replysys_last_activity")
+    if (!lastActivity) return false
+    
+    const lastActivityTime = parseInt(lastActivity, 10)
+    const currentTime = Date.now()
+    const inactivityTime = currentTime - lastActivityTime
+    const INACTIVITY_LIMIT = 5 * 60 * 1000 // 5 minutes
+    
+    if (inactivityTime > INACTIVITY_LIMIT) {
+      console.log('⏰ Session timeout due to inactivity');
+      authService.logout();
+      return true
+    }
+    return false
+  },
+
+  // Update last activity time
+  updateActivity: () => {
+    if (typeof window !== "undefined" && localStorage.getItem("isAuthenticated") === "true") {
+      localStorage.setItem("replysys_last_activity", Date.now().toString())
     }
   },
 

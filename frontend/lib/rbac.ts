@@ -20,28 +20,35 @@ export const routeAccess = {
   '/dashboard': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
   '/dashboard/home': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
   
-  // Broadcasts
-  '/dashboard/broadcasts': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT],
-  '/dashboard/broadcasts/new': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
-  '/dashboard/broadcasts/schedule': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
+  // Broadcasts - Allow USER role for clients
+  '/dashboard/broadcasts': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
+  '/dashboard/broadcasts/new': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
+  '/dashboard/broadcasts/schedule': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
+  '/dashboard/broadcasts/create': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
   
-  // Contacts
-  '/dashboard/contacts': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT],
-  '/dashboard/contacts/import': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
+  // Contacts - Allow USER role for clients
+  '/dashboard/contacts': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
+  '/dashboard/contacts/import': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
   
   // Messages
   '/dashboard/messages': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT],
-  '/dashboard/templates': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
   
-  // Chatbot
+  // Templates - Allow USER role for clients
+  '/dashboard/templates': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
+  
+  // Chatbot - Admin only
   '/dashboard/chatbot': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
   '/dashboard/chatbot/builder': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
   
-  // Campaigns
-  '/dashboard/campaigns': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
-  '/dashboard/campaigns/new': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
+  // Chat/Live Chat - Allow USER role for clients
+  '/dashboard/chat': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
   
-  // Analytics
+  // Campaigns - Allow USER role for clients
+  '/dashboard/campaigns': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
+  '/dashboard/campaigns/new': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
+  '/dashboard/campaigns/create': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
+  
+  // Analytics - Admin only
   '/dashboard/analytics': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
   '/dashboard/reports': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
   
@@ -55,11 +62,21 @@ export const routeAccess = {
   '/dashboard/billing/invoices': [UserRole.SUPERADMIN, UserRole.ADMIN],
   '/dashboard/billing/subscriptions': [UserRole.SUPERADMIN, UserRole.ADMIN],
   
+  // Invoices - Allow USER role for clients
+  '/dashboard/invoices': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
+  
   // Settings
   '/dashboard/settings': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
   '/dashboard/settings/account': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
   '/dashboard/settings/security': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
   '/dashboard/settings/whatsapp-setup': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
+  
+  // SuperAdmin only routes
+  '/dashboard/organizations': [UserRole.SUPERADMIN],
+  '/dashboard/system-health': [UserRole.SUPERADMIN],
+  '/dashboard/platform-billing': [UserRole.SUPERADMIN],
+  '/dashboard/transactions': [UserRole.SUPERADMIN],
+  '/dashboard/website-settings': [UserRole.SUPERADMIN],
 }
 
 /**

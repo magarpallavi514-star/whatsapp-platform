@@ -349,7 +349,7 @@ function CheckoutContent() {
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-400 py-12 px-4 mt-16">
         <div className="max-w-7xl mx-auto text-center">
-          <p>© 2026 Pixels WhatsApp Platform. All rights reserved.</p>
+          <p>© 2026 Replysys. All rights reserved.</p>
         </div>
       </footer>
     </div>

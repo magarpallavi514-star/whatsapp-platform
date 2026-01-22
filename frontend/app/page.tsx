@@ -25,6 +25,7 @@ import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { API_URL } from "@/lib/config/api"
 import Navbar from "@/components/Navbar"
+import Footer from "@/components/Footer"
 
 export default function LandingPage() {
   const router = useRouter()
@@ -235,9 +236,7 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="py-12 px-4 bg-gray-900 text-gray-400 text-center">
-        <p>© 2026 Pixels WhatsApp Platform. Made in India 🇮🇳</p>
-      </footer>
+      <Footer />
     </div>
   )
 }

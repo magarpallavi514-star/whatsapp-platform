@@ -10,7 +10,8 @@ import {
   getOrganizationById,
   updateOrganization,
   deleteOrganization,
-  migrateBillingDates
+  migrateBillingDates,
+  generatePaymentLink
 } from '../controllers/organizationsController.js';
 
 const router = express.Router();
@@ -24,7 +25,7 @@ router.get('/', getAllOrganizations);
 
 /**
  * @route   POST /api/admin/organizations
- * @desc    Create new organization/user
+ * @desc    Create new organization/user (FREE - no invoice)
  * @access  Admin only (requires JWT auth)
  */
 router.post('/', createOrganization);
@@ -35,6 +36,13 @@ router.post('/', createOrganization);
  * @access  Admin only (requires JWT auth)
  */
 router.post('/migrate/billing-dates', migrateBillingDates);
+
+/**
+ * @route   POST /api/admin/organizations/:id/generate-payment-link
+ * @desc    Generate payment link for a client (creates invoice + subscription)
+ * @access  Admin only (requires JWT auth)
+ */
+router.post('/:id/generate-payment-link', generatePaymentLink);
 
 /**
  * @route   GET /api/admin/organizations/:id

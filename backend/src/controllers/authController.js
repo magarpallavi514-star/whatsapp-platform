@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { generateToken } from '../middlewares/jwtAuth.js';
 import Account from '../models/Account.js';
+import User from '../models/User.js';
 
 /**
  * Auth Controller
@@ -218,10 +219,44 @@ export const login = async (req, res) => {
       });
     }
     
-    // User not found
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid email or password'
+    // Check for registered user in database
+    console.log('🔍 Checking User collection for:', email);
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      console.log('❌ User not found:', email);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+    
+    // Check password (plain text for now - should be hashed in production)
+    if (!user.password || user.password !== password) {
+      console.log('❌ Invalid password for user:', email);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+    
+    // User authenticated - generate token
+    const userData = {
+      email: user.email,
+      accountId: user.accountId,
+      name: user.name || user.email,
+      role: user.role || 'user',
+      _id: user._id
+    };
+    
+    const token = generateToken(userData);
+    console.log('✅ User logged in:', email);
+    
+    return res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: userData
     });
     
   } catch (error) {

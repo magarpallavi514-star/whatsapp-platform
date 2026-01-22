@@ -2,9 +2,12 @@
 
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { MessageSquare } from 'lucide-react'
+import { MessageSquare, Menu, X } from 'lucide-react'
+import { useState } from 'react'
 
 export default function Navbar() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
   return (
     <nav className="fixed top-0 w-full bg-white/95 backdrop-blur-sm z-50 border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,15 +23,18 @@ export default function Navbar() {
           </Link>
 
           {/* Links - Hidden on mobile */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-8">
             <Link href="/#features" className="text-sm text-gray-600 hover:text-green-600 transition">
               Features
             </Link>
-            <Link href="/#pricing" className="text-sm text-gray-600 hover:text-green-600 transition">
+            <Link href="/solutions" className="text-sm text-gray-600 hover:text-green-600 transition">
+              Solutions
+            </Link>
+            <Link href="/pricing" className="text-sm text-gray-600 hover:text-green-600 transition">
               Pricing
             </Link>
-            <Link href="/#faq" className="text-sm text-gray-600 hover:text-green-600 transition">
-              FAQ
+            <Link href="/about" className="text-sm text-gray-600 hover:text-green-600 transition">
+              About
             </Link>
             <Link href="/auth/login">
               <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-50">
@@ -41,7 +47,67 @@ export default function Navbar() {
               </Button>
             </Link>
           </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? (
+              <X className="h-6 w-6 text-gray-600" />
+            ) : (
+              <Menu className="h-6 w-6 text-gray-600" />
+            )}
+          </button>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden pb-4 border-t border-gray-200 bg-white">
+            <div className="flex flex-col gap-4 pt-4">
+              <Link
+                href="/#features"
+                className="text-sm text-gray-600 hover:text-green-600 transition"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Features
+              </Link>
+              <Link
+                href="/solutions"
+                className="text-sm text-gray-600 hover:text-green-600 transition"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Solutions
+              </Link>
+              <Link
+                href="/pricing"
+                className="text-sm text-gray-600 hover:text-green-600 transition"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Pricing
+              </Link>
+              <Link
+                href="/about"
+                className="text-sm text-gray-600 hover:text-green-600 transition"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                About
+              </Link>
+              <div className="pt-2 border-t border-gray-200 flex flex-col gap-2">
+                <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full">
+                    Login
+                  </Button>
+                </Link>
+                <Link href="/auth/register" onClick={() => setMobileMenuOpen(false)}>
+                  <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                    Start Free
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   )
