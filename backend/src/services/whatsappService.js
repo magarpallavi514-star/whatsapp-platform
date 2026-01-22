@@ -18,12 +18,29 @@ class WhatsAppService {
   
   /**
    * Get phone number config with decrypted token
-   * @param {string} accountId 
+   * Handles both STRING and ObjectId accountId formats
+   * @param {string|ObjectId} accountId 
    * @param {string} phoneNumberId 
    */
   async getPhoneConfig(accountId, phoneNumberId) {
-    const config = await PhoneNumber.findOne({ 
-      accountId, 
+    // accountId might be a STRING from Conversation: "695a15a5c526dbe7c085ece2"
+    // But PhoneNumber.accountId is stored as OBJECTID
+    // Convert to ObjectId if it looks like one
+    
+    let queryAccountId = accountId;
+    
+    // If accountId is a string that looks like a 24-char hex (valid ObjectId format)
+    if (typeof accountId === 'string' && /^[a-f0-9]{24}$/.test(accountId)) {
+      try {
+        queryAccountId = new (require('mongoose')).Types.ObjectId(accountId);
+      } catch (err) {
+        // Keep as string if conversion fails
+        queryAccountId = accountId;
+      }
+    }
+    
+    const config = await PhoneNumber.findOne({
+      accountId: queryAccountId,
       phoneNumberId,
       isActive: true 
     }).select('+accessToken'); // CRITICAL: explicitly select encrypted field

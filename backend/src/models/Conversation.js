@@ -10,7 +10,7 @@ import mongoose from 'mongoose';
 const conversationSchema = new mongoose.Schema({
   // Multi-tenant isolation
   accountId: {
-    type: String,
+    type: mongoose.Schema.Types.Mixed, // Support both String and ObjectId
     required: true,
     index: true
   },

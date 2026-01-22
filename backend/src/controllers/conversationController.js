@@ -12,7 +12,9 @@ import whatsappService from '../services/whatsappService.js';
  */
 export const getConversations = async (req, res) => {
   try {
-    const accountId = req.accountId; // From auth middleware
+    // Conversation.accountId is stored as STRING (Account._id.toString())
+    // So convert req.account._id to string for matching
+    const accountId = req.account._id.toString();
     const { phoneNumberId, status, limit = 50 } = req.query;
     
     const query = { accountId };
