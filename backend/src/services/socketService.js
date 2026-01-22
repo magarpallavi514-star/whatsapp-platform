@@ -13,7 +13,10 @@ export const initSocketIO = (server) => {
       origin: [
         'http://localhost:3000',
         'https://whatsapp-platform-nine.vercel.app',
-        'https://mpiyush15-whatsapp-platform.vercel.app'
+        'https://mpiyush15-whatsapp-platform.vercel.app',
+        'https://replysys.com',
+        'https://www.replysys.com',
+        process.env.FRONTEND_URL
       ].filter(Boolean),
       credentials: true,
     },
