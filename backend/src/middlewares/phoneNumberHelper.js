@@ -12,8 +12,17 @@ import PhoneNumber from '../models/PhoneNumber.js';
 
 export const resolvePhoneNumber = async (req, res, next) => {
   try {
-    const accountId = req.accountId; // Set by auth middleware
+    // Get accountId as ObjectId (req.account._id) not STRING (req.accountId)
+    const accountId = req.account?._id || req.accountId;
     let phoneNumberId = req.body.phoneNumberId || req.query.phoneNumberId;
+    
+    if (!accountId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Account not found.',
+        hint: 'Make sure you are logged in'
+      });
+    }
     
     // SIMPLE MODE: Auto-detect if phoneNumberId not provided
     if (!phoneNumberId) {
@@ -82,7 +91,8 @@ export const resolvePhoneNumber = async (req, res, next) => {
  */
 export const optionalPhoneNumber = async (req, res, next) => {
   try {
-    const accountId = req.accountId;
+    // Get accountId as ObjectId (req.account._id) not STRING (req.accountId)
+    const accountId = req.account?._id || req.accountId;
     const phoneNumberId = req.query.phoneNumberId;
     
     // If phoneNumberId provided, validate it
