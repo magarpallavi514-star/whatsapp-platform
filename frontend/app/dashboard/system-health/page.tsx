@@ -141,6 +141,5 @@ export default function SystemHealthPage() {
         </div>
       </div>
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

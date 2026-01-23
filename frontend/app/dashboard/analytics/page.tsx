@@ -131,6 +131,5 @@ export default function AnalyticsPage() {
         </div>
       </div>
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

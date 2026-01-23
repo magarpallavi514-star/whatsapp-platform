@@ -1014,7 +1014,6 @@ export default function OrganizationsPage() {
         </div>
       )}
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError(null)} />}
   )
 }
 

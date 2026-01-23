@@ -261,6 +261,5 @@ export default function PricingCards() {
         </div>
       </div>
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   );
 }

@@ -240,6 +240,5 @@ export default function LandingPage() {
       {/* FOOTER */}
       <Footer />
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

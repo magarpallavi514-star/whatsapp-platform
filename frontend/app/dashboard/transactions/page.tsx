@@ -287,6 +287,5 @@ export default function TransactionsPage() {
         )}
       </div>
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError(null)} />}
   )
 }

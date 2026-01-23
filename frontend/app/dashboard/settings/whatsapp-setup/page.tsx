@@ -272,5 +272,6 @@ export default function WhatsAppSetupPage() {
           </div>
         )}
       </div>
-    </div>    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}  )
+    </div>
+  )
 }

@@ -1116,6 +1116,5 @@ export default function ChatbotPage() {
         </div>
       )}
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

@@ -305,6 +305,5 @@ export default function PricingPage() {
 
       <Footer />
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

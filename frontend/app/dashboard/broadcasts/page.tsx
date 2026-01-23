@@ -783,6 +783,5 @@ export default function BroadcastsPage() {
         </div>
       )}
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

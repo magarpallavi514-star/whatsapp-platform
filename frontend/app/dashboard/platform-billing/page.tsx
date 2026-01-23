@@ -291,6 +291,5 @@ export default function PlatformBillingPage() {
         )}
       </div>
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

@@ -280,7 +280,9 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
+
+      {/* Main Content */}
+      <div className={`transition-all duration-300 ${
         sidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
       }`}>
         {/* Top Header */}

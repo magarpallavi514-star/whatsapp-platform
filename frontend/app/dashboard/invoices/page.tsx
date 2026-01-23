@@ -428,6 +428,5 @@ export default function InvoicesPage() {
         </div>
       )}
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

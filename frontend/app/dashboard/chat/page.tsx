@@ -1165,6 +1165,5 @@ export default function ChatPage() {
         )}
       </div>
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

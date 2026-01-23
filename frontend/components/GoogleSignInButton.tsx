@@ -76,7 +76,6 @@ export function GoogleSignInButton({ onSuccess, onError }: GoogleSignInProps) {
     <>
       {/* This will be rendered by GoogleOAuthProvider's GoogleLogin component */}
       {/* See the updated login page for implementation details */}
-      {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
     </>
   );
 }

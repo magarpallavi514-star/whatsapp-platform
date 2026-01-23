@@ -243,6 +243,5 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

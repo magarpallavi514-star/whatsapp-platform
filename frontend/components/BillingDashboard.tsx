@@ -326,6 +326,5 @@ export default function BillingDashboard() {
         </div>
       )}
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError(null)} />}
   );
 }

@@ -932,6 +932,5 @@ function Step6Review({ campaign }: { campaign: CampaignData }) {
         </p>
       </div>
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError('')} />}
   );
 }

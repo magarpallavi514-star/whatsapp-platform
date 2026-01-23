@@ -374,6 +374,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

@@ -1385,6 +1385,5 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError(null)} />}
   )
 }

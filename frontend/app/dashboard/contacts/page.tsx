@@ -796,6 +796,5 @@ export default function ContactsPage() {
         </div>
       )}
     </div>
-    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

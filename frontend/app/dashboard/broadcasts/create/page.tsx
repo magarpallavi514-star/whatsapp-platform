@@ -808,5 +808,6 @@ export default function CreateBroadcastPage() {
           </div>
         </form>
       </div>
-    </div>    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}  )
+    </div>
+  )
 }
