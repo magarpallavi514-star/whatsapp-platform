@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Users, Plus, Upload, Download, Search, MoreVertical, Edit, Trash2, X, Tag, Mail, Phone as PhoneIcon, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { authService } from "@/lib/auth"
-import { socket } from "@/lib/socket"
+import { getSocket } from "@/lib/socket"
 
 interface Contact {
   _id: string
@@ -363,14 +363,17 @@ export default function ContactsPage() {
       fetchContacts()
     }
 
-    // Subscribe to socket events
-    socket.on('new_message', handleNewMessage)
-    socket.on('conversation_update', handleConversationUpdate)
+    // Get socket instance and subscribe to events
+    const socket = getSocket()
+    if (socket) {
+      socket.on('new_message', handleNewMessage)
+      socket.on('conversation_update', handleConversationUpdate)
 
-    // Cleanup listeners on unmount
-    return () => {
-      socket.off('new_message', handleNewMessage)
-      socket.off('conversation_update', handleConversationUpdate)
+      // Cleanup listeners on unmount
+      return () => {
+        socket.off('new_message', handleNewMessage)
+        socket.off('conversation_update', handleConversationUpdate)
+      }
     }
   }, [])
 
