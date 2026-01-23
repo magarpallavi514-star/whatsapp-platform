@@ -55,7 +55,7 @@ export const getChatbots = async (req, res) => {
       : 0;
     
     const totalMessages = await Message.countDocuments({ 
-      accountId, 
+      accountId: req.account._id, 
       direction: 'inbound' 
     });
     const automationRate = totalMessages > 0 
@@ -359,7 +359,7 @@ export const getChatbotInteractions = async (req, res) => {
     // Find messages that triggered this rule
     // You can track this by adding a metadata field to messages
     const interactions = await Message.find({
-      accountId,
+      accountId: req.account._id,
       direction: 'inbound',
       'metadata.triggeredRule': id
     })
