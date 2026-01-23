@@ -14,7 +14,7 @@ const GRAPH_API_URL = 'https://graph.facebook.com/v21.0';
  */
 export const getTemplates = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account.accountId || req.accountId; // Use String accountId for Template model
     const { status, category } = req.query;
     
     const query = { accountId, deleted: false };
@@ -54,7 +54,7 @@ export const getTemplates = async (req, res) => {
  */
 export const getTemplate = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account.accountId || req.accountId; // Use String accountId for Template model
     const { id } = req.params;
     
     const template = await Template.findOne({ 
@@ -319,7 +319,7 @@ export const deleteTemplate = async (req, res) => {
  */
 export const submitTemplateToMeta = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account.accountId || req.accountId; // Use STRING accountId for Template model
     const { id } = req.params;
 
     // Get template
@@ -370,7 +370,7 @@ export const submitTemplateToMeta = async (req, res) => {
 
     // Get phone number config to get WABA ID and access token
     const phoneConfig = await PhoneNumber.findOne({ 
-      accountId: req.account._id, 
+      accountId: accountId,  // Use STRING accountId - PhoneNumber stores as String
       isActive: true 
     }).select('+accessToken');
 
@@ -490,9 +490,8 @@ export const submitTemplateToMeta = async (req, res) => {
  */
 export const syncTemplates = async (req, res) => {
   try {
-    // Use req.account._id (ObjectId) instead of req.accountId (string)
-    // Phone numbers are stored with ObjectId accountId in database
-    const accountId = req.account._id;
+    // Use STRING accountId from JWT - PhoneNumber stores accountId as String
+    const accountId = req.account.accountId || req.accountId;
     
     // Get phone number config to get WABA ID and access token
     const phoneConfig = await PhoneNumber.findOne({ 

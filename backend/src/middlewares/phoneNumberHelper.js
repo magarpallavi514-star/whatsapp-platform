@@ -12,8 +12,8 @@ import PhoneNumber from '../models/PhoneNumber.js';
 
 export const resolvePhoneNumber = async (req, res, next) => {
   try {
-    // Get accountId as ObjectId (req.account._id) not STRING (req.accountId)
-    const accountId = req.account?._id || req.accountId;
+    // Get STRING accountId from JWT (matches PhoneNumber.accountId field type)
+    const accountId = req.account.accountId || req.accountId;
     let phoneNumberId = req.body.phoneNumberId || req.query.phoneNumberId;
     
     if (!accountId) {

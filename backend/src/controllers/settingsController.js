@@ -14,9 +14,15 @@ import { broadcastPhoneStatusChange } from '../services/socketService.js';
  */
 export const getPhoneNumbers = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    // PhoneNumber collection stores accountId as ObjectId (_id from Account)
+    const accountId = req.account.id || req.account._id; // Use ObjectId from account
     
-    console.log('📱 [GET PHONE NUMBERS] Fetching status for account:', accountId?.toString?.() || accountId);
+    console.log('📱 [GET PHONE NUMBERS] Fetching status for account:');
+    console.log('  req.account.id:', req.account.id);
+    console.log('  req.account._id:', req.account._id);
+    console.log('  accountId used for query:', accountId);
+    console.log('  accountId type:', typeof accountId);
+    console.log('  accountId toString():', String(accountId));
     
     if (!accountId) {
       console.error('❌ NO ACCOUNT ID IN REQUEST!');
@@ -26,25 +32,9 @@ export const getPhoneNumbers = async (req, res) => {
       });
     }
     
-    // Build query to find phone numbers by:
-    // 1. String accountId (from JWT token)
-    // 2. MongoDB ObjectId (if account has both accountId and _id)
-    let mongoAccountId = null;
-    
-    // Try to find the account's MongoDB _id if we only have the accountId string
-    try {
-      const account = await Account.findOne({ accountId }).select('_id');
-      if (account) {
-        mongoAccountId = account._id;
-      }
-    } catch (e) {
-      console.log('  Note: Could not lookup account._id:', e.message);
-    }
-    
-    // Query using both possible IDs
-    const query = mongoAccountId 
-      ? { $or: [{ accountId }, { accountId: mongoAccountId }] }
-      : { accountId };
+    // Query using ObjectId accountId - PhoneNumber stores accountId as ObjectId
+    const query = { accountId };
+    console.log('  Query object:', JSON.stringify(query, null, 2));
     
     const phoneNumbers = await PhoneNumber.find(query)
       .select('-accessToken') // Don't expose token

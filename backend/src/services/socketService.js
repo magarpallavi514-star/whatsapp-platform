@@ -159,58 +159,181 @@ export const initSocketIO = (server) => {
 };
 
 /**
- * Broadcast new message to all users in a conversation
+ * ✅ CRITICAL FIX: Broadcast new message with error handling
+ * Validates io instance, catches broadcast failures, logs for debugging
  * Called from webhook or message controller
  */
 export const broadcastNewMessage = (io, conversationId, message) => {
-  io.to(`conversation:${conversationId}`).emit('new_message', {
-    conversationId,
-    message,
-    timestamp: new Date().toISOString(),
-  });
+  // ✅ CRITICAL: Validate io instance exists
+  if (!io) {
+    console.error('❌ Socket.io instance is null - cannot broadcast new message');
+    return;
+  }
+  
+  try {
+    const payload = {
+      conversationId,
+      message,
+      timestamp: new Date().toISOString(),
+    };
+    
+    console.log('📡 Broadcasting new message:', {
+      room: `conversation:${conversationId}`,
+      messageId: message._id,
+      type: message.messageType
+    });
+    
+    // ✅ Emit with acknowledgment callback to detect failures
+    io.to(`conversation:${conversationId}`).emit('new_message', payload, (err) => {
+      if (err) {
+        console.error('❌ Broadcast new_message failed:', {
+          room: `conversation:${conversationId}`,
+          error: err.message
+        });
+      } else {
+        console.log('✅ Broadcast new_message successful');
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error broadcasting new message:', {
+      error: error.message,
+      conversationId,
+      stack: error.stack
+    });
+  }
 };
 
 /**
- * Broadcast conversation update to all users
+ * ✅ CRITICAL FIX: Broadcast conversation update with error handling
  */
 export const broadcastConversationUpdate = (io, accountId, conversation) => {
-  io.to(`user:${accountId}`).emit('conversation_update', {
-    conversation,
-    timestamp: new Date().toISOString(),
-  });
+  // ✅ CRITICAL: Validate io instance exists
+  if (!io) {
+    console.error('❌ Socket.io instance is null - cannot broadcast conversation update');
+    return;
+  }
+  
+  try {
+    const payload = {
+      conversation,
+      timestamp: new Date().toISOString(),
+    };
+    
+    console.log('📡 Broadcasting conversation update:', {
+      room: `user:${accountId}`,
+      conversationId: conversation._id
+    });
+    
+    // ✅ Emit with acknowledgment callback
+    io.to(`user:${accountId}`).emit('conversation_update', payload, (err) => {
+      if (err) {
+        console.error('❌ Broadcast conversation_update failed:', {
+          room: `user:${accountId}`,
+          error: err.message
+        });
+      } else {
+        console.log('✅ Broadcast conversation_update successful');
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error broadcasting conversation update:', {
+      error: error.message,
+      accountId,
+      stack: error.stack
+    });
+  }
 };
 
 /**
- * Broadcast message status update
+ * ✅ CRITICAL FIX: Broadcast message status update with error handling
  */
 export const broadcastMessageStatus = (io, conversationId, messageId, status) => {
-  io.to(`conversation:${conversationId}`).emit('message_status', {
-    messageId,
-    status,
-    timestamp: new Date().toISOString(),
-  });
+  // ✅ CRITICAL: Validate io instance exists
+  if (!io) {
+    console.error('❌ Socket.io instance is null - cannot broadcast message status');
+    return;
+  }
+  
+  try {
+    const payload = {
+      messageId,
+      status,
+      timestamp: new Date().toISOString(),
+    };
+    
+    console.log('📡 Broadcasting message status:', {
+      room: `conversation:${conversationId}`,
+      messageId,
+      status
+    });
+    
+    // ✅ Emit with acknowledgment callback
+    io.to(`conversation:${conversationId}`).emit('message_status', payload, (err) => {
+      if (err) {
+        console.error('❌ Broadcast message_status failed:', {
+          room: `conversation:${conversationId}`,
+          error: err.message
+        });
+      } else {
+        console.log('✅ Broadcast message_status successful');
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error broadcasting message status:', {
+      error: error.message,
+      conversationId,
+      messageId,
+      stack: error.stack
+    });
+  }
 };
 
 /**
- * Broadcast phone status change to all users in account
+ * ✅ CRITICAL FIX: Broadcast phone status change with error handling
  * Called when phone connection test succeeds/fails
  */
 export const broadcastPhoneStatusChange = (io, accountId, phoneNumber) => {
-  console.log('📡 Broadcasting phone status change:', {
-    accountId,
-    phoneNumberId: phoneNumber.phoneNumberId,
-    isActive: phoneNumber.isActive,
-    qualityRating: phoneNumber.qualityRating
-  });
+  // ✅ CRITICAL: Validate io instance exists
+  if (!io) {
+    console.error('❌ Socket.io instance is null - cannot broadcast phone status');
+    return;
+  }
   
-  io.to(`user:${accountId}`).emit('phone_status_changed', {
-    phoneNumberId: phoneNumber.phoneNumberId,
-    isActive: phoneNumber.isActive,
-    qualityRating: phoneNumber.qualityRating,
-    displayPhoneNumber: phoneNumber.displayPhoneNumber,
-    lastTestedAt: phoneNumber.lastTestedAt,
-    verifiedName: phoneNumber.verifiedName,
-    status: phoneNumber.isActive ? 'ACTIVE' : 'INACTIVE',
-    timestamp: new Date().toISOString(),
-  });
+  try {
+    console.log('📡 Broadcasting phone status change:', {
+      accountId,
+      phoneNumberId: phoneNumber.phoneNumberId,
+      isActive: phoneNumber.isActive,
+      qualityRating: phoneNumber.qualityRating
+    });
+    
+    const payload = {
+      phoneNumberId: phoneNumber.phoneNumberId,
+      isActive: phoneNumber.isActive,
+      qualityRating: phoneNumber.qualityRating,
+      displayPhoneNumber: phoneNumber.displayPhoneNumber,
+      lastTestedAt: phoneNumber.lastTestedAt,
+      verifiedName: phoneNumber.verifiedName,
+      status: phoneNumber.isActive ? 'ACTIVE' : 'INACTIVE',
+      timestamp: new Date().toISOString(),
+    };
+    
+    // ✅ Emit with acknowledgment callback
+    io.to(`user:${accountId}`).emit('phone_status_changed', payload, (err) => {
+      if (err) {
+        console.error('❌ Broadcast phone_status_changed failed:', {
+          room: `user:${accountId}`,
+          error: err.message
+        });
+      } else {
+        console.log('✅ Broadcast phone_status_changed successful');
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error broadcasting phone status:', {
+      error: error.message,
+      accountId,
+      stack: error.stack
+    });
+  }
 };

@@ -142,7 +142,7 @@ export default function ChatPage() {
     setIsLoading(true)
     try {
       const response = await fetch(
-        `${API_URL}/conversations/${encodeURIComponent(conversationId)}/messages`,
+        `${API_URL}/conversations/${encodeURIComponent(conversationId)}/messages?limit=500&hours=24`,
         {
           headers: getHeaders(),
         }

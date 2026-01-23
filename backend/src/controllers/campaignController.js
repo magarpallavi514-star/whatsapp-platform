@@ -5,7 +5,7 @@ import campaignService from '../services/campaignService.js';
  */
 export const getAvailableSegments = async (req, res) => {
   try {
-    const { accountId } = req.params;
+    const accountId = req.account.accountId || req.accountId; // Use STRING from JWT, not URL params
 
     const segments = await campaignService.getAvailableSegments(accountId);
 
@@ -26,7 +26,8 @@ export const getAvailableSegments = async (req, res) => {
  */
 export const createCampaign = async (req, res) => {
   try {
-    const { accountId, phoneNumberId } = req.params;
+    const accountId = req.account.accountId || req.accountId; // Use STRING from JWT, not URL params
+    const phoneNumberId = req.params.phoneNumberId || req.body.phoneNumberId; // Only phoneNumberId from params
     const data = req.body;
 
     const campaign = await campaignService.createCampaign(accountId, phoneNumberId, data);
@@ -49,7 +50,8 @@ export const createCampaign = async (req, res) => {
  */
 export const getCampaigns = async (req, res) => {
   try {
-    const { accountId, phoneNumberId } = req.params;
+    const accountId = req.account.accountId || req.accountId; // Use STRING from JWT
+    const phoneNumberId = req.params.phoneNumberId;
     const filters = {
       status: req.query.status,
       type: req.query.type,

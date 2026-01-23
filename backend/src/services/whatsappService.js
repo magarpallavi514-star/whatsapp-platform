@@ -19,26 +19,19 @@ class WhatsAppService {
   
   /**
    * Get phone number config with decrypted token
-   * Handles both STRING and ObjectId accountId formats
-   * @param {string|ObjectId} accountId 
+   * Handles STRING accountId format (Account.accountId, not MongoDB _id)
+   * @param {string} accountId 
    * @param {string} phoneNumberId 
    */
   async getPhoneConfig(accountId, phoneNumberId) {
-    // accountId might be a STRING from Conversation: "695a15a5c526dbe7c085ece2"
-    // But PhoneNumber.accountId is stored as OBJECTID
-    // Convert to ObjectId if it looks like one
+    // accountId is a STRING from JWT: "6971e3a706837a5539992bee"
+    // PhoneNumber.accountId is stored as STRING (matches Account.accountId)
+    // NO conversion needed - use STRING directly
     
     let queryAccountId = accountId;
     
-    // If accountId is a string that looks like a 24-char hex (valid ObjectId format)
-    if (typeof accountId === 'string' && /^[a-f0-9]{24}$/.test(accountId)) {
-      try {
-        queryAccountId = new (require('mongoose')).Types.ObjectId(accountId);
-      } catch (err) {
-        // Keep as string if conversion fails
-        queryAccountId = accountId;
-      }
-    }
+    // Keep accountId as STRING - PhoneNumber model stores accountId as String
+    // Do NOT convert to ObjectId
     
     const config = await PhoneNumber.findOne({
       accountId: queryAccountId,

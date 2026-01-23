@@ -3,7 +3,22 @@ import Notification from '../models/Notification.js';
 
 export const getNotifications = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    // Debug JWT auth
+    console.log('🔔 GET /notifications');
+    console.log('  req.account:', !!req.account);
+    console.log('  req.accountId:', !!req.accountId);
+    
+    const accountId = req.account.accountId || req.accountId;  // Use STRING for Notification model
+    
+    if (!accountId) {
+      console.error('❌ No accountId found in request');
+      return res.status(401).json({
+        success: false,
+        error: 'No account information found'
+      });
+    }
+    
+    console.log('  Using accountId:', accountId);
     const { limit = 20, skip = 0, unreadOnly = false } = req.query;
 
     const result = await notificationService.getNotifications(accountId, {
@@ -17,7 +32,7 @@ export const getNotifications = async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error getting notifications:', error);
+    console.error('❌ Error getting notifications:', error);
     res.status(400).json({
       success: false,
       error: error.message
@@ -27,7 +42,7 @@ export const getNotifications = async (req, res) => {
 
 export const markAsRead = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account.accountId || req.accountId; // Use STRING for Notification model
     const { notificationId } = req.params;
 
     const notification = await notificationService.markAsRead(notificationId, accountId);
@@ -54,7 +69,7 @@ export const markAsRead = async (req, res) => {
 
 export const markAllAsRead = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account.accountId || req.accountId; // Use STRING for Notification model
 
     const result = await notificationService.markAllAsRead(accountId);
 

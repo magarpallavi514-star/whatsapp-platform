@@ -47,8 +47,21 @@ export const requireJWT = async (req, res, next) => {
       role: decoded.role
     };
 
-    // Look up account in database to get full account object with _id
-    const account = await Account.findOne({ accountId: decoded.accountId });
+    // Look up account in database
+    // Try findById first if accountId looks like ObjectId, otherwise use findOne
+    let account;
+    
+    // Check if accountId is a valid MongoDB ObjectId format
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(decoded.accountId);
+    
+    if (isValidObjectId) {
+      // accountId is a valid ObjectId - use findById
+      account = await Account.findById(decoded.accountId);
+    } else {
+      // accountId is a custom string (like "pixels_internal") - use findOne with accountId field
+      account = await Account.findOne({ accountId: decoded.accountId });
+    }
+    
     if (!account) {
       console.error('❌ Account not found for accountId:', decoded.accountId);
       return res.status(401).json({

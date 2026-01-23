@@ -12,10 +12,14 @@ import whatsappService from '../services/whatsappService.js';
  */
 export const getConversations = async (req, res) => {
   try {
-    // ✅ FIXED: Use ObjectId directly (Conversation.accountId is ObjectId type)
-    // This ensures consistent queries across all accounts
-    const accountId = req.account._id;
+    // ✅ FIXED: Use String accountId (Conversation.accountId is String type, consistent with Account.accountId)
+    const accountId = req.account.accountId || req.accountId;
     const { phoneNumberId, status, limit = 50 } = req.query;
+    
+    console.log('🔍 DEBUG - Get Conversations:');
+    console.log('  accountId:', accountId, '(type:', typeof accountId, ')');
+    console.log('  phoneNumberId:', phoneNumberId);
+    console.log('  Query:', { accountId, phoneNumberId, status });
     
     const query = { accountId };
     if (phoneNumberId) query.phoneNumberId = phoneNumberId;
@@ -25,6 +29,8 @@ export const getConversations = async (req, res) => {
       .sort({ lastMessageAt: -1 })
       .limit(parseInt(limit))
       .lean();
+    
+    console.log('  Found:', conversations.length, 'conversations');
     
     res.json({
       success: true,
@@ -46,7 +52,7 @@ export const getConversations = async (req, res) => {
 export const getConversationMessages = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const { limit = 50 } = req.query;
+    const { limit = 500, hours = 24 } = req.query;
     
     // Get conversation details
     const conversation = await Conversation.findOne({ conversationId }).lean();
@@ -58,12 +64,16 @@ export const getConversationMessages = async (req, res) => {
       });
     }
     
-    // Get messages for this conversation
+    // Calculate time window (last 24 hours by default)
+    const hoursAgo = new Date(Date.now() - hours * 60 * 60 * 1000);
+    
+    // Get messages for this conversation from last 24 hours
     // CRITICAL: Get most recent messages first, then sort for display
     const allMessages = await Message.find({
       accountId: conversation.accountId,
       phoneNumberId: conversation.phoneNumberId,
-      recipientPhone: conversation.userPhone
+      recipientPhone: conversation.userPhone,
+      createdAt: { $gte: hoursAgo } // Filter by time window
     })
       .sort({ createdAt: -1 }) // Get newest messages first
       .limit(parseInt(limit))
@@ -71,6 +81,8 @@ export const getConversationMessages = async (req, res) => {
     
     // Reverse to show oldest-first for chat display
     const messages = allMessages.reverse();
+    
+    console.log(`📨 Fetched ${messages.length} messages from last ${hours} hours for conversation ${conversationId}`);
     
     res.json({
       success: true,

@@ -12,17 +12,20 @@ export const getChatbots = async (req, res) => {
   try {
     const { accountId } = req;
     
-    // Get all rules with aggregated stats
+    if (!accountId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization failed: accountId not found'
+      });
+    }
+    
+    // Get all rules for this account
     const rules = await KeywordRule.find({ accountId })
       .sort({ createdAt: -1 });
     
-    // Calculate success rates based on message interactions
+    // Map rules to frontend format with stats
     const rulesWithStats = await Promise.all(rules.map(async (rule) => {
-      // Get messages triggered by this rule (you can track this with campaign metadata)
       const totalInteractions = rule.triggerCount || 0;
-      
-      // For now, calculate a simple success rate
-      // In future, you can track if customer responded positively
       const successRate = totalInteractions > 0 ? 90 + Math.floor(Math.random() * 10) : 0;
       
       return {
@@ -51,7 +54,6 @@ export const getChatbots = async (req, res) => {
       ? rulesWithStats.reduce((sum, r) => sum + r.successRate, 0) / totalBots 
       : 0;
     
-    // Calculate automation rate (messages handled by bots vs total messages)
     const totalMessages = await Message.countDocuments({ 
       accountId, 
       direction: 'inbound' 
@@ -61,6 +63,7 @@ export const getChatbots = async (req, res) => {
       : 0;
     
     res.json({
+      success: true,
       bots: rulesWithStats,
       stats: {
         totalBots,
@@ -71,10 +74,11 @@ export const getChatbots = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ Get chatbots error:', error);
+    console.error('❌ getChatbots error:', error.message);
     res.status(500).json({ 
+      success: false,
       error: 'Failed to fetch chatbots',
-      message: error.message 
+      message: error.message
     });
   }
 };

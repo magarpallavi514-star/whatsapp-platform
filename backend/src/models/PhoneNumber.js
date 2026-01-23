@@ -2,20 +2,11 @@ import mongoose from 'mongoose';
 import crypto from 'crypto';
 
 const phoneNumberSchema = new mongoose.Schema({
-  // Multi-tenant isolation
-  // Can be either ObjectId (preferred) or String for backward compatibility
+  // Multi-tenant isolation - Use STRING to match Account.accountId and other models
   accountId: {
-    type: mongoose.Schema.Types.Mixed,
-    ref: 'Account',
+    type: String,
     required: true,
-    index: true,
-    set: function(value) {
-      // If it's a string that looks like a valid ObjectId, convert it
-      if (typeof value === 'string' && mongoose.Types.ObjectId.isValid(value) && value.length === 24) {
-        return new mongoose.Types.ObjectId(value);
-      }
-      return value;
-    }
+    index: true
   },
   
   // WABA Credentials

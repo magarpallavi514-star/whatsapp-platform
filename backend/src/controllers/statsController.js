@@ -14,7 +14,7 @@ import PhoneNumber from '../models/PhoneNumber.js';
  */
 export const getStats = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account.accountId || req.accountId; // Use STRING for WhatsApp models
     const { phoneNumberId } = req.query;
     
     // Get messaging stats from service
@@ -77,7 +77,7 @@ export const getStats = async (req, res) => {
  */
 export const getDailyStats = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account.accountId || req.accountId; // Use STRING for WhatsApp models
     const { phoneNumberId, days = 7 } = req.query;
     
     const query = { accountId };

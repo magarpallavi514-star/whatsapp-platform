@@ -129,13 +129,8 @@ export default function ChatbotPage() {
     try {
       const token = authService.getToken();
       console.log('🔑 Token available:', !!token);
-      console.log('🔑 Token from storage:', localStorage.getItem('token')?.substring(0, 20) + '...');
       
       const headers = getHeaders();
-      console.log('📤 Headers being sent:', { 
-        hasAuthorization: !!headers.Authorization,
-        authHeaderValue: headers.Authorization?.substring(0, 30) + '...'
-      });
       
       const response = await fetch(`${API_URL}/chatbots`, {
         headers: getHeaders()
@@ -145,7 +140,6 @@ export default function ChatbotPage() {
       
       if (response.status === 401) {
         console.error('❌ Authentication failed - Token missing or expired');
-        console.error('Token in storage:', !!authService.getToken());
         alert('Authentication failed. Please login again.');
         setLoading(false);
         return;
@@ -154,13 +148,17 @@ export default function ChatbotPage() {
       if (response.ok) {
         const data = await response.json();
         console.log('✅ Fetched bots:', data.bots?.length || 0);
+        console.log('✅ Fetched stats:', data.stats);
         setBots(data.bots || []);
         setStats(data.stats || stats);
       } else {
-        console.error('❌ Failed to fetch bots:', response.status);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Failed to fetch bots:', response.status, errorData);
+        alert(`Failed to fetch chatbots: ${errorData.message || response.statusText}`);
       }
     } catch (error) {
       console.error('Failed to fetch chatbots:', error);
+      alert('Failed to fetch chatbots: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }
