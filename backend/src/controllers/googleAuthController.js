@@ -99,7 +99,7 @@ const googleAuthController = {
         user.lastLogin = new Date();
         await user.save();
 
-        account = await Account.findById(user.accountId);
+        account = await Account.findOne({ accountId: user.accountId }); // user.accountId is String field
         console.log('✅ Google user logged in:', { userId: user._id, email });
       }
 

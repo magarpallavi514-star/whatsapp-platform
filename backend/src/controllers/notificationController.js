@@ -8,7 +8,7 @@ export const getNotifications = async (req, res) => {
     console.log('  req.account:', !!req.account);
     console.log('  req.accountId:', !!req.accountId);
     
-    const accountId = req.account.accountId || req.accountId;  // Use STRING for Notification model
+    const accountId = req.account.accountId; // Notification model uses String accountId
     
     if (!accountId) {
       console.error('❌ No accountId found in request');
@@ -42,7 +42,7 @@ export const getNotifications = async (req, res) => {
 
 export const markAsRead = async (req, res) => {
   try {
-    const accountId = req.account.accountId || req.accountId; // Use STRING for Notification model
+    const accountId = req.account.accountId; // Notification model uses String accountId
     const { notificationId } = req.params;
 
     const notification = await notificationService.markAsRead(notificationId, accountId);
@@ -69,7 +69,7 @@ export const markAsRead = async (req, res) => {
 
 export const markAllAsRead = async (req, res) => {
   try {
-    const accountId = req.account.accountId || req.accountId; // Use STRING for Notification model
+    const accountId = req.account.accountId; // Notification model uses String accountId
 
     const result = await notificationService.markAllAsRead(accountId);
 

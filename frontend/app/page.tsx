@@ -23,6 +23,7 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
+import { ErrorToast } from "@/components/ErrorToast"
 import { API_URL } from "@/lib/config/api"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
@@ -32,6 +33,7 @@ export default function LandingPage() {
   const [pricingPlans, setPricingPlans] = useState<any[]>([])
   const [isLoadingPlans, setIsLoadingPlans] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [error, setError] = useState<string>("")  
 
   /* FALLBACK PLANS */
   const fallbackPlans = [
@@ -238,5 +240,6 @@ export default function LandingPage() {
       {/* FOOTER */}
       <Footer />
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

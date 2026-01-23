@@ -20,7 +20,7 @@ export const getChatbots = async (req, res) => {
     }
     
     // Get all rules for this account
-    const rules = await KeywordRule.find({ accountId })
+    const rules = await KeywordRule.find({ accountId: req.account._id })
       .sort({ createdAt: -1 });
     
     // Map rules to frontend format with stats
@@ -313,7 +313,7 @@ export const deleteChatbot = async (req, res) => {
     
     const rule = await KeywordRule.findOneAndDelete({ 
       _id: id, 
-      accountId 
+      accountId: req.account._id 
     });
     
     if (!rule) {

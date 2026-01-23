@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { FileText, Download, Eye, Search, Filter, Calendar, DollarSign, CheckCircle, Clock, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ErrorToast } from "@/components/ErrorToast"
 import { API_URL } from "@/lib/config/api"
 import { authService, UserRole } from "@/lib/auth"
 
@@ -427,5 +428,6 @@ export default function InvoicesPage() {
         </div>
       )}
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

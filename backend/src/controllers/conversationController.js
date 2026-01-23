@@ -12,8 +12,8 @@ import whatsappService from '../services/whatsappService.js';
  */
 export const getConversations = async (req, res) => {
   try {
-    // ✅ FIXED: Use String accountId (Conversation.accountId is String type, consistent with Account.accountId)
-    const accountId = req.account.accountId || req.accountId;
+    // Use ObjectId for database queries (Conversation.accountId is ObjectId type)
+    const accountId = req.account._id;
     const { phoneNumberId, status, limit = 50 } = req.query;
     
     console.log('🔍 DEBUG - Get Conversations:');

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle, X } from 'lucide-react';
+import { ErrorToast } from './ErrorToast';
 
 interface Subscription {
   _id: string;
@@ -325,5 +326,6 @@ export default function BillingDashboard() {
         </div>
       )}
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError(null)} />}
   );
 }

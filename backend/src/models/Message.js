@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 
 const messageSchema = new mongoose.Schema({
-  // Multi-tenant isolation - Use String (matches Account.accountId field)
+  // Multi-tenant isolation - Use ObjectId (MongoDB standard)
   accountId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Account',
     required: true,
     index: true
   },

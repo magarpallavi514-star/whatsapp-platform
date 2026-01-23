@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Bot, Plus, Play, Pause, Edit, Trash2, X, Search, MessageSquare, Zap, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ErrorToast } from "@/components/ErrorToast"
 import { authService } from "@/lib/auth"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050';
@@ -1115,5 +1116,6 @@ export default function ChatbotPage() {
         </div>
       )}
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

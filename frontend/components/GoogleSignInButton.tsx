@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { GoogleCredentialResponse, CredentialResponse } from '@react-oauth/google';
 import { useRouter } from 'next/navigation';
+import { ErrorToast } from './ErrorToast';
 
 interface GoogleSignInProps {
   onSuccess?: () => void;
@@ -11,6 +12,7 @@ interface GoogleSignInProps {
 
 export function GoogleSignInButton({ onSuccess, onError }: GoogleSignInProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>("");
   const router = useRouter();
 
   const handleGoogleLogin = useCallback(async (credentialResponse: CredentialResponse) => {
@@ -74,6 +76,7 @@ export function GoogleSignInButton({ onSuccess, onError }: GoogleSignInProps) {
     <>
       {/* This will be rendered by GoogleOAuthProvider's GoogleLogin component */}
       {/* See the updated login page for implementation details */}
+      {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
     </>
   );
 }

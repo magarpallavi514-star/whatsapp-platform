@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { ArrowLeft, Send, AlertCircle, X, Search, CheckCircle, Loader } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ErrorToast } from "@/components/ErrorToast"
 import Link from "next/link"
 import { authService } from "@/lib/auth"
 import { useRouter } from "next/navigation"
@@ -807,6 +808,5 @@ export default function CreateBroadcastPage() {
           </div>
         </form>
       </div>
-    </div>
-  )
+    </div>    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}  )
 }

@@ -3,6 +3,7 @@
 import { MessageSquare, Megaphone, Users, FileText, Bot, Building2, Activity, DollarSign, CheckCircle, Clock, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
+import { ErrorToast } from "@/components/ErrorToast"
 import { authService, UserRole } from "@/lib/auth"
 import { API_URL } from "@/lib/config/api"
 
@@ -10,6 +11,7 @@ export default function DashboardPage() {
   const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [subscription, setSubscription] = useState<any>(null)
   const [loadingSubscription, setLoadingSubscription] = useState(true)
+  const [error, setError] = useState("")
 
   useEffect(() => {
     const user = authService.getCurrentUser()
@@ -241,5 +243,6 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

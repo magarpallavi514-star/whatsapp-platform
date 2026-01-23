@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { Button } from '@/components/ui/button'
+import { ErrorToast } from '@/components/ErrorToast'
 import { API_URL } from '@/lib/config/api'
 
 export default function PricingPage() {
@@ -14,6 +15,7 @@ export default function PricingPage() {
   const [plans, setPlans] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [error, setError] = useState<string>("")
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
 
   useEffect(() => {
@@ -303,5 +305,6 @@ export default function PricingPage() {
 
       <Footer />
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

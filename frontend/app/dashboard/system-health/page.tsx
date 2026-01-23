@@ -1,8 +1,11 @@
 "use client"
 
 import { Activity, AlertCircle, CheckCircle, Server, Database, Zap, Clock } from "lucide-react"
+import { ErrorToast } from "@/components/ErrorToast"
+import { useState } from "react"
 
 export default function SystemHealthPage() {
+  const [error, setError] = useState("")
   const services = [
     { name: "API Server", status: "Healthy", uptime: "99.9%", responseTime: "45ms", lastCheck: "Just now" },
     { name: "WhatsApp API", status: "Healthy", uptime: "99.7%", responseTime: "120ms", lastCheck: "1 min ago" },
@@ -138,5 +141,6 @@ export default function SystemHealthPage() {
         </div>
       </div>
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

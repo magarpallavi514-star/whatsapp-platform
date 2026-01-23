@@ -392,7 +392,7 @@ export const createInvoice = async (req, res) => {
     }
 
     // Check if invoice already exists for this account
-    const existingInvoice = await Invoice.findOne({ accountId: user.accountId });
+    const existingInvoice = await Invoice.findOne({ accountId: req.account._id });
     if (existingInvoice && amount === 0) {
       return res.status(400).json({
         success: false,
@@ -488,7 +488,7 @@ export const generatePaymentLink = async (req, res) => {
     }
 
     // Check if subscription already exists
-    let subscription = await Subscription.findOne({ accountId: user.accountId });
+    let subscription = await Subscription.findOne({ accountId: req.account._id });
     
     if (subscription) {
       return res.status(400).json({

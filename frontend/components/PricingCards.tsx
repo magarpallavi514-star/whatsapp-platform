@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Check, X } from 'lucide-react';
+import { ErrorToast } from './ErrorToast';
 import Link from 'next/link';
 
 interface Feature {
@@ -31,6 +32,7 @@ export default function PricingCards() {
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -259,5 +261,6 @@ export default function PricingCards() {
         </div>
       </div>
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   );
 }

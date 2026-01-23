@@ -2,6 +2,7 @@
 
 import { MessageSquare, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ErrorToast } from "@/components/ErrorToast"
 import Link from "next/link"
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
@@ -373,5 +374,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

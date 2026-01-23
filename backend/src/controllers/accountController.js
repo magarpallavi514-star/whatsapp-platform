@@ -32,6 +32,7 @@ export const createAccount = async (req, res) => {
     }
     
     // Check if account already exists
+    // For creation endpoint, verify by accountId field (not by _id)
     const existing = await Account.findOne({ accountId });
     if (existing) {
       return res.status(409).json({
@@ -145,6 +146,7 @@ export const getAccount = async (req, res) => {
   try {
     const { accountId } = req.params;
     
+    // For admin endpoints, accountId from params is a String identifier
     const account = await Account.findOne({ accountId })
       .select('-apiKeyHash');
     
@@ -224,6 +226,7 @@ export const deleteAccount = async (req, res) => {
   try {
     const { accountId } = req.params;
     
+    // For admin endpoints, delete by accountId string field
     const account = await Account.findOneAndDelete({ accountId });
     
     if (!account) {
@@ -259,6 +262,7 @@ export const regenerateApiKey = async (req, res) => {
   try {
     const { accountId } = req.params;
     
+    // For admin endpoints, search by accountId string field
     const account = await Account.findOne({ accountId });
     
     if (!account) {
@@ -343,9 +347,8 @@ export const revokeApiKey = async (req, res) => {
  */
 export const getMyAccount = async (req, res) => {
   try {
-    const accountId = req.accountId; // From auth middleware
-    
-    const account = await Account.findOne({ accountId })
+    // Use ObjectId from authenticated request
+    const account = await Account.findById(req.account._id)
       .select('-apiKeyHash');
     
     if (!account) {
@@ -379,9 +382,8 @@ export const getMyAccount = async (req, res) => {
  */
 export const regenerateMyApiKey = async (req, res) => {
   try {
-    const accountId = req.accountId; // From auth middleware
-    
-    const account = await Account.findOne({ accountId });
+    // Use ObjectId from authenticated request
+    const account = await Account.findById(req.account._id);
     
     if (!account) {
       return res.status(404).json({
@@ -417,11 +419,8 @@ export const regenerateMyApiKey = async (req, res) => {
  */
 export const generateIntegrationToken = async (req, res) => {
   try {
-    const accountId = req.accountId;
-    
-    console.log('🔑 Generating integration token for account:', accountId);
-    
-    const account = await Account.findOne({ accountId }).select('+integrationTokenHash');
+    // Use ObjectId from authenticated request
+    const account = await Account.findById(req.account._id).select('+integrationTokenHash');
     
     if (!account) {
       console.error('❌ Account not found:', accountId);
@@ -468,9 +467,8 @@ export const generateIntegrationToken = async (req, res) => {
  */
 export const getIntegrationToken = async (req, res) => {
   try {
-    const accountId = req.accountId;
-    
-    const account = await Account.findOne({ accountId }).select('integrationTokenPrefix integrationTokenCreatedAt integrationTokenLastUsedAt');
+    // Use ObjectId from authenticated request
+    const account = await Account.findById(req.account._id).select('integrationTokenPrefix integrationTokenCreatedAt integrationTokenLastUsedAt');
     
     if (!account) {
       return res.status(404).json({
@@ -504,9 +502,8 @@ export const getIntegrationToken = async (req, res) => {
  */
 export const revokeIntegrationToken = async (req, res) => {
   try {
-    const accountId = req.accountId;
-    
-    const account = await Account.findOne({ accountId });
+    // Use ObjectId from authenticated request
+    const account = await Account.findById(req.account._id);
     
     if (!account) {
       return res.status(404).json({

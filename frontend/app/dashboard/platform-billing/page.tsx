@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { DollarSign, TrendingUp, CreditCard, Users, Download, RefreshCw, Clock, CheckCircle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ErrorToast } from "@/components/ErrorToast"
 import { API_URL } from "@/lib/config/api"
 
 export default function PlatformBillingPage() {
@@ -11,6 +12,7 @@ export default function PlatformBillingPage() {
   const [autoSyncOrgs, setAutoSyncOrgs] = useState(true)
   const [orgSyncLoading, setOrgSyncLoading] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState("")
 
   useEffect(() => {
     fetchOrganizations()
@@ -289,5 +291,6 @@ export default function PlatformBillingPage() {
         )}
       </div>
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

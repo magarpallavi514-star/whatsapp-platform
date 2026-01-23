@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { FileText, Plus, Search, MoreVertical, CheckCircle, Clock, XCircle, Edit, Trash2, Eye, X, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ErrorToast } from "@/components/ErrorToast"
 import { authService } from "@/lib/auth"
 
 interface Template {
@@ -948,5 +949,6 @@ export default function TemplatesPage() {
         </div>
       )}
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

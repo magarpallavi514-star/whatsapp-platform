@@ -2,6 +2,7 @@
 
 import { AlertCircle, CheckCircle, Loader, MessageSquare, ArrowLeft, Zap, Shield, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ErrorToast } from '@/components/ErrorToast'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'

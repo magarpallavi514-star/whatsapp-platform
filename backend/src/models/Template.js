@@ -3,7 +3,8 @@ import mongoose from 'mongoose';
 const templateSchema = new mongoose.Schema({
   // Multi-tenant isolation
   accountId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Account',
     required: true,
     index: true
   },

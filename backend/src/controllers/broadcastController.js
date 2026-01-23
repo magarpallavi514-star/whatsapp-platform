@@ -48,8 +48,8 @@ export const createBroadcast = async (req, res) => {
 
 export const getBroadcasts = async (req, res) => {
   try {
-    // Get accountId from JWT middleware - use STRING for WhatsApp models
-    const accountId = req.account.accountId || req.accountId;
+    // Get accountId from JWT middleware - use ObjectId for database queries
+    const accountId = req.account._id;
     const phoneNumberId = req.params.phoneNumberId || 'any';
     const { status, limit, skip } = req.query;
 
@@ -74,8 +74,8 @@ export const getBroadcasts = async (req, res) => {
 
 export const getBroadcastById = async (req, res) => {
   try {
-    // Get accountId from JWT middleware - use STRING for WhatsApp models
-    const accountId = req.account.accountId || req.accountId;
+    // Get accountId from JWT middleware - use ObjectId for database queries
+    const accountId = req.account._id;
     
     // Get broadcastId from params - could be from different route formats:
     // 1. GET /api/broadcasts/:broadcastId
@@ -144,7 +144,7 @@ export const updateBroadcast = async (req, res) => {
 
 export const startBroadcast = async (req, res) => {
   try {
-    const accountId = req.account.accountId || req.accountId;
+    const accountId = req.account._id; // Use ObjectId for database queries
     const broadcastId = req.params.broadcastId;
 
     // First get the broadcast to extract phoneNumberId
@@ -232,8 +232,8 @@ export const getBroadcastStats = async (req, res) => {
 
 export const deleteBroadcast = async (req, res) => {
   try {
-    // Get accountId from JWT middleware - use STRING for WhatsApp models
-    const accountId = req.account.accountId || req.accountId;
+    // Get accountId from JWT middleware - use ObjectId for database queries
+    const accountId = req.account._id;
     
     // Get broadcastId from params
     const broadcastId = req.params.broadcastId || req.params.accountId;

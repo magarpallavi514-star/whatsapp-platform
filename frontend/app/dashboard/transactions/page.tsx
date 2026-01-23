@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { AlertCircle, CheckCircle, Loader, Download, CreditCard, Calendar, Package, TrendingUp, ArrowUpRight, X, RefreshCw, Clock, ArrowDown, ArrowUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ErrorToast } from '@/components/ErrorToast'
 import { API_URL } from '@/lib/config/api'
 import Link from 'next/link'
 
@@ -286,5 +287,6 @@ export default function TransactionsPage() {
         )}
       </div>
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError(null)} />}
   )
 }

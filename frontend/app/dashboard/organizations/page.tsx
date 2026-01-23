@@ -3,6 +3,7 @@
 import { Building2, Plus, Search, MoreVertical, Users, TrendingUp, DollarSign, Activity, X, Bell, Mail } from "lucide-react"
 import { FaWhatsapp } from "react-icons/fa"
 import { Button } from "@/components/ui/button"
+import { ErrorToast } from "@/components/ErrorToast"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { API_URL } from "@/lib/config/api"
@@ -1013,6 +1014,7 @@ export default function OrganizationsPage() {
         </div>
       )}
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError(null)} />}
   )
 }
 

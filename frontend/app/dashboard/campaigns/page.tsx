@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AlertCircle } from 'lucide-react';
+import { ErrorToast } from '@/components/ErrorToast';
 import { authService } from '@/lib/auth';
 
 interface Campaign {
@@ -612,5 +613,6 @@ export default function CampaignsPage() {
         )}
       </div>
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError('')} />}
   );
 }

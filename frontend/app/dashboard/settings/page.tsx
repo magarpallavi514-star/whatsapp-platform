@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { MessageSquare, User, Lock, Shield, Plus, Trash2, CheckCircle, XCircle, RefreshCw, Phone, X, Copy, Eye, EyeOff, Key } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ErrorToast } from "@/components/ErrorToast"
 import { authService } from "@/lib/auth"
 
 interface PhoneNumber {
@@ -1384,5 +1385,6 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError(null)} />}
   )
 }

@@ -2,9 +2,10 @@ import mongoose from 'mongoose';
 import crypto from 'crypto';
 
 const phoneNumberSchema = new mongoose.Schema({
-  // Multi-tenant isolation - Use STRING to match Account.accountId and other models
+  // Multi-tenant isolation - Use ObjectId (MongoDB standard)
   accountId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Account',
     required: true,
     index: true
   },

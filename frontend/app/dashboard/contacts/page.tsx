@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Users, Plus, Upload, Download, Search, MoreVertical, Edit, Trash2, X, Tag, Mail, Phone as PhoneIcon, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ErrorToast } from "@/components/ErrorToast"
 import { authService } from "@/lib/auth"
 import { getSocket } from "@/lib/socket"
 
@@ -795,5 +796,6 @@ export default function ContactsPage() {
         </div>
       )}
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

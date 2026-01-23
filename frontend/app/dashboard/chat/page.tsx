@@ -20,6 +20,7 @@ import {
   Play,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ErrorToast } from "@/components/ErrorToast"
 import { authService } from "@/lib/auth"
 import { 
   initSocket, 
@@ -1164,5 +1165,6 @@ export default function ChatPage() {
         )}
       </div>
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

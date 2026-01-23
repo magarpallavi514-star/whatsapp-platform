@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { MessageSquare, CheckCircle2, AlertCircle, ExternalLink, Copy, ArrowRight, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ErrorToast } from "@/components/ErrorToast"
 import { useRouter } from "next/navigation"
 
 export default function WhatsAppSetupPage() {
@@ -271,6 +272,5 @@ export default function WhatsAppSetupPage() {
           </div>
         )}
       </div>
-    </div>
-  )
+    </div>    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}  )
 }

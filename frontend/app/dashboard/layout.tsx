@@ -7,6 +7,7 @@ import {
   Activity, DollarSign, Sliders, CreditCard, Receipt
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ErrorToast } from "@/components/ErrorToast"
 import { API_URL } from "@/lib/config/api"
 import Link from "next/link"
 import { useState, useEffect } from "react"
@@ -22,6 +23,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [error, setError] = useState("")
   const pathname = usePathname()
   const router = useRouter()
 
@@ -278,9 +280,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </div>
-
-      {/* Main Content */}
-      <div className={`transition-all duration-300 ${
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
         sidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
       }`}>
         {/* Top Header */}

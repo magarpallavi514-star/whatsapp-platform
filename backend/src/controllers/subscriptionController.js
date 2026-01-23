@@ -387,7 +387,7 @@ export const createOrder = async (req, res) => {
     }
 
     // Get account - accountId from JWT is a string (accountId field), not MongoDB _id
-    const account = await Account.findOne({ accountId });
+    const account = await Account.findById(req.account._id);
     if (!account) {
       return res.status(404).json({
         success: false,
@@ -548,7 +548,7 @@ export const verifyPayment = async (req, res) => {
     }
 
     // Find the payment record
-    const payment = await Payment.findOne({ orderId, accountId });
+    const payment = await Payment.findOne({ orderId, accountId: req.account._id });
 
     if (!payment) {
       return res.status(404).json({

@@ -95,7 +95,7 @@ async function activateSubscription(payment) {
     const { accountId, planId } = payment;
 
     // Check if subscription already exists
-    let subscription = await Subscription.findOne({ accountId });
+    let subscription = await Subscription.findOne({ accountId: req.account._id });
 
     if (subscription) {
       // Update existing subscription
@@ -264,7 +264,7 @@ export const retryPayment = async (req, res) => {
     const { orderId } = req.params;
     const accountId = req.account._id;
 
-    const payment = await Payment.findOne({ orderId, accountId });
+    const payment = await Payment.findOne({ orderId, accountId: req.account._id });
     if (!payment) {
       return res.status(404).json({
         success: false,

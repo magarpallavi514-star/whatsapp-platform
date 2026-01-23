@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { AlertCircle, CheckCircle, Loader, Save, Plus, Trash2, Edit2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ErrorToast } from '@/components/ErrorToast'
 import { authService, UserRole } from '@/lib/auth'
 import { API_URL } from '@/lib/config/api'
 import { useRouter } from 'next/navigation'
@@ -892,5 +893,6 @@ export default function WebsiteSettingsPage() {
         </Button>
       </div>
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError(null)} />}
   )
 }

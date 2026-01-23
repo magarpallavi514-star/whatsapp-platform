@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { ErrorToast } from '@/components/ErrorToast';
 import { authService } from '@/lib/auth';
 
 interface CampaignData {
@@ -931,5 +932,6 @@ function Step6Review({ campaign }: { campaign: CampaignData }) {
         </p>
       </div>
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError('')} />}
   );
 }

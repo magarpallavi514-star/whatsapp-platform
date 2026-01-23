@@ -1,8 +1,11 @@
 "use client"
 
 import { BarChart3, TrendingUp, Users, MessageSquare, DollarSign, Target } from "lucide-react"
+import { ErrorToast } from "@/components/ErrorToast"
+import { useState } from "react"
 
 export default function AnalyticsPage() {
+  const [error, setError] = useState("")
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -128,5 +131,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }

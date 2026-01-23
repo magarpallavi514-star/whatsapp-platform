@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, X } from 'lucide-react';
+import { ErrorToast } from './ErrorToast';
 
 interface Feature {
   _id: string;
@@ -575,5 +576,6 @@ export default function SuperadminPricingDashboard() {
         </div>
       )}
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError(null)} />}
   );
 }

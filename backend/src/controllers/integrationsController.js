@@ -94,14 +94,14 @@ export const getConversationsViaIntegration = async (req, res) => {
     });
 
     // Fetch conversations
-    const conversations = await Conversation.find({ accountId })
+    const conversations = await Conversation.find({ accountId: req.account._id })
       .sort({ lastMessageAt: -1 })
       .skip(parseInt(offset))
       .limit(parseInt(limit))
       .lean();
 
     // Get total count
-    const totalCount = await Conversation.countDocuments({ accountId });
+    const totalCount = await Conversation.countDocuments({ accountId: req.account._id });
 
     return res.json({
       success: true,
@@ -523,11 +523,11 @@ export const deleteContactViaIntegration = async (req, res) => {
  */
 export const getAccountConfigViaIntegration = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountObjectId = req.account._id; // Use ObjectId for database queries
 
-    console.log(`⚙️ [INTEGRATION] Fetching account config:`, { accountId });
+    console.log(`⚙️ [INTEGRATION] Fetching account config:`, { accountId: req.accountId });
 
-    const account = await Account.findOne({ accountId }).select('accountId name email type plan status').lean();
+    const account = await Account.findById(accountObjectId).select('accountId name email type plan status').lean();
 
     if (!account) {
       return res.status(404).json({
@@ -537,7 +537,7 @@ export const getAccountConfigViaIntegration = async (req, res) => {
     }
 
     // Get phone numbers
-    const phoneNumbers = await PhoneNumber.find({ accountId }).select('phoneNumberId displayName phone isActive').lean();
+    const phoneNumbers = await PhoneNumber.find({ accountId: accountObjectId }).select('phoneNumberId displayName phone isActive').lean();
 
     return res.json({
       success: true,
@@ -571,10 +571,10 @@ export const getAccountConfigViaIntegration = async (req, res) => {
  */
 export const healthCheckViaIntegration = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account._id;
 
     // Quick database check
-    const account = await Account.findOne({ accountId }).select('_id').lean();
+    const account = await Account.findById(accountId).select('_id').lean();
 
     if (!account) {
       return res.status(404).json({
@@ -710,7 +710,7 @@ export const getTemplatesViaIntegration = async (req, res) => {
 
     console.log(`📋 [INTEGRATION] Fetching templates:`, { accountId, limit, offset, status, category });
 
-    const query = { accountId, deleted: false };
+    const query = { accountId: req.account._id, deleted: false };
     if (status) query.status = status;
     if (category) query.category = category;
 
@@ -723,11 +723,11 @@ export const getTemplatesViaIntegration = async (req, res) => {
     const totalCount = await Template.countDocuments(query);
 
     const stats = {
-      approved: await Template.countDocuments({ accountId, status: 'approved', deleted: false }),
-      pending: await Template.countDocuments({ accountId, status: 'pending', deleted: false }),
-      rejected: await Template.countDocuments({ accountId, status: 'rejected', deleted: false }),
-      draft: await Template.countDocuments({ accountId, status: 'draft', deleted: false }),
-      total: await Template.countDocuments({ accountId, deleted: false })
+      approved: await Template.countDocuments({ accountId: req.account._id, status: 'approved', deleted: false }),
+      pending: await Template.countDocuments({ accountId: req.account._id, status: 'pending', deleted: false }),
+      rejected: await Template.countDocuments({ accountId: req.account._id, status: 'rejected', deleted: false }),
+      draft: await Template.countDocuments({ accountId: req.account._id, status: 'draft', deleted: false }),
+      total: await Template.countDocuments({ accountId: req.account._id, deleted: false })
     };
 
     return res.json({

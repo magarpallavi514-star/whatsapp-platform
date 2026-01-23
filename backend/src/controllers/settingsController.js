@@ -478,9 +478,9 @@ export const testPhoneNumber = async (req, res) => {
  */
 export const getProfile = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account._id;
     
-    const account = await Account.findOne({ accountId })
+    const account = await Account.findById(accountId)
       .select('name email company phone timezone')
       .lean();
     
@@ -510,10 +510,10 @@ export const getProfile = async (req, res) => {
  */
 export const updateProfile = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account._id;
     const { name, email, company, phone, timezone } = req.body;
     
-    const account = await Account.findOne({ accountId });
+    const account = await Account.findById(accountId);
     
     if (!account) {
       return res.status(404).json({
@@ -557,7 +557,7 @@ export const updateProfile = async (req, res) => {
  */
 export const getApiKeys = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account._id;
     
     const apiKeys = await ApiKey.find({ accountId })
       .select('name keyPrefix lastUsedAt createdAt expiresAt')
@@ -583,7 +583,7 @@ export const getApiKeys = async (req, res) => {
  */
 export const generateApiKey = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account._id;
     const { name } = req.body;
     
     if (!name || !name.trim()) {
@@ -630,7 +630,7 @@ export const generateApiKey = async (req, res) => {
  */
 export const deleteApiKey = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account._id;
     const { id } = req.params;
     
     const apiKey = await ApiKey.findOne({ _id: id, accountId });
@@ -663,7 +663,7 @@ export const deleteApiKey = async (req, res) => {
  */
 export const changePassword = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account._id;
     const { currentPassword, newPassword } = req.body;
     
     if (!currentPassword || !newPassword) {
@@ -680,7 +680,7 @@ export const changePassword = async (req, res) => {
       });
     }
     
-    const account = await Account.findOne({ accountId }).select('+password');
+    const account = await Account.findById(req.account._id).select('+password');
     
     if (!account) {
       return res.status(404).json({

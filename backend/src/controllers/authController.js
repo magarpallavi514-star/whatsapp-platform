@@ -60,6 +60,7 @@ export const login = async (req, res) => {
       
       // Ensure demo account exists in database
       try {
+        // Note: For demo/hardcoded account, we search by accountId field (String) since it's not from auth token
         let account = await Account.findOne({ accountId: user.accountId });
         
         if (!account) {
@@ -179,6 +180,7 @@ export const login = async (req, res) => {
       
       // Ensure admin account exists in database
       try {
+        // Note: For demo/hardcoded account, we search by accountId field (String) since it's not from auth token
         let account = await Account.findOne({ accountId: ADMIN_USER.accountId });
         
         if (!account) {

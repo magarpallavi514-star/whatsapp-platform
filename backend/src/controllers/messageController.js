@@ -26,10 +26,10 @@ export const setSocketIO = (socketIOInstance) => {
  */
 export const sendTextMessage = async (req, res) => {
   try {
-    // Use STRING accountId for WhatsApp model consistency
-    // req.account.accountId is STRING (from jwtAuth middleware, matches Model accountId field)
-    // Message model stores accountId as String
-    const accountId = req.account.accountId || req.accountId;
+    // Use ObjectId for database queries - all models use ObjectId
+    // req.account._id is the ObjectId (from jwtAuth middleware)
+    // Message model stores accountId as ObjectId
+    const accountId = req.account._id;
     const phoneNumberId = req.phoneNumberId; // From phoneNumberHelper (auto-detected or validated)
     const { recipientPhone, message, campaign } = req.body;
     
@@ -102,7 +102,7 @@ export const sendTextMessage = async (req, res) => {
  */
 export const sendTemplateMessage = async (req, res) => {
   try {
-    const accountId = req.account.accountId || req.accountId; // Use String accountId for WhatsApp models
+    const accountId = req.account._id; // Use ObjectId for database queries
     const phoneNumberId = req.phoneNumberId; // From phoneNumberHelper middleware
     const { recipientPhone, templateName, params, campaign } = req.body;
     
@@ -150,7 +150,7 @@ export const sendTemplateMessage = async (req, res) => {
  */
 export const getMessages = async (req, res) => {
   try {
-    const accountId = req.account.accountId || req.accountId; // Use String accountId for WhatsApp models
+    const accountId = req.account._id; // Use ObjectId for database queries
     const { phoneNumberId, status, limit = 50, skip = 0 } = req.query;
     
     const query = { accountId };

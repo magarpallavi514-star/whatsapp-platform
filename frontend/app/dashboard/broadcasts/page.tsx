@@ -2,6 +2,7 @@
 
 import { Megaphone, Plus, Calendar, Users, Send, MoreVertical, Loader, Edit, Trash2, Clock, CheckCircle, Eye, X, Copy, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ErrorToast } from "@/components/ErrorToast"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { authService } from "@/lib/auth"
@@ -782,5 +783,6 @@ export default function BroadcastsPage() {
         </div>
       )}
     </div>
+    {error && <ErrorToast message={error} onDismiss={() => setError("")} />}
   )
 }
