@@ -93,16 +93,14 @@ export const addPhoneNumber = async (req, res) => {
       });
     }
     
-    // Get the account's MongoDB _id
-    const account = await Account.findOne({ accountId }).select('_id');
-    if (!account) {
+    // ✅ FIXED: Use req.account._id directly - jwtAuth already looked up the account
+    const mongoAccountId = req.account._id;
+    if (!mongoAccountId) {
       return res.status(404).json({
         success: false,
-        message: 'Account not found'
+        message: 'Account not found - authentication failed'
       });
     }
-    
-    const mongoAccountId = account._id;
     
     // Check if phone number already exists FOR THIS ACCOUNT (check both IDs)
     const existing = await PhoneNumber.findOne({ 
