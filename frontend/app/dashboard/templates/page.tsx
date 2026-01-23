@@ -190,6 +190,29 @@ export default function TemplatesPage() {
     }
   }
 
+  // Submit template to Meta
+  const submitTemplateToMeta = async (id: string) => {
+    if (!confirm("Submit this template to Meta for approval?")) return
+    
+    try {
+      const response = await fetch(`${API_URL}/templates/${id}/submit`, {
+        method: 'POST',
+        headers: getHeaders(),
+      })
+
+      const result = await response.json()
+      if (response.ok) {
+        alert(`✅ Template submitted to Meta successfully!\nTemplate ID: ${result.metaTemplateId}`)
+        fetchTemplates()
+      } else {
+        alert(`❌ Failed to submit template: ${result.message || "Unknown error"}`)
+      }
+    } catch (error) {
+      console.error("Error submitting template:", error)
+      alert("❌ Failed to submit template. Please try again.")
+    }
+  }
+
   // Sync templates from WhatsApp Manager
   const syncTemplatesFromWhatsApp = async () => {
     try {
@@ -424,6 +447,15 @@ export default function TemplatesPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
+                          {template.status === 'draft' && (
+                            <button 
+                              onClick={() => submitTemplateToMeta(template._id)}
+                              className="text-green-600 hover:text-green-700"
+                              title="Submit to Meta"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </button>
+                          )}
                           <button 
                             onClick={() => deleteTemplate(template._id)}
                             className="text-red-600 hover:text-red-700"

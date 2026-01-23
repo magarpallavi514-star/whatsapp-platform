@@ -10,7 +10,7 @@ import Contact from '../models/Contact.js';
  */
 export const getContacts = async (req, res) => {
   try {
-    const accountId = req.accountId; // From auth middleware
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { type, isOptedIn, limit = 100, skip = 0 } = req.query;
     
     const query = { accountId };
@@ -50,7 +50,7 @@ export const getContacts = async (req, res) => {
  */
 export const createContact = async (req, res) => {
   try {
-    const accountId = req.accountId; // From auth middleware
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { name, phone, whatsappNumber, email, type, tags, metadata } = req.body;
     
     if (!name || !whatsappNumber) {
@@ -172,7 +172,7 @@ export const deleteContact = async (req, res) => {
  */
 export const importContacts = async (req, res) => {
   try {
-    const accountId = req.accountId; // From auth middleware
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { contacts } = req.body;
     
     if (!Array.isArray(contacts) || contacts.length === 0) {

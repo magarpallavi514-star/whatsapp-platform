@@ -1,4 +1,5 @@
 import axios from 'axios';
+import mongoose from 'mongoose';
 import PhoneNumber from '../models/PhoneNumber.js';
 import Message from '../models/Message.js';
 import Template from '../models/Template.js';
@@ -57,6 +58,27 @@ class WhatsAppService {
       );
     }
     
+    // ✅ CRITICAL FIX: Validate token is actually decrypted
+    if (!config.accessToken) {
+      throw new Error(
+        'Access token is missing. This may indicate:\n' +
+        '1. Token encryption/decryption failed\n' +
+        '2. JWT_SECRET environment variable changed\n' +
+        '3. Database corruption\n' +
+        'Action: Reconnect your WhatsApp account in Settings.'
+      );
+    }
+    
+    // ✅ Log token status for debugging
+    console.log('📱 Phone config loaded:', {
+      phoneNumberId: config.phoneNumberId,
+      wabaId: config.wabaId,
+      isActive: config.isActive,
+      tokenLength: config.accessToken.length,
+      tokenStarts: config.accessToken.substring(0, 30),
+      hasValidFormat: !config.accessToken.startsWith('Bearer ')  // Should not have Bearer prefix here
+    });
+    
     return config;
   }
 
@@ -72,12 +94,38 @@ class WhatsAppService {
     let message;
     
     try {
+      // ✅ CRITICAL FIX: Validate phoneNumberId first
+      if (!phoneNumberId || typeof phoneNumberId !== 'string') {
+        throw new Error(
+          'Phone number not found. Phone number ID is required.\n' +
+          'This error occurs when:\n' +
+          '1. Phone number is not properly configured\n' +
+          '2. Phone number is still provisioning (quality rating not shown)\n' +
+          '3. Phone number is not assigned to this account\n\n' +
+          'Action: Go to Settings > Phone Numbers and ensure the phone has an ACTIVE status with quality rating displayed.'
+        );
+      }
+
       // Validate recipient phone FIRST before any operations
       if (!recipientPhone || typeof recipientPhone !== 'string') {
         throw new Error(`Invalid recipient phone: ${recipientPhone}. Expected non-empty string.`);
       }
 
       const config = await this.getPhoneConfig(accountId, phoneNumberId);
+      
+      // ✅ CRITICAL FIX: Validate phone is ACTIVE (not just exists)
+      if (!config.isActive) {
+        throw new Error(
+          'Phone number is not active. Cannot send messages.\n' +
+          'Action: Verify your phone number connection in Settings.'
+        );
+      }
+      
+      // ✅ CRITICAL FIX: Validate quality status
+      // Phone should have quality rating to reliably send messages
+      if (!config.qualityRating) {
+        console.warn('⚠️  Warning: Phone number quality rating not shown yet. Messages may fail temporarily.');
+      }
       
       // Clean phone number (remove + and spaces)
       const cleanPhone = recipientPhone.replace(/[\s+()-]/g, '');
@@ -136,7 +184,9 @@ class WhatsAppService {
       await message.save();
 
       // Update conversation with latest message timestamp
-      const conversationId = `${accountId}_${phoneNumberId}_${cleanPhone}`;
+      // Use ObjectId as string for conversationId consistency
+      const accountIdStr = accountId instanceof mongoose.Types.ObjectId ? accountId.toString() : accountId;
+      const conversationId = `${accountIdStr}_${phoneNumberId}_${cleanPhone}`;
       await Conversation.findOneAndUpdate(
         { conversationId },
         {
@@ -203,12 +253,26 @@ class WhatsAppService {
     let message;
     
     try {
+      // ✅ CRITICAL FIX: Validate phoneNumberId first
+      if (!phoneNumberId || typeof phoneNumberId !== 'string') {
+        throw new Error(
+          'Phone number not found. Phone number ID is required.\n' +
+          'Action: Go to Settings > Phone Numbers and ensure the phone has an ACTIVE status.'
+        );
+      }
+
       // Validate recipient phone FIRST before any operations
       if (!recipientPhone || typeof recipientPhone !== 'string') {
         throw new Error(`Invalid recipient phone: ${recipientPhone}. Expected non-empty string.`);
       }
 
       const config = await this.getPhoneConfig(accountId, phoneNumberId);
+      
+      // ✅ CRITICAL FIX: Validate phone is ACTIVE
+      if (!config.isActive) {
+        throw new Error('Phone number is not active. Cannot send template messages.');
+      }
+
       const cleanPhone = recipientPhone.replace(/[\s+()-]/g, '');
 
       console.log('📋 ========== SENDING TEMPLATE MESSAGE ==========');
@@ -227,7 +291,14 @@ class WhatsAppService {
       });
 
       if (!template) {
-        throw new Error(`Template "${templateName}" not found or not approved`);
+        throw new Error(
+          `Template "${templateName}" not found or not approved.\n` +
+          'Possible reasons:\n' +
+          '1. Template is still in DRAFT status - submit it to Meta first\n' +
+          '2. Template is PENDING approval - wait for Meta to approve it\n' +
+          '3. Template name is incorrect - check the exact name\n' +
+          'Action: Go to Messages > Templates and verify the template is APPROVED.'
+        );
       }
 
       const templateVariableCount = template.variables?.length || 0;
@@ -321,7 +392,8 @@ class WhatsAppService {
       await message.save();
 
       // Update conversation with latest message timestamp
-      const conversationId = `${accountId}_${phoneNumberId}_${cleanPhone}`;
+      const accountIdStr = accountId instanceof mongoose.Types.ObjectId ? accountId.toString() : accountId;
+      const conversationId = `${accountIdStr}_${phoneNumberId}_${cleanPhone}`;
       await Conversation.findOneAndUpdate(
         { conversationId },
         {
@@ -800,7 +872,8 @@ class WhatsAppService {
       await message.save();
 
       // Update conversation with latest message timestamp
-      const conversationId = `${accountId}_${phoneNumberId}_${cleanPhone}`;
+      const accountIdStr = accountId instanceof mongoose.Types.ObjectId ? accountId.toString() : accountId;
+      const conversationId = `${accountIdStr}_${phoneNumberId}_${cleanPhone}`;
       const mediaLabel = mediaType === 'image' ? '🖼️ Photo' : 
                          mediaType === 'video' ? '🎥 Video' : 
                          '📄 Document';

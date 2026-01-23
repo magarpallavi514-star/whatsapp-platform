@@ -12,9 +12,9 @@ import whatsappService from '../services/whatsappService.js';
  */
 export const getConversations = async (req, res) => {
   try {
-    // Conversation.accountId is stored as STRING (Account._id.toString())
-    // So convert req.account._id to string for matching
-    const accountId = req.account._id.toString();
+    // ✅ FIXED: Use ObjectId directly (Conversation.accountId is ObjectId type)
+    // This ensures consistent queries across all accounts
+    const accountId = req.account._id;
     const { phoneNumberId, status, limit = 50 } = req.query;
     
     const query = { accountId };
@@ -89,6 +89,10 @@ export const getConversationMessages = async (req, res) => {
 
 /**
  * POST /api/conversations/:conversationId/reply - Reply to conversation
+ * 
+ * CRITICAL: WhatsApp 24h session rule
+ * - Text replies only allowed within 24h of last message from user
+ * - Outside 24h window → MUST use template message
  */
 export const replyToConversation = async (req, res) => {
   try {
@@ -101,7 +105,8 @@ export const replyToConversation = async (req, res) => {
     if (!conversation) {
       return res.status(404).json({
         success: false,
-        message: 'Conversation not found'
+        message: 'Conversation not found',
+        error: 'CONVERSATION_NOT_FOUND'
       });
     }
     
@@ -111,7 +116,26 @@ export const replyToConversation = async (req, res) => {
       if (!message) {
         return res.status(400).json({
           success: false,
-          message: 'message is required for text type'
+          message: 'message is required for text type',
+          error: 'MISSING_MESSAGE'
+        });
+      }
+      
+      // ✅ CRITICAL FIX: Check 24h session window
+      // WhatsApp allows free-text replies ONLY within 24 hours of last message from user
+      const now = new Date();
+      const lastMessageTime = new Date(conversation.lastMessageAt);
+      const timeDiffMs = now - lastMessageTime;
+      const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
+      
+      if (timeDiffHours > 24) {
+        return res.status(400).json({
+          success: false,
+          message: '24h session expired. Please send a template message to reopen chat.',
+          error: 'SESSION_EXPIRED',
+          sessionExpiredAt: lastMessageTime,
+          timeSinceLastMessage: `${Math.round(timeDiffHours)} hours ago`,
+          requiredAction: 'Use template message instead'
         });
       }
       
@@ -164,9 +188,35 @@ export const replyToConversation = async (req, res) => {
     
   } catch (error) {
     console.error('❌ Reply to conversation error:', error);
-    res.status(500).json({
+    
+    // ✅ CRITICAL FIX: Return detailed error response
+    const errorMessage = error.message || 'Failed to send reply';
+    let errorType = 'REPLY_FAILED';
+    let userMessage = errorMessage;
+    let action = '';
+    
+    if (errorMessage.includes('SESSION_EXPIRED')) {
+      errorType = 'SESSION_EXPIRED';
+      userMessage = '24h session expired. Cannot send free-text message.';
+      action = 'Please send a template message to reopen the chat.';
+    } else if (errorMessage.includes('not found') || errorMessage.includes('not approved')) {
+      errorType = 'TEMPLATE_NOT_APPROVED';
+      userMessage = 'Template not found or not approved';
+      action = 'Verify the template is created and approved by Meta.';
+    } else if (errorMessage.includes('Phone number')) {
+      errorType = 'PHONE_NUMBER_ERROR';
+      userMessage = 'Phone number is not properly configured';
+      action = 'Go to Settings and verify your phone number connection.';
+    }
+    
+    res.status(400).json({
       success: false,
-      message: error.message
+      message: userMessage,
+      error: errorType,
+      details: {
+        fullError: errorMessage,
+        suggestedAction: action
+      }
     });
   }
 };

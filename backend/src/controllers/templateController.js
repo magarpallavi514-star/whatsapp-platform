@@ -14,7 +14,7 @@ const GRAPH_API_URL = 'https://graph.facebook.com/v21.0';
  */
 export const getTemplates = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { status, category } = req.query;
     
     const query = { accountId, deleted: false };
@@ -54,7 +54,7 @@ export const getTemplates = async (req, res) => {
  */
 export const getTemplate = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { id } = req.params;
     
     const template = await Template.findOne({ 
@@ -89,7 +89,7 @@ export const getTemplate = async (req, res) => {
  */
 export const createTemplate = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { name, language, category, content, variables, components, hasMedia, mediaType, mediaUrl, headerText, footerText } = req.body;
     
     // Handle file upload
@@ -224,7 +224,7 @@ export const createTemplate = async (req, res) => {
  */
 export const updateTemplate = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { id } = req.params;
     const { name, language, category, content, variables, components } = req.body;
     
@@ -278,7 +278,7 @@ export const updateTemplate = async (req, res) => {
  */
 export const deleteTemplate = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { id } = req.params;
     
     const template = await Template.findOne({ 
@@ -313,10 +313,13 @@ export const deleteTemplate = async (req, res) => {
 
 /**
  * POST /api/templates/:id/submit - Submit template to Meta for approval
+ * 
+ * CRITICAL: This submits the template to Meta Cloud API
+ * Only approved templates can be used for sending messages
  */
 export const submitTemplateToMeta = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { id } = req.params;
 
     // Get template
@@ -329,14 +332,39 @@ export const submitTemplateToMeta = async (req, res) => {
     if (!template) {
       return res.status(404).json({
         success: false,
-        message: 'Template not found'
+        message: 'Template not found',
+        error: 'TEMPLATE_NOT_FOUND'
       });
     }
 
     if (template.status !== 'draft') {
       return res.status(400).json({
         success: false,
-        message: `Template is already ${template.status}. Only draft templates can be submitted.`
+        message: `Template is already ${template.status}. Only draft templates can be submitted.`,
+        error: 'INVALID_TEMPLATE_STATUS',
+        currentStatus: template.status
+      });
+    }
+
+    // ✅ CRITICAL FIX: Validate template has all required components
+    if (!template.components || template.components.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Template has no components. Add at least a BODY component before submitting.',
+        error: 'MISSING_TEMPLATE_COMPONENTS'
+      });
+    }
+
+    // ✅ CRITICAL FIX: Validate template name is valid for Meta
+    // Meta requires lowercase, alphanumeric, underscore only
+    const validNameRegex = /^[a-z0-9_]+$/;
+    if (!validNameRegex.test(template.name)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Template name contains invalid characters. Meta allows only lowercase letters, numbers, and underscores.',
+        error: 'INVALID_TEMPLATE_NAME',
+        providedName: template.name,
+        example: 'order_confirmation_template'
       });
     }
 
@@ -349,20 +377,36 @@ export const submitTemplateToMeta = async (req, res) => {
     if (!phoneConfig || !phoneConfig.wabaId) {
       return res.status(400).json({
         success: false,
-        message: 'WhatsApp Business Account not configured. Please add your phone number first.'
+        message: 'WhatsApp Business Account not configured. Please add your phone number first.',
+        error: 'MISSING_WABA_CONFIG'
       });
     }
 
     const wabaId = phoneConfig.wabaId;
     const accessToken = phoneConfig.accessToken;
 
+    // ✅ CRITICAL FIX: Validate access token is available
+    if (!accessToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Access token not available. Phone number may not be properly configured.',
+        error: 'MISSING_ACCESS_TOKEN'
+      });
+    }
+
     // Build Meta template request
     const metaTemplate = {
       name: template.name,
-      language: template.language,
-      category: template.category,
+      language: template.language || 'en',
+      category: template.category || 'UTILITY',
       components: template.components
     };
+
+    console.log('📤 Submitting template to Meta:', {
+      wabaId,
+      templateName: template.name,
+      components: template.components.length
+    });
 
     // Submit to Meta
     const response = await axios.post(
@@ -375,13 +419,22 @@ export const submitTemplateToMeta = async (req, res) => {
 
     const metaId = response.data?.id;
 
+    if (!metaId) {
+      return res.status(500).json({
+        success: false,
+        message: 'Meta API returned no template ID. Submission may have failed.',
+        error: 'INVALID_META_RESPONSE',
+        rawResponse: response.data
+      });
+    }
+
     // Update template status and store Meta ID
     template.status = 'pending';
     template.metaTemplateId = metaId;
     template.submittedAt = new Date();
     await template.save();
 
-    console.log(`✅ Template submitted to Meta: ${template.name} (${metaId})`);
+    console.log(`✅ Template submitted to Meta: ${template.name} (ID: ${metaId})`);
 
     res.json({
       success: true,
@@ -397,9 +450,37 @@ export const submitTemplateToMeta = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Submit template error:', error.response?.data || error.message);
+    
+    // ✅ CRITICAL FIX: Return proper error response with details
+    const metaError = error.response?.data?.error;
+    const errorMessage = metaError?.message || error.message;
+    const errorCode = metaError?.code || error.response?.status;
+    
+    // Provide actionable error messages
+    let userMessage = errorMessage;
+    let action = '';
+    
+    if (errorCode === 'INVALID_TEMPLATE_NAME') {
+      userMessage = 'Template name contains invalid characters. Use only lowercase letters, numbers, and underscores.';
+      action = 'Rename your template and try again.';
+    } else if (errorCode === 100 || errorMessage?.includes('duplicate')) {
+      userMessage = 'A template with this name already exists on your Meta account.';
+      action = 'Rename your template or delete the old one from Meta first.';
+    } else if (errorCode === 400 || errorMessage?.includes('invalid')) {
+      userMessage = 'Template structure is invalid. Check your components and variables.';
+      action = 'Review your template components and try again.';
+    } else if (errorCode === 403) {
+      userMessage = 'Permission denied. Access token may be expired or invalid.';
+      action = 'Reconnect your WhatsApp account in Settings.';
+    }
+    
     res.status(500).json({
       success: false,
-      message: error.response?.data?.error?.message || error.message
+      message: userMessage,
+      error: 'TEMPLATE_SUBMISSION_FAILED',
+      metaErrorCode: errorCode,
+      suggestedAction: action,
+      rawError: errorMessage
     });
   }
 };

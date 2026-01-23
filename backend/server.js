@@ -16,6 +16,34 @@ app.io = io; // Make io available to controllers/routes
 // Setup Socket.io for controllers (pass io instance)
 setupSocketIO(io);
 
+// ✅ Add health check endpoint for Socket.io connections
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    socketConnections: io.engine.clientsCount,
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// ✅ Add Socket.io stats endpoint for debugging
+app.get('/socket-stats', (req, res) => {
+  const sockets = io.sockets.sockets;
+  const stats = {
+    totalConnections: sockets.size,
+    connections: Array.from(sockets.values()).map(socket => ({
+      id: socket.id,
+      userId: socket.userId,
+      email: socket.email,
+      transport: socket.conn?.transport?.name,
+      connected: socket.connected,
+      connectedAt: socket.handshake.issued
+    }))
+  };
+  res.json(stats);
+});
+
 // Start server function
 const startServer = async () => {
   try {
@@ -30,8 +58,20 @@ const startServer = async () => {
       console.log(`📍 Local: http://localhost:${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔌 WebSocket (Socket.io) enabled for real-time chat`);
+      console.log(`📊 Health check: GET /health`);
+      console.log(`📊 Socket stats: GET /socket-stats`);
       console.log('='.repeat(50));
     });
+    
+    // ✅ Graceful shutdown handler
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received, closing server gracefully...');
+      server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+      });
+    });
+    
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);

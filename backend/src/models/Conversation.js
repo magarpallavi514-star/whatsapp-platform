@@ -8,9 +8,10 @@ import mongoose from 'mongoose';
  * Messages are stored separately in Message model
  */
 const conversationSchema = new mongoose.Schema({
-  // Multi-tenant isolation
+  // Multi-tenant isolation - Use ObjectId (reference to Account._id)
   accountId: {
-    type: mongoose.Schema.Types.Mixed, // Support both String and ObjectId
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Account',
     required: true,
     index: true
   },

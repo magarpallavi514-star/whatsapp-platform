@@ -2,6 +2,7 @@ import PhoneNumber from '../models/PhoneNumber.js';
 import Account from '../models/Account.js';
 import ApiKey from '../models/ApiKey.js';
 import crypto from 'crypto';
+import { broadcastPhoneStatusChange } from '../services/socketService.js';
 
 /**
  * Settings Controller
@@ -13,18 +14,12 @@ import crypto from 'crypto';
  */
 export const getPhoneNumbers = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     
-    console.log('📱 [GET PHONE NUMBERS]');
-    console.log('  Account ID from middleware:', accountId);
-    console.log('  User email:', req.user?.email);
-    console.log('  User role:', req.user?.role);
+    console.log('📱 [GET PHONE NUMBERS] Fetching status for account:', accountId?.toString?.() || accountId);
     
     if (!accountId) {
       console.error('❌ NO ACCOUNT ID IN REQUEST!');
-      console.log('  req.accountId:', req.accountId);
-      console.log('  req.user:', req.user);
-      console.log('  All req keys:', Object.keys(req).filter(k => !k.startsWith('_')).slice(0, 10));
       return res.status(401).json({
         success: false,
         message: 'Account ID not found in request. Authentication failed.'
@@ -41,7 +36,6 @@ export const getPhoneNumbers = async (req, res) => {
       const account = await Account.findOne({ accountId }).select('_id');
       if (account) {
         mongoAccountId = account._id;
-        console.log('  Found MongoDB ID:', mongoAccountId);
       }
     } catch (e) {
       console.log('  Note: Could not lookup account._id:', e.message);
@@ -57,11 +51,32 @@ export const getPhoneNumbers = async (req, res) => {
       .sort({ isActive: -1, createdAt: -1 })
       .lean();
     
-    console.log('  Found phones:', phoneNumbers.length);
+    console.log('✅ Found phone numbers:', phoneNumbers.length);
+    
+    // ✅ CRITICAL FIX: Ensure status fields are included in response
+    const phoneNumbersWithStatus = phoneNumbers.map(phone => ({
+      ...phone,
+      // Ensure these fields are always present for UI
+      isActive: phone.isActive ?? false,
+      qualityRating: (phone.qualityRating || 'unknown').toLowerCase(),  // ✅ FIXED: Ensure lowercase
+      displayPhoneNumber: phone.displayPhone || phone.phoneNumberId,  // ✅ FIXED: Use correct schema field
+      lastTestedAt: phone.lastTestedAt || null,
+      verifiedName: phone.verifiedName || 'Not verified',
+      messageCount: {
+        total: phone.messageCount?.total || 0,
+        sent: phone.messageCount?.sent || 0,
+        received: phone.messageCount?.received || 0
+      }
+    }));
+    
+    console.log('📊 Returning phone numbers with status:');
+    phoneNumbersWithStatus.forEach((p, i) => {
+      console.log(`  [${i+1}] ${p.displayPhoneNumber} - Active: ${p.isActive}, Quality: ${p.qualityRating}`);
+    });
     
     res.json({
       success: true,
-      phoneNumbers
+      phoneNumbers: phoneNumbersWithStatus
     });
     
   } catch (error) {
@@ -78,7 +93,7 @@ export const getPhoneNumbers = async (req, res) => {
  */
 export const addPhoneNumber = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { phoneNumberId, wabaId, accessToken, displayName, displayPhone } = req.body;
     
     if (!phoneNumberId || !wabaId || !accessToken) {
@@ -160,7 +175,7 @@ export const addPhoneNumber = async (req, res) => {
  */
 export const updatePhoneNumber = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { id } = req.params;
     const { displayName, displayPhone, accessToken, isActive } = req.body;
     
@@ -222,7 +237,7 @@ export const updatePhoneNumber = async (req, res) => {
  */
 export const deletePhoneNumber = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { id } = req.params;
     
     const phoneNumber = await PhoneNumber.findOne({ _id: id, accountId });
@@ -263,18 +278,78 @@ export const deletePhoneNumber = async (req, res) => {
 
 /**
  * POST /api/settings/phone-numbers/:id/test - Test phone number connection
+ * 
+ * CRITICAL: Validates phone number is properly configured and ACTIVE
  */
 export const testPhoneNumber = async (req, res) => {
+  let phoneNumber;
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { id } = req.params;
     
-    const phoneNumber = await PhoneNumber.findOne({ _id: id, accountId }).select('+accessToken');
+    console.log('🧪 Testing phone number:', { id, accountId });
+    
+    // ✅ CRITICAL FIX: Fetch full phone config with access token
+    phoneNumber = await PhoneNumber.findOne({ _id: id, accountId }).select('+accessToken');
     
     if (!phoneNumber) {
+      console.error('❌ Phone number not found in DB');
       return res.status(404).json({
         success: false,
-        message: 'Phone number not found'
+        message: 'Phone number not found',
+        error: 'PHONE_NUMBER_NOT_FOUND'
+      });
+    }
+    
+    console.log('✅ Found phone number:', { 
+      phoneNumberId: phoneNumber.phoneNumberId,
+      isActive: phoneNumber.isActive,
+      hasToken: !!phoneNumber.accessToken
+    });
+    
+    // ✅ CRITICAL FIX: Verify access token exists and is valid
+    if (!phoneNumber.accessToken) {
+      console.error('❌ Access token is missing');
+      return res.status(400).json({
+        success: false,
+        message: 'Access token is missing or invalid. Please reconnect your phone number.',
+        error: 'MISSING_ACCESS_TOKEN'
+      });
+    }
+    
+    // ✅ CRITICAL FIX: Validate token format (should be alphanumeric, not include Bearer prefix)
+    const token = phoneNumber.accessToken;
+    
+    // Check if token looks decrypted (should be a long alphanumeric string)
+    // Real Meta tokens are typically 200+ characters
+    // If it's short or contains colons, it's likely still encrypted (decryption failed)
+    const isLikelyEncrypted = token.includes(':') || token.length < 50;
+    
+    if (!token || token.length < 10) {
+      console.error('❌ Token is missing or too short:', token?.substring(0, 30) || 'null');
+      return res.status(400).json({
+        success: false,
+        message: 'Access token is missing or invalid. Please reconnect your phone number.',
+        error: 'INVALID_TOKEN_FORMAT'
+      });
+    }
+    
+    if (token.includes('Bearer ')) {
+      console.error('❌ Token still has Bearer prefix (should not):', token.substring(0, 20));
+      return res.status(400).json({
+        success: false,
+        message: 'Access token format is invalid. Please reconnect your phone number.',
+        error: 'TOKEN_BEARER_PREFIX'
+      });
+    }
+    
+    if (isLikelyEncrypted) {
+      console.error('❌ Token appears encrypted/corrupted:', token.substring(0, 30));
+      return res.status(400).json({
+        success: false,
+        message: 'Access token could not be decrypted. Server configuration issue (JWT_SECRET mismatch). Please reconnect your phone number.',
+        error: 'TOKEN_DECRYPTION_FAILED',
+        hint: 'This usually means JWT_SECRET was changed. Re-add your phone number to fix this.'
       });
     }
     
@@ -282,31 +357,130 @@ export const testPhoneNumber = async (req, res) => {
     const axios = (await import('axios')).default;
     const GRAPH_API_URL = 'https://graph.facebook.com/v21.0';
     
+    console.log('🚀 Calling Meta API:', {
+      endpoint: `${GRAPH_API_URL}/${phoneNumber.phoneNumberId}`,
+      tokenLength: token.length,
+      tokenStarts: token.substring(0, 30)
+    });
+    
     const response = await axios.get(
       `${GRAPH_API_URL}/${phoneNumber.phoneNumberId}`,
       {
-        headers: { 'Authorization': `Bearer ${phoneNumber.accessToken}` }
+        headers: { 'Authorization': `Bearer ${token}` },
+        timeout: 10000 // 10 second timeout
       }
     );
     
+    console.log('✅ Meta API response:', response.data);
+    
+    // ✅ CRITICAL FIX: Validate quality rating
+    const qualityRating = response.data.quality_rating;
+    const displayPhone = response.data.display_phone_number;
+    
+    if (!qualityRating) {
+      console.warn('⚠️  Warning: Phone quality rating not shown. Phone may still be provisioning.');
+    }
+    
+    // ✅ CRITICAL FIX: Update ALL status fields and ENSURE isActive is set
     phoneNumber.lastTestedAt = new Date();
-    await phoneNumber.save();
+    phoneNumber.displayPhone = displayPhone;  // ✅ FIXED: Use correct field name from schema
+    phoneNumber.qualityRating = (qualityRating || 'yellow').toLowerCase();  // ✅ FIXED: Lowercase to match schema enum
+    phoneNumber.verifiedName = response.data.verified_name || 'Not verified';  // ✅ FIXED: Better default
+    phoneNumber.isActive = true;  // ✅ CRITICAL: Set to true if test passes
+    
+    // Save using the model (not .lean() to trigger hooks)
+    const savedPhone = await phoneNumber.save();
+    
+    console.log('✅ Phone number test successful, config updated:', {
+      phoneNumberId: savedPhone.phoneNumberId,
+      isActive: savedPhone.isActive,
+      qualityRating: savedPhone.qualityRating,
+      lastTestedAt: savedPhone.lastTestedAt
+    });
+    
+    // 🎯 CRITICAL FIX: Broadcast phone status change to frontend in real-time
+    try {
+      if (req.app && req.app.io && savedPhone) {
+        broadcastPhoneStatusChange(req.app.io, accountId, savedPhone);
+        console.log('📡 Phone status broadcast sent successfully');
+      } else {
+        console.warn('⚠️  Socket.io broadcast skipped:', {
+          hasApp: !!req.app,
+          hasIo: !!req.app?.io,
+          hasSavedPhone: !!savedPhone
+        });
+      }
+    } catch (broadcastError) {
+      console.error('⚠️  Failed to broadcast phone status:', broadcastError?.message || String(broadcastError));
+    }
     
     res.json({
       success: true,
       message: 'Connection test successful',
+      error: null,
       details: {
-        phoneNumber: response.data.display_phone_number,
-        verifiedName: response.data.verified_name,
-        qualityRating: response.data.quality_rating
+        phoneNumberId: savedPhone.phoneNumberId,
+        displayPhoneNumber: displayPhone,
+        verifiedName: savedPhone.verifiedName,
+        qualityRating: qualityRating || 'YELLOW (Provisioning)',
+        status: 'ACTIVE',
+        isActive: true,
+        lastTestedAt: new Date()
       }
     });
     
   } catch (error) {
-    console.error('❌ Test phone number error:', error);
-    res.status(500).json({
+    console.error('❌ Test phone number error:', {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      metaError: error.response?.data?.error
+    });
+    
+    // ✅ CRITICAL FIX: Return detailed error information
+    const metaError = error.response?.data?.error;
+    const errorCode = metaError?.code || error.response?.status || error.code;
+    const errorMessage = metaError?.message || error.message;
+    
+    let userMessage = 'Failed to test connection to WhatsApp API';
+    let suggestion = '';
+    let debugInfo = {};
+    
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+      userMessage = 'Connection timeout - backend cannot reach Meta API';
+      suggestion = 'Check your internet connection and firewall settings.';
+      debugInfo.timeout = true;
+    } else if (errorCode === 400 || errorMessage?.includes('Invalid')) {
+      userMessage = 'Phone Number ID is invalid or not found on Meta';
+      suggestion = 'Verify your Phone Number ID is correct and exists in your Meta business account.';
+    } else if (errorCode === 403 || errorMessage?.includes('Unauthorized') || errorMessage?.includes('Invalid OAuth')) {
+      userMessage = 'Access token is invalid or expired';
+      suggestion = 'Reconnect your WhatsApp account in Settings > Add Phone Number. Token may have expired.';
+      debugInfo.tokenInvalid = true;
+    } else if (errorCode === 404) {
+      userMessage = 'Phone number not found in WhatsApp system';
+      suggestion = 'Ensure this phone number is properly connected to your WhatsApp Business Account.';
+    } else if (errorMessage?.includes('Network') || errorMessage?.includes('ENOTFOUND')) {
+      userMessage = 'Cannot reach Meta API - network error';
+      suggestion = 'Check your internet connection and firewall. Meta may be temporarily unavailable.';
+      debugInfo.networkError = true;
+    } else if (error.message.includes('jwt')) {
+      userMessage = 'Token encryption/decryption error';
+      suggestion = 'This is a server configuration issue. Contact support.';
+      debugInfo.encryptionError = true;
+    }
+    
+    res.status(error.response?.status || 500).json({
       success: false,
-      message: error.response?.data?.error?.message || error.message
+      message: userMessage,
+      error: 'CONNECTION_TEST_FAILED',
+      metaErrorCode: errorCode,
+      details: {
+        errorMessage,
+        suggestion,
+        action: 'Please verify your configuration and try again.',
+        ...(Object.keys(debugInfo).length > 0 && { debugInfo })
+      }
     });
   }
 };

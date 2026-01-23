@@ -3,7 +3,7 @@ import Notification from '../models/Notification.js';
 
 export const getNotifications = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { limit = 20, skip = 0, unreadOnly = false } = req.query;
 
     const result = await notificationService.getNotifications(accountId, {
@@ -27,7 +27,7 @@ export const getNotifications = async (req, res) => {
 
 export const markAsRead = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { notificationId } = req.params;
 
     const notification = await notificationService.markAsRead(notificationId, accountId);
@@ -54,7 +54,7 @@ export const markAsRead = async (req, res) => {
 
 export const markAllAsRead = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
 
     const result = await notificationService.markAllAsRead(accountId);
 
@@ -74,7 +74,7 @@ export const markAllAsRead = async (req, res) => {
 
 export const deleteNotification = async (req, res) => {
   try {
-    const accountId = req.accountId;
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { notificationId } = req.params;
 
     const notification = await Notification.findOneAndDelete({

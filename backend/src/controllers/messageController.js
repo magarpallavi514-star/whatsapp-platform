@@ -26,9 +26,29 @@ export const setSocketIO = (socketIOInstance) => {
  */
 export const sendTextMessage = async (req, res) => {
   try {
-    const accountId = req.accountId; // From auth middleware
+    // Use ObjectId for database consistency
+    // req.account._id is ObjectId (from jwtAuth middleware)
+    // req.accountId is STRING (for reference)
+    const accountId = req.account?._id || req.accountId;
     const phoneNumberId = req.phoneNumberId; // From phoneNumberHelper (auto-detected or validated)
     const { recipientPhone, message, campaign } = req.body;
+    
+    // Validate required fields
+    if (!accountId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Account not found. Please login again.',
+        error: 'MISSING_ACCOUNT'
+      });
+    }
+    
+    if (!phoneNumberId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number not found. Please configure a WhatsApp phone number.',
+        error: 'MISSING_PHONE'
+      });
+    }
     
     if (!recipientPhone || !message) {
       return res.status(400).json({
@@ -38,7 +58,7 @@ export const sendTextMessage = async (req, res) => {
     }
     
     console.log(`📤 Sending text message [${req.phoneNumberMode}]:`, {
-      accountId,
+      accountId: accountId ? accountId.toString() : 'UNDEFINED',
       phoneNumberId,
       recipientPhone,
       message: message.substring(0, 50) + '...'
@@ -82,7 +102,7 @@ export const sendTextMessage = async (req, res) => {
  */
 export const sendTemplateMessage = async (req, res) => {
   try {
-    const accountId = req.accountId; // From auth middleware
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const phoneNumberId = req.phoneNumberId; // From phoneNumberHelper middleware
     const { recipientPhone, templateName, params, campaign } = req.body;
     
@@ -130,7 +150,7 @@ export const sendTemplateMessage = async (req, res) => {
  */
 export const getMessages = async (req, res) => {
   try {
-    const accountId = req.accountId; // From auth middleware
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const { phoneNumberId, status, limit = 50, skip = 0 } = req.query;
     
     const query = { accountId };
@@ -200,7 +220,7 @@ export const getMessage = async (req, res) => {
  */
 export const sendMediaMessage = async (req, res) => {
   try {
-    const accountId = req.accountId; // From auth middleware
+    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
     const phoneNumberId = req.phoneNumberId; // From phoneNumberHelper middleware
     const { recipientPhone, caption, campaign } = req.body;
     
