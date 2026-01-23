@@ -37,12 +37,6 @@ export const initSocket = (): Socket => {
     
     // ✅ CRITICAL FIX: Use both transports for fallback
     transports: ['websocket', 'polling'],
-    
-    // ✅ CRITICAL FIX: Add timeouts
-    connectTimeout: 45000,  // 45s to establish connection
-    
-    // ✅ CRITICAL FIX: Enable automatic upgrades
-    upgrade: true,
   });
 
   socket.on('connect', () => {
