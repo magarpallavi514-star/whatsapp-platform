@@ -111,7 +111,6 @@ export function CompletePaymentCard({ user, subscription, onPaymentComplete }: C
           billingCycle: selectedTenure,
           replaceExisting: hasExistingPlan && replaceExisting
         })
-        })
       })
 
       const orderData = await response.json()
