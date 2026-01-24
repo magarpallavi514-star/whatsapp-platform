@@ -57,7 +57,9 @@ export const authService = {
           email: data.user.email,
           name: data.user.name,
           role: data.user.role === 'superadmin' ? UserRole.SUPERADMIN : 
-                data.user.role === 'admin' ? UserRole.ADMIN : UserRole.USER,
+                data.user.role === 'admin' ? UserRole.ADMIN : 
+                data.user.role === 'manager' ? UserRole.MANAGER : 
+                data.user.role === 'agent' ? UserRole.AGENT : UserRole.USER,
           accountId: data.user.accountId
         }
 
@@ -103,7 +105,9 @@ export const authService = {
           email: data.user.email,
           name: data.user.name,
           role: data.user.role === 'superadmin' ? UserRole.SUPERADMIN : 
-                data.user.role === 'admin' ? UserRole.ADMIN : UserRole.USER,
+                data.user.role === 'admin' ? UserRole.ADMIN : 
+                data.user.role === 'manager' ? UserRole.MANAGER : 
+                data.user.role === 'agent' ? UserRole.AGENT : UserRole.USER,
           accountId: data.user.accountId
         }
 
