@@ -3,6 +3,7 @@ import { generateToken } from '../middlewares/jwtAuth.js';
 import Account from '../models/Account.js';
 import User from '../models/User.js';
 import Invoice from '../models/Invoice.js';
+import PricingPlan from '../models/PricingPlan.js';
 
 /**
  * Auth Controller
@@ -375,6 +376,30 @@ export const signup = async (req, res) => {
     // Generate unique accountId
     const accountId = `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+    // Fetch pricing plan to get the plan name (selectedPlan might be a plan ID from API)
+    let planName = selectedPlan.toLowerCase();
+    try {
+      // Try to find plan by planId, _id, or name
+      const pricingPlan = await PricingPlan.findOne({
+        $or: [
+          { _id: selectedPlan },
+          { planId: selectedPlan },
+          { name: { $regex: selectedPlan, $options: 'i' } }
+        ],
+        isActive: true
+      });
+      
+      if (pricingPlan) {
+        planName = pricingPlan.name.toLowerCase(); // Use actual plan name from database
+        console.log(`🔍 Plan found: "${planName}" (from input: "${selectedPlan}")`);
+      } else {
+        console.log(`⚠️ Plan not found in database, using input directly: "${selectedPlan}"`);
+      }
+    } catch (err) {
+      console.log(`⚠️ Could not fetch plan details:`, err.message);
+      // Continue with selectedPlan as fallback
+    }
+
     // Create new account with PENDING status (will be activated after payment)
     const newAccount = new Account({
       accountId,
@@ -384,7 +409,7 @@ export const signup = async (req, res) => {
       company: company?.trim() || undefined,
       phone: phone?.trim() || undefined,
       type: 'client',
-      plan: selectedPlan.toLowerCase(), // Use plan directly from API
+      plan: planName, // Use resolved plan name from database or input
       billingCycle: cycle, // Store billing cycle preference
       status: 'pending' // Account is PENDING until payment succeeds
     });
@@ -396,7 +421,7 @@ export const signup = async (req, res) => {
     console.log('  Email:', email);
     console.log('  Name:', name);
     console.log('  Status: PENDING (will be activated after payment)');
-    console.log('  Selected Plan:', selectedPlan.toLowerCase());
+    console.log('  Selected Plan:', planName);
     console.log('  Billing Cycle:', cycle);
 
     // 📝 NOTE: Account is PENDING until payment completes
