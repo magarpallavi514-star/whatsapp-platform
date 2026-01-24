@@ -171,31 +171,37 @@ class WhatsAppService {
       await message.save();
 
       // ✅ FIX 1: Create/update conversation with proper fields
-      // This ensures the conversation appears in live chat after sending
-      const accountIdStr = accountId instanceof mongoose.Types.ObjectId ? accountId.toString() : accountId;
-      await Conversation.findOneAndUpdate(
-        {
-          accountId,
-          phoneNumberId,
-          customerNumber: cleanPhone
-        },
-        {
-          $setOnInsert: {
+      // Conversation model requires: accountId, phoneNumberId, userPhone, conversationId, lastMessageAt
+      const conversationId = `${accountId.toString()}_${phoneNumberId}_${cleanPhone}`;
+      try {
+        await Conversation.findOneAndUpdate(
+          {
             accountId,
             phoneNumberId,
-            customerNumber: cleanPhone,
-            startedAt: new Date()
+            userPhone: cleanPhone
           },
-          $set: {
-            lastMessageAt: new Date(),
-            lastMessagePreview: messageText.substring(0, 200),
-            lastMessageType: 'text',
-            status: 'open'
-          }
-        },
-        { upsert: true, new: true }
-      );
-      console.log('✅ Conversation created/updated for live chat display');
+          {
+            $setOnInsert: {
+              accountId,
+              phoneNumberId,
+              userPhone: cleanPhone,
+              conversationId: conversationId,
+              lastMessageAt: new Date()
+            },
+            $set: {
+              lastMessageAt: new Date(),
+              lastMessagePreview: messageText.substring(0, 200),
+              lastMessageType: 'text',
+              status: 'open'
+            }
+          },
+          { upsert: true, new: true }
+        );
+        console.log('✅ Conversation created/updated for live chat display');
+      } catch (convError) {
+        console.error('⚠️ Conversation update warning (non-critical):', convError.message);
+        // Don't throw - message was already sent successfully
+      }
 
       // Update phone number stats
       await PhoneNumber.updateOne(
@@ -388,31 +394,37 @@ class WhatsAppService {
       await message.save();
 
       // ✅ FIX 1: Create/update conversation with proper fields
-      // This ensures the conversation appears in live chat after sending template
-      const accountIdStr = accountId instanceof mongoose.Types.ObjectId ? accountId.toString() : accountId;
-      await Conversation.findOneAndUpdate(
-        {
-          accountId,
-          phoneNumberId,
-          customerNumber: cleanPhone
-        },
-        {
-          $setOnInsert: {
+      // Conversation model requires: accountId, phoneNumberId, userPhone, conversationId, lastMessageAt
+      const conversationIdTemplate = `${accountId.toString()}_${phoneNumberId}_${cleanPhone}`;
+      try {
+        await Conversation.findOneAndUpdate(
+          {
             accountId,
             phoneNumberId,
-            customerNumber: cleanPhone,
-            startedAt: new Date()
+            userPhone: cleanPhone
           },
-          $set: {
-            lastMessageAt: new Date(),
-            lastMessagePreview: `[Template] ${templateName}`,
-            lastMessageType: 'template',
-            status: 'open'
-          }
-        },
-        { upsert: true, new: true }
-      );
-      console.log('✅ Conversation created/updated for live chat display');
+          {
+            $setOnInsert: {
+              accountId,
+              phoneNumberId,
+              userPhone: cleanPhone,
+              conversationId: conversationIdTemplate,
+              lastMessageAt: new Date()
+            },
+            $set: {
+              lastMessageAt: new Date(),
+              lastMessagePreview: `[Template] ${templateName}`,
+              lastMessageType: 'template',
+              status: 'open'
+            }
+          },
+          { upsert: true, new: true }
+        );
+        console.log('✅ Conversation created/updated for live chat display');
+      } catch (convError) {
+        console.error('⚠️ Conversation update warning (non-critical):', convError.message);
+        // Don't throw - message was already sent successfully
+      }
 
       // Update stats
       await PhoneNumber.updateOne(
@@ -878,36 +890,42 @@ class WhatsAppService {
       await message.save();
 
       // ✅ FIX 1: Create/update conversation with proper fields
-      // This ensures the conversation appears in live chat after sending media
-      const accountIdStr = accountId instanceof mongoose.Types.ObjectId ? accountId.toString() : accountId;
+      // Conversation model requires: accountId, phoneNumberId, userPhone, conversationId, lastMessageAt
+      const conversationIdMedia = `${accountId.toString()}_${phoneNumberId}_${cleanPhone}`;
       const mediaLabel = mediaType === 'image' ? '🖼️ Photo' : 
                          mediaType === 'video' ? '🎥 Video' :
                          mediaType === 'audio' ? '🎵 Audio Message' :
                          mediaType === 'document' ? `📄 ${metadata.filename || 'Document'}` :
                          `${mediaType}`;
-      await Conversation.findOneAndUpdate(
-        {
-          accountId,
-          phoneNumberId,
-          customerNumber: cleanPhone
-        },
-        {
-          $setOnInsert: {
+      try {
+        await Conversation.findOneAndUpdate(
+          {
             accountId,
             phoneNumberId,
-            customerNumber: cleanPhone,
-            startedAt: new Date()
+            userPhone: cleanPhone
           },
-          $set: {
-            lastMessageAt: new Date(),
-            lastMessagePreview: mediaLabel,
-            lastMessageType: mediaType,
-            status: 'open'
-          }
-        },
-        { upsert: true, new: true }
-      );
-      console.log('✅ Conversation created/updated for live chat display');
+          {
+            $setOnInsert: {
+              accountId,
+              phoneNumberId,
+              userPhone: cleanPhone,
+              conversationId: conversationIdMedia,
+              lastMessageAt: new Date()
+            },
+            $set: {
+              lastMessageAt: new Date(),
+              lastMessagePreview: mediaLabel,
+              lastMessageType: mediaType,
+              status: 'open'
+            }
+          },
+          { upsert: true, new: true }
+        );
+        console.log('✅ Conversation created/updated for live chat display');
+      } catch (convError) {
+        console.error('⚠️ Conversation update warning (non-critical):', convError.message);
+        // Don't throw - message was already sent successfully
+      }
 
       // Update phone number stats
       await PhoneNumber.updateOne(
