@@ -189,42 +189,49 @@ export class BroadcastExecutionService {
       const message = new Message({
         accountId,
         phoneNumberId,
-        messageId,
-        senderPhone: '', // Internal sender
+        waMessageId: messageId,  // Use waMessageId, not messageId
         recipientPhone,
         messageType: broadcast.messageType,
         status: 'sent',
         direction: 'outbound',
-        broadcastId: broadcast._id,
+        campaign: broadcast._id.toString(),
         content: broadcast.content
       });
 
       await message.save();
 
       // ✅ FIX 2: Ensure conversation is created for broadcast recipients
-      // whatsappService already creates it, but we upsert here as well for safety
+      // Conversation model uses 'userPhone' field, and requires conversationId
       const Conversation = (await import('../models/Conversation.js')).default;
-      await Conversation.findOneAndUpdate(
-        {
-          accountId,
-          phoneNumberId,
-          customerNumber: recipientPhone
-        },
-        {
-          $setOnInsert: {
+      const conversationId = `${accountId.toString()}_${phoneNumberId}_${recipientPhone}`;
+      
+      try {
+        await Conversation.findOneAndUpdate(
+          {
             accountId,
             phoneNumberId,
-            customerNumber: recipientPhone,
-            startedAt: new Date()
+            userPhone: recipientPhone
           },
-          $set: {
-            lastMessageAt: new Date(),
-            lastMessagePreview: `[Broadcast] ${broadcast.messageType}`,
-            status: 'open'
-          }
-        },
-        { upsert: true, new: true }
-      );
+          {
+            $setOnInsert: {
+              accountId,
+              phoneNumberId,
+              userPhone: recipientPhone,
+              conversationId: conversationId,
+              lastMessageAt: new Date()
+            },
+            $set: {
+              lastMessageAt: new Date(),
+              lastMessagePreview: `[Broadcast] ${broadcast.messageType}`,
+              status: 'open'
+            }
+          },
+          { upsert: true, new: true }
+        );
+      } catch (convError) {
+        console.warn('⚠️ Conversation creation warning (non-critical):', convError.message);
+        // Don't throw - message was already sent successfully
+      }
 
       return { success: true, messageId };
 
