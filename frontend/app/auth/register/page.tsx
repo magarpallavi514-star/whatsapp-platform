@@ -21,7 +21,8 @@ export default function RegisterPage() {
     name: '',
     email: '',
     password: '',
-    selectedPlan: '' // Add plan selection
+    selectedPlan: '',
+    billingCycle: 'monthly' // Add billing cycle with default
   })
 
   // Fetch pricing plans
@@ -136,7 +137,7 @@ export default function RegisterPage() {
       return false
     }
     if (!formData.selectedPlan) {
-      setError('Please select a plan (Starter or Pro)')
+      setError('Please select a plan')
       return false
     }
     return true
@@ -160,7 +161,8 @@ export default function RegisterPage() {
           name: formData.name.trim(),
           email: formData.email.trim(),
           password: formData.password,
-          selectedPlan: formData.selectedPlan // Include selected plan
+          selectedPlan: formData.selectedPlan,
+          billingCycle: formData.billingCycle
         })
       })
 
@@ -322,10 +324,60 @@ export default function RegisterPage() {
               </div>
             </div>
 
+            {/* Billing Cycle Selection */}
+            {formData.selectedPlan && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Billing Cycle
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, billingCycle: 'monthly' }))}
+                    disabled={loading || success}
+                    className={`p-3 rounded-lg border-2 transition font-medium text-sm ${
+                      formData.billingCycle === 'monthly'
+                        ? 'border-green-600 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    } disabled:opacity-50`}
+                  >
+                    <div className="font-bold">Monthly</div>
+                    <div className="text-xs mt-1">Full Price</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, billingCycle: 'quarterly' }))}
+                    disabled={loading || success}
+                    className={`p-3 rounded-lg border-2 transition font-medium text-sm ${
+                      formData.billingCycle === 'quarterly'
+                        ? 'border-green-600 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    } disabled:opacity-50`}
+                  >
+                    <div className="font-bold">Quarterly</div>
+                    <div className="text-xs mt-1">5% Off</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, billingCycle: 'annual' }))}
+                    disabled={loading || success}
+                    className={`p-3 rounded-lg border-2 transition font-medium text-sm ${
+                      formData.billingCycle === 'annual'
+                        ? 'border-green-600 bg-green-50 text-green-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    } disabled:opacity-50`}
+                  >
+                    <div className="font-bold">Annual</div>
+                    <div className="text-xs mt-1">20% Off</div>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || success}
+              disabled={loading || success || !formData.selectedPlan}
               className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-2.5 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
             >
               {loading && <Loader className="w-4 h-4 animate-spin" />}

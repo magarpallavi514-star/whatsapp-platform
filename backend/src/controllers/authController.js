@@ -315,7 +315,7 @@ export const logout = async (req, res) => {
  */
 export const signup = async (req, res) => {
   try {
-    const { name, email, password, company, phone, selectedPlan } = req.body;
+    const { name, email, password, company, phone, selectedPlan, billingCycle } = req.body;
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -325,20 +325,23 @@ export const signup = async (req, res) => {
       });
     }
 
-    // Validate plan selection (Starter or Pro)
-    if (!selectedPlan || !['starter', 'pro'].includes(selectedPlan.toLowerCase())) {
+    // Validate plan selection - accept any plan name from API
+    if (!selectedPlan || selectedPlan.trim() === '') {
       return res.status(400).json({
         success: false,
-        message: 'Please select a plan: Starter or Pro'
+        message: 'Please select a plan'
       });
     }
 
-    // Map frontend plan names to backend enum values
-    const planMapping = {
-      'starter': 'basic',  // frontend "Starter" maps to backend "basic" plan
-      'pro': 'pro'         // frontend "Pro" maps to backend "pro" plan
-    };
-    const mappedPlan = planMapping[selectedPlan.toLowerCase()];
+    // Validate billing cycle
+    const validCycles = ['monthly', 'quarterly', 'annual'];
+    const cycle = (billingCycle || 'monthly').toLowerCase();
+    if (!validCycles.includes(cycle)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid billing cycle. Choose: monthly, quarterly, or annual'
+      });
+    }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -381,7 +384,8 @@ export const signup = async (req, res) => {
       company: company?.trim() || undefined,
       phone: phone?.trim() || undefined,
       type: 'client',
-      plan: mappedPlan, // Set to mapped plan (basic or pro)
+      plan: selectedPlan.toLowerCase(), // Use plan directly from API
+      billingCycle: cycle, // Store billing cycle preference
       status: 'pending' // Account is PENDING until payment succeeds
     });
 
@@ -392,8 +396,8 @@ export const signup = async (req, res) => {
     console.log('  Email:', email);
     console.log('  Name:', name);
     console.log('  Status: PENDING (will be activated after payment)');
-    console.log('  Selected Plan (Frontend):', selectedPlan.toLowerCase());
-    console.log('  Mapped Plan (Backend):', mappedPlan);
+    console.log('  Selected Plan:', selectedPlan.toLowerCase());
+    console.log('  Billing Cycle:', cycle);
 
     // 📝 NOTE: Account is PENDING until payment completes
     // Invoice will be created after user completes payment for selected plan
