@@ -53,9 +53,32 @@ export const getConversationMessages = async (req, res) => {
   try {
     const { conversationId } = req.params;
     const { limit = 500, hours = 24 } = req.query;
+    const accountId = req.account._id;  // From JWT middleware
     
-    // Get conversation details
-    const conversation = await Conversation.findOne({ conversationId }).lean();
+    // Parse conversationId format: accountId_phoneNumberId_customerNumber
+    let conversation;
+    
+    // Try to find by the new structure first
+    if (conversationId.includes('_')) {
+      const parts = conversationId.split('_');
+      if (parts.length >= 3) {
+        const phoneNumberId = parts[1];
+        const customerNumber = parts.slice(2).join('_');  // Handle phone numbers with underscores
+        conversation = await Conversation.findOne({
+          accountId,
+          phoneNumberId,
+          customerNumber
+        }).lean();
+      }
+    }
+    
+    // Fallback: try to find by _id (if conversationId is MongoDB ObjectId)
+    if (!conversation) {
+      conversation = await Conversation.findOne({
+        _id: conversationId,
+        accountId
+      }).lean();
+    }
     
     if (!conversation) {
       return res.status(404).json({
@@ -72,7 +95,7 @@ export const getConversationMessages = async (req, res) => {
     const allMessages = await Message.find({
       accountId: conversation.accountId,
       phoneNumberId: conversation.phoneNumberId,
-      recipientPhone: conversation.userPhone,
+      recipientPhone: conversation.customerNumber,  // Changed from userPhone to customerNumber
       createdAt: { $gte: hoursAgo } // Filter by time window
     })
       .sort({ createdAt: -1 }) // Get newest messages first
@@ -110,9 +133,34 @@ export const replyToConversation = async (req, res) => {
   try {
     const { conversationId } = req.params;
     const { messageType, message, templateName, templateParams } = req.body;
+    const accountId = req.account._id;  // From JWT middleware
     
-    // Get conversation details
-    const conversation = await Conversation.findOne({ conversationId }).lean();
+    // Parse conversationId format: accountId_phoneNumberId_customerNumber
+    // OR use it as a MongoDB ObjectId lookup
+    let conversation;
+    
+    // Try to find by the new structure first (accountId, phoneNumberId, customerNumber)
+    // Extract from conversationId if it's in old format
+    if (conversationId.includes('_')) {
+      const parts = conversationId.split('_');
+      if (parts.length >= 3) {
+        const phoneNumberId = parts[1];
+        const customerNumber = parts.slice(2).join('_');  // Handle phone numbers with underscores
+        conversation = await Conversation.findOne({
+          accountId,
+          phoneNumberId,
+          customerNumber
+        }).lean();
+      }
+    }
+    
+    // Fallback: try to find by _id (if conversationId is MongoDB ObjectId)
+    if (!conversation) {
+      conversation = await Conversation.findOne({
+        _id: conversationId,
+        accountId
+      }).lean();
+    }
     
     if (!conversation) {
       return res.status(404).json({
@@ -154,7 +202,7 @@ export const replyToConversation = async (req, res) => {
       result = await whatsappService.sendTextMessage(
         conversation.accountId,
         conversation.phoneNumberId,
-        conversation.userPhone,
+        conversation.customerNumber,
         message,
         { campaign: 'inbox_reply' }
       );
@@ -169,7 +217,7 @@ export const replyToConversation = async (req, res) => {
       result = await whatsappService.sendTemplateMessage(
         conversation.accountId,
         conversation.phoneNumberId,
-        conversation.userPhone,
+        conversation.customerNumber,
         templateName,
         templateParams || [],
         { campaign: 'inbox_reply' }
@@ -183,7 +231,11 @@ export const replyToConversation = async (req, res) => {
     
     // Update conversation
     await Conversation.updateOne(
-      { conversationId },
+      {
+        accountId: conversation.accountId,
+        phoneNumberId: conversation.phoneNumberId,
+        customerNumber: conversation.customerNumber
+      },
       {
         $set: {
           lastRepliedAt: new Date(),
