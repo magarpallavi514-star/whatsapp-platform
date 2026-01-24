@@ -4,6 +4,7 @@ import Account from '../models/Account.js';
 import User from '../models/User.js';
 import Invoice from '../models/Invoice.js';
 import PricingPlan from '../models/PricingPlan.js';
+import { emailService } from '../services/emailService.js';
 
 /**
  * Auth Controller
@@ -248,6 +249,13 @@ export const login = async (req, res) => {
     // Check password - account.password should now be available
     if (!account.password) {
       console.log('❌ Account has no password set:', email);
+      console.log('   Account details:', {
+        accountId: account.accountId,
+        email: account.email,
+        status: account.status,
+        hasPassword: !!account.password,
+        passwordType: typeof account.password
+      });
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
@@ -441,6 +449,33 @@ export const signup = async (req, res) => {
     // 📝 NOTE: Account is PENDING until payment completes
     // Invoice will be created after user completes payment for selected plan
     // Webhook will activate the account when payment succeeds
+
+    // Send pending payment notification email
+    try {
+      const paymentLink = `${process.env.FRONTEND_URL || 'https://app.pixelswhatsapp.com'}/checkout?plan=${planName.toLowerCase()}`;
+      const planPrices = {
+        starter: { monthly: 999, quarterly: 2847, annual: 9590 },
+        pro: { monthly: 2999, quarterly: 8547, annual: 28790 },
+        enterprise: { monthly: 9999, quarterly: 28497, annual: 95990 },
+        custom: { monthly: 0, quarterly: 0, annual: 0 }
+      };
+      
+      const planAmount = planPrices[planName]?.[cycle] || 0;
+      if (planAmount > 0) {
+        console.log('📧 Sending pending payment email to:', email);
+        await emailService.sendPendingPaymentEmail(
+          email,
+          name,
+          planName,
+          planAmount,
+          cycle,
+          paymentLink
+        ).catch(err => console.error('⚠️ Failed to send pending payment email:', err.message));
+      }
+    } catch (emailErr) {
+      console.error('⚠️ Error in pending payment email:', emailErr.message);
+      // Don't fail signup if email fails
+    }
 
     // Create user object for token
     // Use a temporary token that only allows checkout

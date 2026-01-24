@@ -405,5 +405,205 @@ export const emailService = {
       }
       return { success: false, error: error.message };
     }
+  },
+
+  // Send pending payment notification for subscription plans
+  sendPendingPaymentEmail: async (email, name, plan, planAmount, billingCycle, paymentLink) => {
+    try {
+      console.log('📧 [EMAIL SERVICE] Sending pending payment email...');
+      console.log('  To:', email);
+      console.log('  Plan:', plan, 'Amount:', planAmount);
+      
+      if (!ENABLE_EMAIL) {
+        console.log('✅ Email service disabled - skipping');
+        return { success: true };
+      }
+
+      const planDisplay = {
+        starter: 'Starter',
+        pro: 'Pro',
+        enterprise: 'Enterprise',
+        custom: 'Custom'
+      }[plan] || plan;
+
+      const billingCycleDisplay = {
+        monthly: 'Monthly',
+        quarterly: 'Quarterly (3 Months)',
+        annual: 'Annual (12 Months)'
+      }[billingCycle] || billingCycle;
+
+      const htmlbody = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+              .content { background: #fef2f2; padding: 20px; border-left: 4px solid #f97316; }
+              .plan-box { background: white; padding: 15px; margin: 15px 0; border: 1px solid #fed7aa; border-radius: 6px; }
+              .plan-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #fef3c7; }
+              .plan-row:last-child { border-bottom: none; }
+              .plan-label { font-weight: 600; color: #666; }
+              .plan-value { font-weight: bold; color: #111; }
+              .amount { font-size: 24px; color: #f97316; font-weight: bold; }
+              .button { background: #f97316; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; margin: 20px 0; font-weight: bold; }
+              .button:hover { background: #ea580c; }
+              .warning { background: #fed7aa; border: 1px solid #fb923c; color: #92400e; padding: 12px; border-radius: 6px; margin: 15px 0; }
+              .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #fed7aa; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1 style="margin: 0;">⚠️ Payment Required</h1>
+                <p style="margin: 5px 0 0 0;">Complete your plan activation</p>
+              </div>
+
+              <div class="content">
+                <p>Hi <strong>${name}</strong>,</p>
+
+                <p>Thank you for signing up! To activate your account and start using all features, please complete the payment for your selected plan.</p>
+
+                <div class="plan-box">
+                  <div class="plan-row">
+                    <span class="plan-label">Plan</span>
+                    <span class="plan-value">${planDisplay} Plan</span>
+                  </div>
+                  <div class="plan-row">
+                    <span class="plan-label">Billing Cycle</span>
+                    <span class="plan-value">${billingCycleDisplay}</span>
+                  </div>
+                  <div class="plan-row">
+                    <span class="plan-label">Amount Due</span>
+                    <span class="amount">₹${planAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                <p style="text-align: center;">
+                  <a href="${paymentLink}" class="button">💳 Complete Payment</a>
+                </p>
+
+                <div class="warning">
+                  <strong>⚠️ Important:</strong> Your account features are currently locked. Please complete the payment within the next 7 days to avoid service interruption.
+                </div>
+
+                <p>If you have any questions or need assistance, please reply to this email.</p>
+
+                <div class="footer">
+                  <p>© ${new Date().getFullYear()} PixelsWhatsApp. All rights reserved.</p>
+                </div>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      return await sendViaZepto(
+        email,
+        `Action Required: Complete Payment for ${planDisplay} Plan`,
+        htmlbody
+      );
+    } catch (error) {
+      console.error('❌ Pending payment email failed:', error.message);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Send payment confirmation email
+  sendPaymentConfirmationEmail: async (email, name, plan, planAmount, transactionId) => {
+    try {
+      console.log('📧 [EMAIL SERVICE] Sending payment confirmation email...');
+      console.log('  To:', email);
+      console.log('  Transaction ID:', transactionId);
+      
+      if (!ENABLE_EMAIL) {
+        console.log('✅ Email service disabled - skipping');
+        return { success: true };
+      }
+
+      const planDisplay = {
+        starter: 'Starter',
+        pro: 'Pro',
+        enterprise: 'Enterprise',
+        custom: 'Custom'
+      }[plan] || plan;
+
+      const htmlbody = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+              .content { background: #f0fdf4; padding: 20px; border-left: 4px solid #16a34a; }
+              .success-box { background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 15px; border-radius: 6px; margin: 15px 0; }
+              .details { background: white; padding: 15px; border: 1px solid #bbf7d0; border-radius: 6px; margin: 15px 0; }
+              .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #d1fae5; }
+              .detail-row:last-child { border-bottom: none; }
+              .button { background: #16a34a; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; margin: 20px 0; font-weight: bold; }
+              .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #d1fae5; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1 style="margin: 0;">✓ Payment Confirmed</h1>
+                <p style="margin: 5px 0 0 0;">Your account is now active</p>
+              </div>
+
+              <div class="content">
+                <p>Hi <strong>${name}</strong>,</p>
+
+                <div class="success-box">
+                  <strong>✓ Your payment has been successfully processed!</strong><br>
+                  Your account is now fully activated and all features are available.
+                </div>
+
+                <h3 style="margin-top: 20px;">Payment Details</h3>
+                <div class="details">
+                  <div class="detail-row">
+                    <span><strong>Plan</strong></span>
+                    <span>${planDisplay}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span><strong>Amount Paid</strong></span>
+                    <span>₹${planAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span><strong>Transaction ID</strong></span>
+                    <span>${transactionId}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span><strong>Date</strong></span>
+                    <span>${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                  </div>
+                </div>
+
+                <p style="text-align: center;">
+                  <a href="${process.env.FRONTEND_URL || 'https://app.pixelswhatsapp.com'}/dashboard" class="button">Go to Dashboard →</a>
+                </p>
+
+                <p>You now have full access to all features. If you need any assistance, our support team is here to help.</p>
+
+                <div class="footer">
+                  <p>© ${new Date().getFullYear()} PixelsWhatsApp. All rights reserved.</p>
+                </div>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      return await sendViaZepto(
+        email,
+        `✓ Payment Confirmed - Your Account is Now Active`,
+        htmlbody
+      );
+    } catch (error) {
+      console.error('❌ Payment confirmation email failed:', error.message);
+      return { success: false, error: error.message };
+    }
   }
 };

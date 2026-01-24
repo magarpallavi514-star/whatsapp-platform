@@ -4,18 +4,21 @@ import { MessageSquare, Megaphone, Users, FileText, Bot, Building2, Activity, Do
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { ErrorToast } from "@/components/ErrorToast"
+import { PendingPaymentBanner } from "@/components/PendingPaymentBanner"
 import { authService, UserRole } from "@/lib/auth"
 import { API_URL } from "@/lib/config/api"
 
 export default function DashboardPage() {
+  const [user, setUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [subscription, setSubscription] = useState<any>(null)
   const [loadingSubscription, setLoadingSubscription] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
-    const user = authService.getCurrentUser()
-    setUserRole(user?.role || null)
+    const currentUser = authService.getCurrentUser()
+    setUser(currentUser)
+    setUserRole(currentUser?.role || null)
     
     // Fetch subscription status
     fetchSubscription()
@@ -59,6 +62,9 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
+      {/* Payment Pending Banner */}
+      {user && <PendingPaymentBanner user={user} planAmount={subscription?.amount || 0} />}
+
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">

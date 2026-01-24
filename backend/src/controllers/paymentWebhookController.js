@@ -4,6 +4,7 @@ import Invoice from '../models/Invoice.js';
 import Account from '../models/Account.js';
 import crypto from 'crypto';
 import { generateAndUploadInvoicePDF } from '../services/invoicePDFService.js';
+import { emailService } from '../services/emailService.js';
 
 /**
  * Handle Cashfree webhook for payment confirmation
@@ -119,11 +120,24 @@ async function activateSubscription(payment) {
 
     // 🔓 ACTIVATE ACCOUNT - Change status from 'pending' to 'active'
     console.log('🔓 Activating account:', accountId);
+    // IMPORTANT: Don't select password field - it has select:false in schema
+    // This prevents accidentally clearing the password when we save
     const account = await Account.findOne({ _id: accountId });
     if (account && account.status === 'pending') {
       account.status = 'active';
-      await account.save();
+      // Save with sparse update - only update status field
+      await Account.updateOne({ _id: accountId }, { status: 'active' });
       console.log('✅ Account activated after successful payment:', accountId);
+      
+      // Send payment confirmation email
+      console.log('📧 Sending payment confirmation email to:', account.email);
+      await emailService.sendPaymentConfirmationEmail(
+        account.email,
+        account.name,
+        payment.planId || 'Pro',
+        payment.amount,
+        payment.gatewayTransactionId || payment.orderId
+      ).catch(err => console.error('⚠️ Failed to send confirmation email:', err.message));
     }
 
     // Check if subscription already exists

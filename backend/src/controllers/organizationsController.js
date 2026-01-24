@@ -4,6 +4,7 @@
  */
 
 import User from '../models/User.js';
+import Account from '../models/Account.js';
 import Counter from '../models/Counter.js';
 import Subscription from '../models/Subscription.js';
 import Invoice from '../models/Invoice.js';
@@ -15,16 +16,24 @@ import mongoose from 'mongoose';
 /**
  * Get all registered users/organizations
  * @route GET /api/admin/organizations
+ * IMPORTANT: Query BOTH User and Account models (new accounts use Account model)
  */
 export const getAllOrganizations = async (req, res) => {
   try {
+    // Get from old User model
     const users = await User.find({})
       .select('_id accountId email name phone phoneNumber countryCode status role plan billingCycle nextBillingDate totalPayments createdAt')
       .sort({ createdAt: -1 });
 
-    res.json({
-      success: true,
-      data: users.map(user => ({
+    // Get from new Account model (signup flow)
+    const accounts = await Account.find({})
+      .select('-apiKeyHash -password') // Exclude sensitive fields
+      .sort({ createdAt: -1 });
+
+    // Combine and format both sources
+    const allOrganizations = [
+      // From User model
+      ...users.map(user => ({
         _id: user._id,
         accountId: user.accountId,
         email: user.email,
@@ -36,8 +45,38 @@ export const getAllOrganizations = async (req, res) => {
         billingCycle: user.billingCycle || 'monthly',
         nextBillingDate: user.nextBillingDate,
         totalPayments: user.totalPayments || 0,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        source: 'legacy' // Mark as legacy User model
+      })),
+      // From Account model
+      ...accounts.filter(acc => acc.type !== 'internal').map(account => ({
+        _id: account._id,
+        accountId: account.accountId,
+        email: account.email,
+        name: account.name,
+        phoneNumber: account.phone || '',
+        plan: account.plan || 'free',
+        status: account.status,
+        role: 'user',
+        billingCycle: account.billingCycle || 'monthly',
+        nextBillingDate: null,
+        totalPayments: 0,
+        createdAt: account.createdAt,
+        source: 'new_signup' // Mark as new signup flow
       }))
+    ];
+
+    // Sort by creation date (newest first)
+    allOrganizations.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json({
+      success: true,
+      data: allOrganizations,
+      summary: {
+        total: allOrganizations.length,
+        legacy: users.length,
+        new_signups: accounts.filter(acc => acc.type !== 'internal').length
+      }
     });
   } catch (error) {
     console.error('Error fetching organizations:', error);

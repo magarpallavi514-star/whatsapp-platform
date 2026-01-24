@@ -17,6 +17,9 @@ export interface User {
   phoneNumber?: string
   company?: string
   accountId?: string
+  status?: string // 'active' or 'pending' (payment pending)
+  plan?: string // 'free', 'starter', 'pro', 'enterprise'
+  billingCycle?: string // 'monthly', 'quarterly', 'annual'
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api"
@@ -60,7 +63,10 @@ export const authService = {
                 data.user.role === 'admin' ? UserRole.ADMIN : 
                 data.user.role === 'manager' ? UserRole.MANAGER : 
                 data.user.role === 'agent' ? UserRole.AGENT : UserRole.USER,
-          accountId: data.user.accountId
+          accountId: data.user.accountId,
+          status: data.user.status,
+          plan: data.user.plan,
+          billingCycle: data.user.billingCycle
         }
 
         // Store JWT token instead of session
@@ -108,7 +114,10 @@ export const authService = {
                 data.user.role === 'admin' ? UserRole.ADMIN : 
                 data.user.role === 'manager' ? UserRole.MANAGER : 
                 data.user.role === 'agent' ? UserRole.AGENT : UserRole.USER,
-          accountId: data.user.accountId
+          accountId: data.user.accountId,
+          status: data.user.status,
+          plan: data.user.plan,
+          billingCycle: data.user.billingCycle
         }
 
         // Store JWT token instead of session

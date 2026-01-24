@@ -4,9 +4,30 @@ import { useState, useEffect } from 'react';
 import { ErrorToast } from '@/components/ErrorToast';
 import Link from 'next/link';
 
+interface Lead {
+  _id: string;
+  name: string;
+  email: string;
+  intent: string;
+  score: number;
+  messageCount: number;
+  status: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost' | 'stale';
+}
+
+interface Stats {
+  total: number;
+  new: number;
+  contacted: number;
+  qualified: number;
+  converted: number;
+  lost: number;
+  stale: number;
+  averageScore: number;
+}
+
 export default function LeadsPage() {
-  const [leads, setLeads] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
@@ -59,12 +80,16 @@ export default function LeadsPage() {
       }
 
       // Update local state
-      setLeads(leads.map(l => l._id === leadId ? { ...l, status: newStatus } : l));
-      setStats({
-        ...stats,
-        [newStatus]: (stats[newStatus] || 0) + 1,
-        [leads.find(l => l._id === leadId)?.status]: Math.max(0, (stats[leads.find(l => l._id === leadId)?.status] || 0) - 1)
-      });
+      const oldLead = leads.find(l => l._id === leadId);
+      setLeads(leads.map(l => l._id === leadId ? { ...l, status: newStatus as Lead['status'] } : l));
+      
+      if (stats && oldLead) {
+        setStats({
+          ...stats,
+          [newStatus]: (stats[newStatus as keyof Stats] as number || 0) + 1,
+          [oldLead.status]: Math.max(0, ((stats[oldLead.status as keyof Stats] as number) || 0) - 1)
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update lead');
     }
