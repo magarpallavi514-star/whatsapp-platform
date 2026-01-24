@@ -17,6 +17,22 @@ export const subdomainDetectionMiddleware = async (req, res, next) => {
   try {
     const hostname = req.hostname; // e.g., "client-a.whatsapp-platform.com"
     
+    // Skip subdomain detection for backend API domains
+    // Backends typically accessed at: domain.up.railway.app, localhost:5000, etc.
+    const backendDomains = [
+      'whatsapp-platform-production',
+      'localhost',
+      '127.0.0.1',
+      process.env.BACKEND_DOMAIN || 'api'  // Allow configuring backend domain
+    ];
+    
+    // Check if this is a backend API domain (skip subdomain detection)
+    const isBackendDomain = backendDomains.some(domain => hostname.includes(domain));
+    if (isBackendDomain) {
+      req.workspaceId = null;  // No workspace context for backend API
+      return next();
+    }
+    
     // Extract subdomain (first part before first dot)
     // "client-a.whatsapp-platform.com" → "client-a"
     // "whatsapp-platform.com" → "whatsapp-platform" (root domain, no subdomain)
@@ -24,7 +40,7 @@ export const subdomainDetectionMiddleware = async (req, res, next) => {
     const subdomain = parts.length > 1 ? parts[0] : null;
     
     // If no subdomain (accessing root domain), skip workspace lookup
-    if (!subdomain || subdomain === 'www') {
+    if (!subdomain || subdomain === 'www' || subdomain === 'replysys') {
       req.workspaceId = null;  // No workspace context
       return next();
     }
@@ -33,12 +49,10 @@ export const subdomainDetectionMiddleware = async (req, res, next) => {
     const workspace = await Account.findOne({ subdomain: subdomain.toLowerCase() });
     
     if (!workspace) {
-      // Subdomain doesn't exist
-      return res.status(404).json({
-        success: false,
-        error: 'Workspace not found',
-        message: `No workspace found for subdomain: ${subdomain}`
-      });
+      // Subdomain doesn't exist - but don't fail, let routes handle it
+      req.workspaceId = null;
+      req.subdomain = subdomain;
+      return next();  // ✅ Continue instead of returning 404
     }
     
     // Store workspace info in request context
