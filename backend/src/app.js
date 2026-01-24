@@ -48,6 +48,7 @@ const allowedOrigins = [
   'https://whatsapp-platform-nine.vercel.app',
   'https://mpiyush15-whatsapp-platform.vercel.app',
   'https://mpiyush15-whatsapp-platform-57rcl0koq-piyushs-projects-5d893f5f.vercel.app',
+  'https://mpiyush15-whatsapp-platform-iq3skf8bi-piyushs-projects-5d893f5f.vercel.app',
   'https://replysys.com',
   'https://www.replysys.com',
   process.env.FRONTEND_URL
