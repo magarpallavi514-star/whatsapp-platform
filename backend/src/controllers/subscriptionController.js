@@ -502,7 +502,10 @@ export const createOrder = async (req, res) => {
 
     // Store payment record in our database
     // Use account._id (MongoDB ObjectId) for Payment model
+    const paymentId = `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    
     const payment = new Payment({
+      paymentId: paymentId,
       accountId: account._id,
       orderId,
       amount: amount,
