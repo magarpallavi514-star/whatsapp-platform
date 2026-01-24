@@ -81,12 +81,17 @@ const accountSchema = new mongoose.Schema({
   // Subscription (Phase 2)
   plan: {
     type: String,
-    enum: ['free', 'basic', 'pro', 'enterprise'],
+    enum: ['free', 'basic', 'pro', 'enterprise', 'starter'], // Support dynamic plan names
     default: 'free'
+  },
+  billingCycle: {
+    type: String,
+    enum: ['monthly', 'quarterly', 'annual'],
+    default: 'monthly'
   },
   status: {
     type: String,
-    enum: ['active', 'suspended', 'cancelled'],
+    enum: ['pending', 'active', 'suspended', 'cancelled'],
     default: 'active'
   },
   

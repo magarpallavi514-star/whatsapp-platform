@@ -361,15 +361,24 @@ export const resumeSubscription = async (req, res) => {
 // Create Cashfree order for checkout
 export const createOrder = async (req, res) => {
   try {
-    const { plan, paymentGateway } = req.body;
+    const { plan, billingCycle, paymentGateway } = req.body;
     const accountId = req.accountId; // From JWT middleware (string)
 
-    console.log('📝 Creating order:', { plan, paymentGateway, accountId });
+    console.log('📝 Creating order:', { plan, billingCycle, paymentGateway, accountId });
 
     if (!plan) {
       return res.status(400).json({
         success: false,
         message: 'Missing plan'
+      });
+    }
+
+    // Validate billing cycle
+    const cycle = (billingCycle || 'monthly').toLowerCase();
+    if (!['monthly', 'quarterly', 'annual'].includes(cycle)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid billing cycle. Must be monthly, quarterly, or annual'
       });
     }
 
@@ -421,12 +430,25 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Calculate total amount (monthly price + setup fee)
-    const amount = pricingPlan.monthlyPrice + (pricingPlan.setupFee || 0);
+    // Calculate total amount based on billing cycle
+    let amount;
+    let billingPeriod;
+    
+    if (cycle === 'annual') {
+      amount = (pricingPlan.monthlyPrice * 12 * 0.8) + (pricingPlan.setupFee || 0); // 20% discount
+      billingPeriod = 'annual';
+    } else if (cycle === 'quarterly') {
+      amount = (pricingPlan.monthlyPrice * 3 * 0.95) + (pricingPlan.setupFee || 0); // 5% discount
+      billingPeriod = 'quarterly';
+    } else {
+      amount = pricingPlan.monthlyPrice + (pricingPlan.setupFee || 0); // No discount for monthly
+      billingPeriod = 'monthly';
+    }
     
     console.log('💰 Amount calculated:', { 
-      monthlyPrice: pricingPlan.monthlyPrice, 
+      baseMonthlyPrice: pricingPlan.monthlyPrice,
       setupFee: pricingPlan.setupFee,
+      billingCycle: cycle,
       totalAmount: amount 
     });
 
@@ -454,14 +476,15 @@ export const createOrder = async (req, res) => {
         return_url: `${process.env.FRONTEND_URL || 'https://pixels-whatsapp-frontend.up.railway.app'}/payment-success?orderId=${orderId}`,
         notify_url: `${process.env.BACKEND_URL || 'https://whatsapp-platform-production-e48b.up.railway.app'}/api/payments/cashfree`
       },
-      order_note: `${pricingPlanName} Plan Subscription`
+      order_note: `${pricingPlanName} Plan (${cycle}) Subscription`
     };
 
     console.log('🔄 Calling Cashfree API with payload:', {
       order_id: sessionPayload.order_id,
       order_amount: sessionPayload.order_amount,
       order_currency: sessionPayload.order_currency,
-      customer_id: sessionPayload.customer_details.customer_id
+      customer_id: sessionPayload.customer_details.customer_id,
+      billingCycle: cycle
     });
 
     // Call Cashfree API to create payment session
@@ -513,11 +536,13 @@ export const createOrder = async (req, res) => {
       paymentGateway: 'cashfree',
       status: 'pending',
       planId: plan,
+      billingCycle: cycle,
       gatewayOrderId: cashfreeData.order_id || cashfreeData.orderId,
       paymentSessionId: cashfreeData.payment_session_id || cashfreeData.paymentSessionId,
       metadata: {
         plan,
         planName: pricingPlanName,
+        billingCycle: cycle,
         amount,
         cashfreeResponse: cashfreeData
       }
@@ -532,6 +557,7 @@ export const createOrder = async (req, res) => {
       paymentSessionId: cashfreeData.payment_session_id || cashfreeData.paymentSessionId,
       amount: amount,
       currency: 'INR',
+      billingCycle: cycle,
       message: 'Order created successfully'
     });
   } catch (error) {

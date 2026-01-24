@@ -12,6 +12,7 @@ function CheckoutContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const planId = searchParams.get('plan') || 'starter'
+  const billingCycle = searchParams.get('billingCycle') || 'monthly'
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -149,6 +150,7 @@ function CheckoutContent() {
         },
         body: JSON.stringify({
           plan: planId,
+          billingCycle: billingCycle,
           paymentGateway: 'cashfree'
         }),
       })

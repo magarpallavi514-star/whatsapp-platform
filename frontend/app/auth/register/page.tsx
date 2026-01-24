@@ -186,9 +186,9 @@ export default function RegisterPage() {
         }
       }
 
-      // Redirect to checkout with selected plan
+      // Redirect to checkout with selected plan and billing cycle
       setTimeout(() => {
-        const redirectUrl = data.redirectTo || `/checkout?plan=${formData.selectedPlan}`
+        const redirectUrl = data.redirectTo || `/checkout?plan=${formData.selectedPlan}&billingCycle=${formData.billingCycle}`
         router.push(redirectUrl)
       }, 1500)
     } catch (err) {

@@ -52,6 +52,11 @@ const paymentSchema = new mongoose.Schema({
   planId: {
     type: String
   },
+  billingCycle: {
+    type: String,
+    enum: ['monthly', 'quarterly', 'annual'],
+    default: 'monthly'
+  },
   
   // Gateway References
   gatewayOrderId: String,
