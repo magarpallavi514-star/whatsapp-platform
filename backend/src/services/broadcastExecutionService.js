@@ -201,6 +201,31 @@ export class BroadcastExecutionService {
 
       await message.save();
 
+      // ✅ FIX 2: Ensure conversation is created for broadcast recipients
+      // whatsappService already creates it, but we upsert here as well for safety
+      const Conversation = (await import('../models/Conversation.js')).default;
+      await Conversation.findOneAndUpdate(
+        {
+          accountId,
+          phoneNumberId,
+          customerNumber: recipientPhone
+        },
+        {
+          $setOnInsert: {
+            accountId,
+            phoneNumberId,
+            customerNumber: recipientPhone,
+            startedAt: new Date()
+          },
+          $set: {
+            lastMessageAt: new Date(),
+            lastMessagePreview: `[Broadcast] ${broadcast.messageType}`,
+            status: 'open'
+          }
+        },
+        { upsert: true, new: true }
+      );
+
       return { success: true, messageId };
 
     } catch (error) {

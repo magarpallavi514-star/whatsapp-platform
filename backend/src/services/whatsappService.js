@@ -176,13 +176,22 @@ class WhatsAppService {
       });
       await message.save();
 
-      // Update conversation with latest message timestamp
-      // Use ObjectId as string for conversationId consistency
+      // ✅ FIX 1: Create/update conversation with proper fields
+      // This ensures the conversation appears in live chat after sending
       const accountIdStr = accountId instanceof mongoose.Types.ObjectId ? accountId.toString() : accountId;
-      const conversationId = `${accountIdStr}_${phoneNumberId}_${cleanPhone}`;
       await Conversation.findOneAndUpdate(
-        { conversationId },
         {
+          accountId,
+          phoneNumberId,
+          customerNumber: cleanPhone
+        },
+        {
+          $setOnInsert: {
+            accountId,
+            phoneNumberId,
+            customerNumber: cleanPhone,
+            startedAt: new Date()
+          },
           $set: {
             lastMessageAt: new Date(),
             lastMessagePreview: messageText.substring(0, 200),
@@ -192,7 +201,7 @@ class WhatsAppService {
         },
         { upsert: true, new: true }
       );
-      console.log('✅ Conversation updated with latest message timestamp');
+      console.log('✅ Conversation created/updated for live chat display');
 
       // Update phone number stats
       await PhoneNumber.updateOne(
@@ -384,12 +393,22 @@ class WhatsAppService {
       });
       await message.save();
 
-      // Update conversation with latest message timestamp
+      // ✅ FIX 1: Create/update conversation with proper fields
+      // This ensures the conversation appears in live chat after sending template
       const accountIdStr = accountId instanceof mongoose.Types.ObjectId ? accountId.toString() : accountId;
-      const conversationId = `${accountIdStr}_${phoneNumberId}_${cleanPhone}`;
       await Conversation.findOneAndUpdate(
-        { conversationId },
         {
+          accountId,
+          phoneNumberId,
+          customerNumber: cleanPhone
+        },
+        {
+          $setOnInsert: {
+            accountId,
+            phoneNumberId,
+            customerNumber: cleanPhone,
+            startedAt: new Date()
+          },
           $set: {
             lastMessageAt: new Date(),
             lastMessagePreview: `[Template] ${templateName}`,
@@ -399,7 +418,7 @@ class WhatsAppService {
         },
         { upsert: true, new: true }
       );
-      console.log('✅ Conversation updated with latest message timestamp');
+      console.log('✅ Conversation created/updated for live chat display');
 
       // Update stats
       await PhoneNumber.updateOne(
@@ -864,15 +883,25 @@ class WhatsAppService {
       });
       await message.save();
 
-      // Update conversation with latest message timestamp
+      // ✅ FIX 1: Create/update conversation with proper fields
+      // This ensures the conversation appears in live chat after sending media
       const accountIdStr = accountId instanceof mongoose.Types.ObjectId ? accountId.toString() : accountId;
-      const conversationId = `${accountIdStr}_${phoneNumberId}_${cleanPhone}`;
       const mediaLabel = mediaType === 'image' ? '🖼️ Photo' : 
                          mediaType === 'video' ? '🎥 Video' : 
                          '📄 Document';
       await Conversation.findOneAndUpdate(
-        { conversationId },
         {
+          accountId,
+          phoneNumberId,
+          customerNumber: cleanPhone
+        },
+        {
+          $setOnInsert: {
+            accountId,
+            phoneNumberId,
+            customerNumber: cleanPhone,
+            startedAt: new Date()
+          },
           $set: {
             lastMessageAt: new Date(),
             lastMessagePreview: mediaLabel,
@@ -882,7 +911,7 @@ class WhatsAppService {
         },
         { upsert: true, new: true }
       );
-      console.log('✅ Conversation updated with latest message timestamp');
+      console.log('✅ Conversation created/updated for live chat display');
 
       // Update phone number stats
       await PhoneNumber.updateOne(

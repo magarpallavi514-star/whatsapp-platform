@@ -366,15 +366,21 @@ export const handleWebhook = async (req, res) => {
                     ? (content.text?.substring(0, 200) || '')
                     : `[${messageType}]`;
                   
+                  // ✅ FIX 4: Create/update conversation with proper fields
                   await Conversation.findOneAndUpdate(
-                    { conversationId },
                     {
-                      $set: {
+                      accountId,
+                      phoneNumberId,
+                      customerNumber: message.from
+                    },
+                    {
+                      $setOnInsert: {
                         accountId,
                         phoneNumberId,
-                        userPhone: message.from,
-                        userName: senderProfile?.profile?.name || null,
-                        userProfileName: senderProfile?.profile?.name || null,
+                        customerNumber: message.from,
+                        startedAt: new Date()
+                      },
+                      $set: {
                         lastMessageAt: new Date(parseInt(message.timestamp) * 1000),
                         lastMessagePreview,
                         lastMessageType: messageType,
