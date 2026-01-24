@@ -437,61 +437,82 @@ export const emailService = {
         <html>
           <head>
             <style>
-              body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
               .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
-              .content { background: #fef2f2; padding: 20px; border-left: 4px solid #f97316; }
-              .plan-box { background: white; padding: 15px; margin: 15px 0; border: 1px solid #fed7aa; border-radius: 6px; }
-              .plan-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #fef3c7; }
+              .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
+              .header h1 { margin: 0; font-size: 28px; }
+              .header p { margin: 10px 0 0 0; font-size: 16px; opacity: 0.95; }
+              .content { background: white; padding: 30px; }
+              .greeting { font-size: 18px; color: #333; margin-bottom: 20px; }
+              .plan-box { background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #667eea; }
+              .plan-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
               .plan-row:last-child { border-bottom: none; }
               .plan-label { font-weight: 600; color: #666; }
               .plan-value { font-weight: bold; color: #111; }
-              .amount { font-size: 24px; color: #f97316; font-weight: bold; }
-              .button { background: #f97316; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; margin: 20px 0; font-weight: bold; }
-              .button:hover { background: #ea580c; }
-              .warning { background: #fed7aa; border: 1px solid #fb923c; color: #92400e; padding: 12px; border-radius: 6px; margin: 15px 0; }
-              .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #fed7aa; }
+              .amount { font-size: 32px; color: #667eea; font-weight: bold; margin-top: 10px; }
+              .button { background: #667eea; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; display: inline-block; margin: 25px 0; font-weight: bold; font-size: 16px; }
+              .button:hover { background: #5568d3; }
+              .button-container { text-align: center; }
+              .benefits { background: #f0f4ff; padding: 20px; border-radius: 8px; margin: 20px 0; }
+              .benefits h3 { color: #667eea; margin-top: 0; }
+              .benefits ul { margin: 10px 0; padding-left: 20px; }
+              .benefits li { margin: 8px 0; color: #333; }
+              .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; }
             </style>
           </head>
           <body>
             <div class="container">
               <div class="header">
-                <h1 style="margin: 0;">⚠️ Payment Required</h1>
-                <p style="margin: 5px 0 0 0;">Complete your plan activation</p>
+                <h1>Welcome to Replysys! 🚀</h1>
+                <p>Let's get you started in just 1 click</p>
               </div>
 
               <div class="content">
-                <p>Hi <strong>${name}</strong>,</p>
+                <p class="greeting">Hi ${name},</p>
 
-                <p>Thank you for signing up! To activate your account and start using all features, please complete the payment for your selected plan.</p>
+                <p>Thank you so much for signing up for Replysys! We're thrilled to have you on board. Your selected plan is ready to activate—just one quick payment to unlock all the amazing features.</p>
 
                 <div class="plan-box">
                   <div class="plan-row">
-                    <span class="plan-label">Plan</span>
-                    <span class="plan-value">${planDisplay} Plan</span>
+                    <span class="plan-label">Your Plan</span>
+                    <span class="plan-value">${planDisplay}</span>
                   </div>
                   <div class="plan-row">
                     <span class="plan-label">Billing Cycle</span>
                     <span class="plan-value">${billingCycleDisplay}</span>
                   </div>
-                  <div class="plan-row">
-                    <span class="plan-label">Amount Due</span>
-                    <span class="amount">₹${planAmount.toLocaleString('en-IN')}</span>
+                  <div style="border-top: 2px solid #e0e0e0; margin-top: 15px; padding-top: 15px;">
+                    <div class="plan-label">Total Amount</div>
+                    <div class="amount">₹${planAmount.toLocaleString('en-IN')}</div>
                   </div>
                 </div>
 
-                <p style="text-align: center;">
-                  <a href="${paymentLink}" class="button">💳 Complete Payment</a>
-                </p>
-
-                <div class="warning">
-                  <strong>⚠️ Important:</strong> Your account features are currently locked. Please complete the payment within the next 7 days to avoid service interruption.
+                <div class="button-container">
+                  <a href="${paymentLink}" class="button">Complete Payment Now</a>
                 </div>
 
-                <p>If you have any questions or need assistance, please reply to this email.</p>
+                <div class="benefits">
+                  <h3>What You'll Get:</h3>
+                  <ul>
+                    <li>📱 Send WhatsApp broadcasts to thousands instantly</li>
+                    <li>🤖 Build intelligent chatbots without coding</li>
+                    <li>👥 Manage your entire team in one dashboard</li>
+                    <li>📊 Real-time analytics and insights</li>
+                    <li>⚡ 24/7 priority support</li>
+                  </ul>
+                </div>
+
+                <p>Payment is secure and encrypted. We accept all major credit cards, debit cards, and digital wallets.</p>
+
+                <p>Have questions? We're here to help! Reply to this email or <a href="https://replysys.com/support" style="color: #667eea; text-decoration: none; font-weight: bold;">contact our support team</a>.</p>
+
+                <p style="margin-top: 30px; color: #666;">
+                  <strong>${name}</strong>, we can't wait to see you succeed with Replysys!<br/>
+                  <em>— The Replysys Team</em>
+                </p>
 
                 <div class="footer">
-                  <p>© ${new Date().getFullYear()} PixelsWhatsApp. All rights reserved.</p>
+                  <p>© ${new Date().getFullYear()} Replysys. All rights reserved.</p>
                 </div>
               </div>
             </div>
@@ -501,11 +522,107 @@ export const emailService = {
 
       return await sendViaZepto(
         email,
-        `Action Required: Complete Payment for ${planDisplay} Plan`,
+        `Welcome ${name}! Complete Your Payment to Start Using Replysys`,
         htmlbody
       );
     } catch (error) {
       console.error('❌ Pending payment email failed:', error.message);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Send payment reminder email (for users who registered but haven't paid)
+  sendPaymentReminderEmail: async (email, name, plan, planAmount, billingCycle, paymentLink) => {
+    try {
+      console.log('📧 [EMAIL SERVICE] Sending payment reminder email...');
+      console.log('  To:', email);
+      console.log('  Plan:', plan);
+      
+      if (!ENABLE_EMAIL) {
+        console.log('✅ Email service disabled - skipping');
+        return { success: true };
+      }
+
+      const planDisplay = {
+        starter: 'Starter',
+        pro: 'Pro',
+        enterprise: 'Enterprise',
+        custom: 'Custom'
+      }[plan] || plan;
+
+      const billingCycleDisplay = {
+        monthly: 'Monthly',
+        quarterly: 'Quarterly (3 Months)',
+        annual: 'Annual (12 Months)'
+      }[billingCycle] || billingCycle;
+
+      const htmlbody = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
+              .header h1 { margin: 0; font-size: 24px; }
+              .content { background: white; padding: 30px; }
+              .reminder-box { background: #f0f4ff; border-left: 4px solid #667eea; padding: 15px; border-radius: 6px; margin: 20px 0; }
+              .plan-details { background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0; }
+              .plan-row { display: flex; justify-content: space-between; padding: 8px 0; }
+              .plan-label { font-weight: 600; color: #666; }
+              .plan-value { font-weight: bold; }
+              .amount { font-size: 24px; color: #667eea; font-weight: bold; }
+              .button { background: #667eea; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; margin: 20px 0; font-weight: bold; }
+              .button:hover { background: #5568d3; }
+              .button-container { text-align: center; }
+              .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>One More Step! ⏰</h1>
+              </div>
+
+              <div class="content">
+                <p>Hi ${name},</p>
+
+                <p>We hope you're excited about Replysys! It looks like you haven't completed your payment yet. We're here to help you get started quickly.</p>
+
+                <div class="reminder-box">
+                  <strong>Your plan is reserved:</strong> ${planDisplay} (${billingCycleDisplay})
+                  <div style="margin-top: 10px; font-size: 18px; color: #667eea;">
+                    ₹${planAmount.toLocaleString('en-IN')}
+                  </div>
+                </div>
+
+                <div class="button-container">
+                  <a href="${paymentLink}" class="button">Complete Payment Now</a>
+                </div>
+
+                <p>If you're having any trouble completing the payment or have questions, our support team is here to help. Just reply to this email.</p>
+
+                <p style="margin-top: 30px; font-size: 14px; color: #666;">
+                  Looking forward to helping you succeed!<br/>
+                  <em>— The Replysys Team</em>
+                </p>
+
+                <div class="footer">
+                  <p>© ${new Date().getFullYear()} Replysys. All rights reserved.</p>
+                </div>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      return await sendViaZepto(
+        email,
+        `Complete Your Payment - Unlock Replysys Now`,
+        htmlbody
+      );
+    } catch (error) {
+      console.error('❌ Payment reminder email failed:', error.message);
       return { success: false, error: error.message };
     }
   },
@@ -603,6 +720,127 @@ export const emailService = {
       );
     } catch (error) {
       console.error('❌ Payment confirmation email failed:', error.message);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // 🔴 Send payment confirmation email using pricing snapshot (NEVER fetch live prices)
+  sendPaymentConfirmationEmailWithSnapshot: async (email, name, pricingSnapshot, transactionId) => {
+    try {
+      console.log('📧 [EMAIL SERVICE] Sending payment confirmation email with pricing snapshot...');
+      console.log('  To:', email);
+      console.log('  Plan:', pricingSnapshot?.planName);
+      console.log('  Amount:', pricingSnapshot?.calculatedAmount);
+      
+      if (!ENABLE_EMAIL) {
+        console.log('✅ Email service disabled - skipping');
+        return { success: true };
+      }
+
+      const htmlbody = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+              .content { background: #f0fdf4; padding: 20px; border-left: 4px solid #16a34a; }
+              .success-box { background: #dcfce7; border: 1px solid #86efac; color: #166534; padding: 15px; border-radius: 6px; margin: 15px 0; }
+              .details { background: white; padding: 15px; border: 1px solid #bbf7d0; border-radius: 6px; margin: 15px 0; }
+              .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #d1fae5; }
+              .detail-row:last-child { border-bottom: none; }
+              .amount-highlight { color: #16a34a; font-weight: bold; font-size: 24px; }
+              .button { background: #16a34a; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; margin: 20px 0; font-weight: bold; }
+              .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #d1fae5; }
+              .snapshot-note { background: #fef3c7; border: 1px solid #fcd34d; padding: 10px; border-radius: 4px; font-size: 12px; color: #92400e; margin-top: 15px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1 style="margin: 0;">✓ Payment Confirmed</h1>
+                <p style="margin: 5px 0 0 0;">Your account is now active</p>
+              </div>
+
+              <div class="content">
+                <p>Hi <strong>${name}</strong>,</p>
+
+                <div class="success-box">
+                  <strong>✓ Your payment has been successfully processed!</strong><br>
+                  Your account is now fully activated and all features are available.
+                </div>
+
+                <h3 style="margin-top: 20px;">Payment Details</h3>
+                <div class="details">
+                  <div class="detail-row">
+                    <span><strong>Plan</strong></span>
+                    <span>${pricingSnapshot?.planName || 'WhatsApp Plan'}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span><strong>Billing Cycle</strong></span>
+                    <span>${(pricingSnapshot?.selectedBillingCycle || 'monthly').toUpperCase()}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span><strong>Monthly Price</strong></span>
+                    <span>₹${pricingSnapshot?.monthlyPrice?.toLocaleString('en-IN') || 'N/A'}</span>
+                  </div>
+                  ${pricingSnapshot?.setupFee ? `
+                  <div class="detail-row">
+                    <span><strong>Setup Fee</strong></span>
+                    <span>₹${pricingSnapshot.setupFee.toLocaleString('en-IN')}</span>
+                  </div>
+                  ` : ''}
+                  ${pricingSnapshot?.discountApplied ? `
+                  <div class="detail-row">
+                    <span><strong>Discount Applied</strong></span>
+                    <span>${pricingSnapshot.discountApplied}% (${pricingSnapshot.discountReason})</span>
+                  </div>
+                  ` : ''}
+                  <div class="detail-row" style="border-bottom: none; margin-top: 10px; padding-top: 10px; border-top: 2px solid #d1fae5;">
+                    <span><strong>Total Amount Paid</strong></span>
+                    <span class="amount-highlight">₹${pricingSnapshot?.calculatedAmount?.toLocaleString('en-IN') || 'N/A'}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span><strong>Transaction ID</strong></span>
+                    <span>${transactionId}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span><strong>Date</strong></span>
+                    <span>${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                  </div>
+                </div>
+
+                <div class="snapshot-note">
+                  ℹ️ This email confirms the exact plan and pricing that was shown at checkout time. The amount you were charged is locked and cannot change.
+                </div>
+
+                <p style="margin: 20px 0; text-align: center;">
+                  <a href="${process.env.FRONTEND_URL}/dashboard/invoices" class="button">View Your Invoice</a>
+                </p>
+
+                <p>Your subscription is now active. You can start using all features immediately. If you have any questions, please contact our support team.</p>
+
+                <div class="footer">
+                  <p>Thank you for choosing Replysys!</p>
+                  <p>This is an automated email. Please do not reply to this address.</p>
+                </div>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      await sendViaZepto(
+        email,
+        `Payment Confirmed - ₹${pricingSnapshot?.calculatedAmount?.toLocaleString('en-IN') || 'N/A'} - ${pricingSnapshot?.planName}`,
+        htmlbody
+      );
+
+      console.log('✅ Payment confirmation email (with snapshot) sent to', email);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Payment confirmation email (with snapshot) failed:', error.message);
       return { success: false, error: error.message };
     }
   }

@@ -165,7 +165,7 @@ export default function PricingCards() {
 
                 {/* CTA Button */}
                 <Link
-                  href={`/checkout?planId=${plan.planId}&cycle=${billingCycle}`}
+                  href={`/checkout?plan=${encodeURIComponent(plan.name)}&cycle=${billingCycle}`}
                   className={`block w-full py-3 px-4 rounded-lg font-semibold text-center transition-all mb-8 ${
                     plan.isPopular
                       ? 'bg-blue-600 text-white hover:bg-blue-700'

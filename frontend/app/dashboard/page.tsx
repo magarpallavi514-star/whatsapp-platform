@@ -4,7 +4,8 @@ import { MessageSquare, Megaphone, Users, FileText, Bot, Building2, Activity, Do
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { ErrorToast } from "@/components/ErrorToast"
-import { PendingPaymentBanner } from "@/components/PendingPaymentBanner"
+import { CompletePaymentCard } from "@/components/CompletePaymentCard"
+import { PendingPaymentReminder } from "@/components/PendingPaymentReminder"
 import { authService, UserRole } from "@/lib/auth"
 import { API_URL } from "@/lib/config/api"
 
@@ -89,10 +90,30 @@ export default function DashboardPage() {
 
   const isSuperAdmin = userRole === UserRole.SUPERADMIN
 
+  const handlePaymentComplete = () => {
+    // Refresh user data and subscription
+    fetchSubscription()
+    // Optionally reload the entire page to update sidebar and profile
+    window.location.reload()
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      {/* Payment Pending Banner */}
-      {user && <PendingPaymentBanner user={user} planAmount={subscription?.amount || 0} />}
+      {/* Complete Payment Card for Pending Clients */}
+      {!isSuperAdmin && user && (
+        <CompletePaymentCard 
+          user={user} 
+          subscription={subscription}
+          onPaymentComplete={handlePaymentComplete}
+        />
+      )}
+
+      {/* Payment Reminder Section for Superadmin */}
+      {isSuperAdmin && (
+        <div className="mb-8">
+          <PendingPaymentReminder />
+        </div>
+      )}
 
       {/* Page Header */}
       <div className="mb-8">

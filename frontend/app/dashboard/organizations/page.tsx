@@ -22,6 +22,11 @@ export default function OrganizationsPage() {
   const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<any>(null)
   const [availablePlans, setAvailablePlans] = useState<any[]>([])
   const [isPaymentLinkModal, setIsPaymentLinkModal] = useState(false)
+  const [isEmailDrawerOpen, setIsEmailDrawerOpen] = useState(false)
+  const [selectedOrgForEmail, setSelectedOrgForEmail] = useState<any>(null)
+  const [emailType, setEmailType] = useState("payment_reminder")
+  const [isSendingEmail, setIsSendingEmail] = useState(false)
+  const [emailMessage, setEmailMessage] = useState("")
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -484,6 +489,17 @@ export default function OrganizationsPage() {
                           className="text-green-600 hover:text-green-800 font-medium text-sm"
                         >
                           Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedOrgForEmail(org)
+                            setIsEmailDrawerOpen(true)
+                            setEmailType("payment_reminder")
+                          }}
+                          className="text-purple-600 hover:text-purple-800 p-1"
+                          title="Send Email"
+                        >
+                          <Mail size={18} />
                         </button>
                       </td>
                     </tr>
@@ -1005,6 +1021,147 @@ export default function OrganizationsPage() {
               </button>
               <button
                 onClick={() => setIsPaymentLinkModal(false)}
+                className="flex-1 bg-gray-300 text-gray-900 py-2.5 rounded-lg hover:bg-gray-400 transition-colors font-semibold text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Email Drawer */}
+      {isEmailDrawerOpen && selectedOrgForEmail && (
+        <div className="fixed inset-0 z-50 flex">
+          <div 
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            onClick={() => setIsEmailDrawerOpen(false)}
+          />
+          <div className="relative ml-auto bg-white w-full max-w-md h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
+            {/* Header */}
+            <div className="border-b border-gray-200 px-8 py-4 flex items-center justify-between bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-900">Send Email</h3>
+              <button
+                onClick={() => setIsEmailDrawerOpen(false)}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto px-8 py-6 space-y-5">
+              {/* Organization Info */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Organization</label>
+                <input
+                  type="text"
+                  disabled
+                  value={selectedOrgForEmail.name || ""}
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 cursor-not-allowed"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <input
+                  type="email"
+                  disabled
+                  value={selectedOrgForEmail.email || ""}
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 cursor-not-allowed"
+                />
+              </div>
+
+              {/* Email Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email Type</label>
+                <select
+                  value={emailType}
+                  onChange={(e) => setEmailType(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="payment_reminder">Payment Reminder</option>
+                  <option value="custom_message">Custom Message</option>
+                  <option value="renewal_notice">Renewal Notice</option>
+                </select>
+              </div>
+
+              {/* Plan Details (for payment reminder) */}
+              {emailType === "payment_reminder" && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                  <p className="text-sm text-blue-900">
+                    <strong>Current Plan:</strong> {selectedOrgForEmail.plan || "Free"}
+                  </p>
+                  <p className="text-sm text-blue-900">
+                    <strong>Status:</strong> {selectedOrgForEmail.status || "Inactive"}
+                  </p>
+                  {selectedOrgForEmail.plan && selectedOrgForEmail.plan !== "free" && (
+                    <p className="text-sm text-blue-900">
+                      <strong>Next Billing:</strong> {selectedOrgForEmail.nextBillingDate ? new Date(selectedOrgForEmail.nextBillingDate).toLocaleDateString() : "N/A"}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Custom Message (for custom message type) */}
+              {emailType === "custom_message" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                  <textarea
+                    value={emailMessage}
+                    onChange={(e) => setEmailMessage(e.target.value)}
+                    placeholder="Enter your message here..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none h-32"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-gray-200 bg-gray-50 px-8 py-4 flex gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    setIsSendingEmail(true)
+                    const token = localStorage.getItem("token")
+                    
+                    const response = await fetch(`${API_URL}/admin/send-payment-reminder`, {
+                      method: "POST",
+                      headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                      },
+                      body: JSON.stringify({
+                        accountId: selectedOrgForEmail._id,
+                        emailType: emailType,
+                        message: emailMessage || undefined
+                      })
+                    })
+
+                    if (!response.ok) {
+                      const error = await response.json()
+                      throw new Error(error.message || "Failed to send email")
+                    }
+
+                    const result = await response.json()
+                    console.log("Email sent successfully:", result)
+                    setIsEmailDrawerOpen(false)
+                    setEmailMessage("")
+                  } catch (err) {
+                    console.error("Error sending email:", err)
+                    alert(`Error: ${err instanceof Error ? err.message : "Failed to send email"}`)
+                  } finally {
+                    setIsSendingEmail(false)
+                  }
+                }}
+                disabled={isSendingEmail || (emailType === "custom_message" && !emailMessage.trim())}
+                className="flex-1 bg-purple-600 text-white py-2.5 rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold text-sm"
+              >
+                {isSendingEmail ? "Sending..." : "Send Email"}
+              </button>
+              <button
+                onClick={() => setIsEmailDrawerOpen(false)}
                 className="flex-1 bg-gray-300 text-gray-900 py-2.5 rounded-lg hover:bg-gray-400 transition-colors font-semibold text-sm"
               >
                 Cancel

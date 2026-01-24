@@ -119,6 +119,13 @@ export const createOrganization = async (req, res) => {
     const accountId = await generateAccountId(Counter);
 
     // Create new user
+    // ✅ ENFORCE: Only admin can set custom status, default to 'pending' (requires payment for pro/enterprise)
+    // Free plans can be 'active', paid plans must go through payment webhook
+    const planLower = (plan || 'free').toLowerCase();
+    const shouldBeFree = planLower === 'free';
+    const defaultStatus = shouldBeFree ? 'active' : 'pending'; // Only 'free' is auto-active
+    const finalStatus = status && status !== 'active' ? status : defaultStatus;
+    
     const newUser = new User({
       name,
       email: email.toLowerCase(),
@@ -126,13 +133,15 @@ export const createOrganization = async (req, res) => {
       phoneNumber: phoneNumber,
       countryCode: countryCode || '+91',
       plan: plan || 'free',
-      status: status || 'active',
+      status: finalStatus, // ✅ Enforce payment requirement for non-free plans
       billingCycle: billingCycle || 'monthly',
       nextBillingDate: nextBillingDate ? new Date(nextBillingDate) : null,
       role: 'user',
       totalPayments: 0,
       accountId: accountId // Use the new 7-digit account ID
     });
+    
+    console.log(`📝 Creating org: plan="${plan}" → status="${finalStatus}" (free=${shouldBeFree})`);
 
     await newUser.save();
 

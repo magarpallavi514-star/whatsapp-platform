@@ -148,11 +148,12 @@ export default function LandingPage() {
         <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
           Broadcast, Automate, Engage & Sell with AI-powered WhatsApp platform
         </p>
-        <Link href="/auth/register">
-          <Button size="lg" className="bg-green-600 hover:bg-green-700">
-            Start for FREE <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </Link>
+        <button 
+          onClick={() => router.push(`/checkout?plan=${encodeURIComponent(plansToRender[0]?.name || 'Starter')}`)}
+          className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold inline-flex items-center gap-2"
+        >
+          Start for FREE <ArrowRight className="h-4 w-4" />
+        </button>
       </section>
 
       {/* FEATURES */}
@@ -207,11 +208,7 @@ export default function LandingPage() {
 
                   <button
                     onClick={() => {
-                      if (!isAuthenticated) {
-                        router.push("/auth/register")
-                      } else {
-                        router.push(`/checkout?plan=${plan.planId}`)
-                      }
+                      router.push(`/checkout?plan=${encodeURIComponent(plan.name)}`)
                     }}
                     className={`w-full py-3 rounded-lg font-semibold mb-6 ${
                       plan.isPopular

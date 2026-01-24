@@ -523,6 +523,22 @@ export const createOrder = async (req, res) => {
 
     console.log('✅ Cashfree order created:', cashfreeData);
 
+    // 🔴 PRICING SNAPSHOT - Capture ALL plan details at order creation time
+    // This snapshot NEVER changes, ensuring consistency across client account, superadmin account, and emails
+    const pricingSnapshot = {
+      planName: pricingPlanName,
+      monthlyPrice: pricingPlan.monthlyPrice,
+      yearlyPrice: pricingPlan.yearlyPrice,
+      setupFee: pricingPlan.setupFee || 0,
+      selectedBillingCycle: cycle,  // What user selected: monthly/quarterly/annual
+      calculatedAmount: amount,      // Exact final amount for this cycle
+      currency: 'INR',
+      discountApplied: cycle === 'annual' ? 20 : (cycle === 'quarterly' ? 5 : 0),
+      discountReason: cycle === 'annual' ? '20% annual discount' : (cycle === 'quarterly' ? '5% quarterly discount' : 'No discount'),
+      finalAmount: amount,
+      capturedAt: new Date()
+    };
+
     // Store payment record in our database
     // Use account._id (MongoDB ObjectId) for Payment model
     const paymentId = `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
@@ -537,6 +553,7 @@ export const createOrder = async (req, res) => {
       status: 'pending',
       planId: plan,
       billingCycle: cycle,
+      pricingSnapshot,  // 🔴 Store immutable pricing snapshot
       gatewayOrderId: cashfreeData.order_id || cashfreeData.orderId,
       paymentSessionId: cashfreeData.payment_session_id || cashfreeData.paymentSessionId,
       metadata: {
@@ -550,6 +567,7 @@ export const createOrder = async (req, res) => {
 
     await payment.save();
     console.log('✅ Payment record saved:', payment._id);
+    console.log('🔴 Pricing snapshot captured:', JSON.stringify(pricingSnapshot, null, 2));
 
     res.status(201).json({
       success: true,
@@ -653,6 +671,20 @@ export const verifyPayment = async (req, res) => {
       await newInvoice.save();
       console.log('✅ Invoice created:', invoiceNumber);
 
+      // 🔴 Send payment confirmation email using pricing snapshot (NEVER live prices)
+      try {
+        const account = await Account.findById(accountId);
+        await emailService.sendPaymentConfirmationEmailWithSnapshot(
+          account?.email,
+          account?.name || 'Valued Customer',
+          payment.pricingSnapshot,  // Pass the immutable pricing snapshot
+          paymentId
+        );
+        console.log('✅ Payment confirmation email sent to:', account?.email);
+      } catch (emailError) {
+        console.warn('⚠️  Payment confirmation email failed:', emailError.message);
+      }
+
       // Send invoice email
       try {
         const pdfUrl = `${process.env.FRONTEND_URL}/dashboard/invoices`;
@@ -686,6 +718,154 @@ export const verifyPayment = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to verify payment',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * 🔴 GET PENDING TRANSACTIONS (for client account)
+ * Returns all pending/unpaid transactions with original pricing snapshot
+ * Client can see what they selected, and superadmin sees the same
+ */
+export const getPendingTransactions = async (req, res) => {
+  try {
+    const accountId = req.account._id;
+
+    // Fetch all pending payments for this account
+    const pendingPayments = await Payment.find({
+      accountId: accountId,
+      status: 'pending'
+    })
+    .sort({ initiatedAt: -1 });
+
+    if (!pendingPayments || pendingPayments.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        message: 'No pending transactions'
+      });
+    }
+
+    // Format response with pricing snapshot (NOT live pricing)
+    const formattedTransactions = pendingPayments.map(payment => ({
+      transactionId: payment.paymentId,
+      orderId: payment.orderId,
+      status: payment.status,
+      createdAt: payment.initiatedAt,
+      
+      // 🔴 Use pricing snapshot, NEVER fetch live prices
+      planDetails: {
+        planName: payment.pricingSnapshot?.planName || payment.metadata?.planName,
+        selectedCycle: payment.pricingSnapshot?.selectedBillingCycle || payment.billingCycle,
+        monthlyPrice: payment.pricingSnapshot?.monthlyPrice,
+        setupFee: payment.pricingSnapshot?.setupFee,
+        discountApplied: payment.pricingSnapshot?.discountApplied,
+        discountReason: payment.pricingSnapshot?.discountReason
+      },
+      
+      // 🔴 Amount is EXACTLY what was shown at checkout time
+      amount: payment.pricingSnapshot?.calculatedAmount || payment.amount,
+      finalAmount: payment.pricingSnapshot?.finalAmount || payment.amount,
+      currency: payment.pricingSnapshot?.currency || payment.currency,
+      
+      paymentGateway: payment.paymentGateway,
+      paymentSessionId: payment.paymentSessionId
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formattedTransactions,
+      total: formattedTransactions.length
+    });
+  } catch (error) {
+    console.error('Error fetching pending transactions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending transactions',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * 🔴 GET ALL PENDING TRANSACTIONS (for superadmin)
+ * Superadmin can see all clients' pending transactions with exact same details
+ */
+export const getAllPendingTransactions = async (req, res) => {
+  try {
+    // Only internal/superadmin can view all
+    if (req.account.type !== 'internal') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only superadmins can view all pending transactions'
+      });
+    }
+
+    // Fetch all pending payments across all accounts
+    const pendingPayments = await Payment.find({
+      status: 'pending'
+    })
+    .populate('accountId', 'name email company accountId')
+    .sort({ initiatedAt: -1 });
+
+    if (!pendingPayments || pendingPayments.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        message: 'No pending transactions'
+      });
+    }
+
+    // Format response with pricing snapshot (NOT live pricing)
+    const formattedTransactions = pendingPayments.map(payment => ({
+      transactionId: payment.paymentId,
+      orderId: payment.orderId,
+      
+      // Client details
+      client: {
+        id: payment.accountId?._id,
+        name: payment.accountId?.name || 'Unknown',
+        email: payment.accountId?.email,
+        company: payment.accountId?.company,
+        accountId: payment.accountId?.accountId
+      },
+      
+      status: payment.status,
+      createdAt: payment.initiatedAt,
+      
+      // 🔴 Use pricing snapshot, NEVER fetch live prices
+      planDetails: {
+        planName: payment.pricingSnapshot?.planName || payment.metadata?.planName,
+        selectedCycle: payment.pricingSnapshot?.selectedBillingCycle || payment.billingCycle,
+        monthlyPrice: payment.pricingSnapshot?.monthlyPrice,
+        setupFee: payment.pricingSnapshot?.setupFee,
+        discountApplied: payment.pricingSnapshot?.discountApplied,
+        discountReason: payment.pricingSnapshot?.discountReason
+      },
+      
+      // 🔴 Amount is EXACTLY what was shown at checkout time
+      amount: payment.pricingSnapshot?.calculatedAmount || payment.amount,
+      finalAmount: payment.pricingSnapshot?.finalAmount || payment.amount,
+      currency: payment.pricingSnapshot?.currency || payment.currency,
+      
+      paymentGateway: payment.paymentGateway,
+      paymentSessionId: payment.paymentSessionId,
+      
+      // Days pending
+      daysPending: Math.floor((Date.now() - new Date(payment.initiatedAt).getTime()) / (1000 * 60 * 60 * 24))
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formattedTransactions,
+      total: formattedTransactions.length
+    });
+  } catch (error) {
+    console.error('Error fetching all pending transactions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending transactions',
       error: error.message
     });
   }

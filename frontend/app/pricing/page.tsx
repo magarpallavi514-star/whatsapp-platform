@@ -82,12 +82,10 @@ export default function PricingPage() {
     }
   }
 
-  const handleGetStarted = (planId: string) => {
-    if (!isAuthenticated) {
-      router.push('/auth/register')
-    } else {
-      router.push(`/checkout?plan=${planId}`)
-    }
+  const handleGetStarted = (planId: string, planName: string) => {
+    // Always go to new integrated checkout page
+    // It handles both authentication and payment
+    router.push(`/checkout?plan=${encodeURIComponent(planName)}`)
   }
 
   return (
@@ -181,7 +179,7 @@ export default function PricingPage() {
 
                   {/* CTA Button */}
                   <button
-                    onClick={() => handleGetStarted(plan.planId)}
+                    onClick={() => handleGetStarted(plan.planId, plan.name)}
                     className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition ${
                       plan.isPopular
                         ? 'bg-green-600 text-white hover:bg-green-700'
@@ -295,11 +293,17 @@ export default function PricingPage() {
           <p className="text-lg mb-8 opacity-90">
             Start free today. No credit card required. Upgrade anytime.
           </p>
-          <Link href="/auth/register">
-            <Button size="lg" className="bg-white text-green-600 hover:bg-gray-100">
-              Start Your Free Trial
-            </Button>
-          </Link>
+          <button
+            onClick={() => {
+              const firstPlan = plans[0];
+              if (firstPlan) {
+                handleGetStarted(firstPlan.planId, firstPlan.name);
+              }
+            }}
+            className="bg-white text-green-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold text-lg transition"
+          >
+            Start Your Free Trial
+          </button>
         </div>
       </section>
 

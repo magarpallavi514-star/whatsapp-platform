@@ -21,6 +21,9 @@ export default function RegisterPage() {
     name: '',
     email: '',
     password: '',
+    mobileNumber: '',
+    companyName: '',
+    website: '',
     selectedPlan: '',
     billingCycle: 'monthly' // Add billing cycle with default
   })
@@ -136,6 +139,14 @@ export default function RegisterPage() {
       setError('Password must be at least 6 characters')
       return false
     }
+    if (!formData.mobileNumber.trim()) {
+      setError('Mobile number is required')
+      return false
+    }
+    if (!formData.companyName.trim()) {
+      setError('Company name is required')
+      return false
+    }
     if (!formData.selectedPlan) {
       setError('Please select a plan')
       return false
@@ -161,6 +172,9 @@ export default function RegisterPage() {
           name: formData.name.trim(),
           email: formData.email.trim(),
           password: formData.password,
+          mobileNumber: formData.mobileNumber.trim(),
+          companyName: formData.companyName.trim(),
+          website: formData.website.trim(),
           selectedPlan: formData.selectedPlan,
           billingCycle: formData.billingCycle
         })
@@ -280,6 +294,57 @@ export default function RegisterPage() {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="At least 6 characters"
+                disabled={loading || success}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent disabled:opacity-50 bg-white text-gray-900"
+              />
+            </div>
+
+            {/* Mobile Number */}
+            <div>
+              <label htmlFor="mobileNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                Mobile Number
+              </label>
+              <input
+                id="mobileNumber"
+                name="mobileNumber"
+                type="tel"
+                value={formData.mobileNumber}
+                onChange={handleChange}
+                placeholder="+91 98765 43210"
+                disabled={loading || success}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent disabled:opacity-50 bg-white text-gray-900"
+              />
+            </div>
+
+            {/* Company Name */}
+            <div>
+              <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-2">
+                Company Name
+              </label>
+              <input
+                id="companyName"
+                name="companyName"
+                type="text"
+                value={formData.companyName}
+                onChange={handleChange}
+                placeholder="Your Company Name"
+                disabled={loading || success}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent disabled:opacity-50 bg-white text-gray-900"
+              />
+            </div>
+
+            {/* Website (Optional) */}
+            <div>
+              <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-2">
+                Website <span className="text-gray-500 text-xs">(Optional)</span>
+              </label>
+              <input
+                id="website"
+                name="website"
+                type="url"
+                value={formData.website}
+                onChange={handleChange}
+                placeholder="https://example.com"
                 disabled={loading || success}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent disabled:opacity-50 bg-white text-gray-900"
               />

@@ -1,11 +1,11 @@
 import express from 'express';
 import * as invoiceController from '../controllers/invoiceController.js';
-import { authMiddleware } from '../middlewares/authMiddleware.js';
+import { requireJWT } from '../middlewares/jwtAuth.js';
 
 const router = express.Router();
 
 // Protected routes
-router.use(authMiddleware);
+router.use(requireJWT);
 
 // User invoice routes
 router.get('/my-invoices', invoiceController.getMyInvoices);

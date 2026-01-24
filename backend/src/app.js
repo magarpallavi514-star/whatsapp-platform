@@ -32,6 +32,7 @@ import organizationsRoutes from './routes/organizationsRoutes.js';
 import leadRoutes from './routes/leadRoutes.js';
 import paymentReminderRoutes from './routes/paymentReminderRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -211,6 +212,9 @@ app.use('/api/account', requireJWT, accountRoutes);
 
 // Mount organizations admin routes (JWT AUTH - for admin)
 app.use('/api/admin/organizations', requireJWT, organizationsRoutes);
+
+// Mount admin routes (JWT AUTH - for superadmin)
+app.use('/api/admin', requireJWT, adminRoutes);
 
 // Mount payment reminder routes (JWT AUTH - for admin)
 app.use('/api/admin/payment-reminders', requireJWT, paymentReminderRoutes);

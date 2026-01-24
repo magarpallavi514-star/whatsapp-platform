@@ -12,6 +12,10 @@ const router = express.Router();
 router.post('/create-order', requireJWT, subscriptionController.createOrder);
 router.post('/verify-payment', requireJWT, subscriptionController.verifyPayment);
 
+// 🔴 Pending Transaction routes
+router.get('/pending-transactions', requireJWT, subscriptionController.getPendingTransactions);  // Client pending transactions
+router.get('/all-pending-transactions', requireJWT, subscriptionController.getAllPendingTransactions);  // Superadmin all pending
+
 // User subscription routes
 router.get('/my-subscription', requireJWT, subscriptionController.getMySubscription);
 router.post('/create', requireJWT, subscriptionController.createSubscription);

@@ -58,6 +58,21 @@ const paymentSchema = new mongoose.Schema({
     default: 'monthly'
   },
   
+  // 🔴 PRICING SNAPSHOT - Captured at order creation time, NEVER changes
+  pricingSnapshot: {
+    planName: String,
+    monthlyPrice: Number,
+    yearlyPrice: Number,
+    setupFee: Number,
+    selectedBillingCycle: String,  // The cycle selected by user: monthly/quarterly/annual
+    calculatedAmount: Number,      // Exact amount charged based on selected cycle
+    currency: String,
+    discountApplied: Number,
+    discountReason: String,
+    finalAmount: Number,
+    capturedAt: { type: Date, default: Date.now }  // When this snapshot was taken
+  },
+  
   // Gateway References
   gatewayOrderId: String,
   gatewayTransactionId: String,

@@ -6,7 +6,7 @@ import {
   handlePaymentWebhook,
   getInvoice 
 } from '../controllers/cashfreePaymentController.js';
-import { requireJWT, authMiddleware } from '../middlewares/authMiddleware.js';
+import { requireJWT } from '../middlewares/jwtAuth.js';
 
 const router = express.Router();
 
@@ -23,7 +23,7 @@ router.post('/webhook/confirm', paymentController.confirmPayment);
 /**
  * PROTECTED ROUTES (require authentication)
  */
-router.use(authMiddleware);
+router.use(requireJWT);
 
 // Cashfree payment flow
 router.post('/create-order', requireJWT, createPaymentOrder);

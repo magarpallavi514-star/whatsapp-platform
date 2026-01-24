@@ -457,14 +457,31 @@ export const signup = async (req, res) => {
     // Send pending payment notification email
     try {
       const paymentLink = `${process.env.FRONTEND_URL || 'https://app.pixelswhatsapp.com'}/checkout?plan=${planName.toLowerCase()}`;
-      const planPrices = {
-        starter: { monthly: 999, quarterly: 2847, annual: 9590 },
-        pro: { monthly: 2999, quarterly: 8547, annual: 28790 },
-        enterprise: { monthly: 9999, quarterly: 28497, annual: 95990 },
-        custom: { monthly: 0, quarterly: 0, annual: 0 }
-      };
       
-      const planAmount = planPrices[planName]?.[cycle] || 0;
+      // Calculate amount based on billing cycle with correct pricing from DB
+      let planAmount = 0;
+      try {
+        const pricingPlan = await PricingPlan.findOne({
+          name: { $regex: planName, $options: 'i' },
+          isActive: true
+        });
+        
+        if (pricingPlan) {
+          const monthlyPrice = pricingPlan.monthlyPrice || 0;
+          
+          // Apply multipliers and discounts
+          if (cycle === 'monthly') {
+            planAmount = monthlyPrice * 1; // No discount
+          } else if (cycle === 'quarterly') {
+            planAmount = Math.round(monthlyPrice * 3 * 0.95); // 5% discount
+          } else if (cycle === 'annual') {
+            planAmount = Math.round(monthlyPrice * 12 * 0.85); // 15% discount
+          }
+          console.log(`✅ Email pricing calculated: ${planName} ${cycle} = ₹${planAmount}`);
+        }
+      } catch (priceErr) {
+        console.error('⚠️ Error calculating email price:', priceErr.message);
+      }
       if (planAmount > 0) {
         console.log('📧 Sending pending payment email to:', email);
         await emailService.sendPendingPaymentEmail(
