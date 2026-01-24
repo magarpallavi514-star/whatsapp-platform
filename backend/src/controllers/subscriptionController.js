@@ -451,8 +451,8 @@ export const createOrder = async (req, res) => {
         customer_phone: account.phone || '9999999999'
       },
       order_meta: {
-        return_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-success?orderId=${orderId}`,
-        notify_url: `${process.env.BACKEND_URL || 'http://localhost:5050'}/api/payments/cashfree`
+        return_url: `${process.env.FRONTEND_URL || 'https://pixels-whatsapp-frontend.up.railway.app'}/payment-success?orderId=${orderId}`,
+        notify_url: `${process.env.BACKEND_URL || 'https://whatsapp-platform-production-e48b.up.railway.app'}/api/payments/cashfree`
       },
       order_note: `${pricingPlanName} Plan Subscription`
     };
