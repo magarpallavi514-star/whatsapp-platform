@@ -101,7 +101,8 @@ function CheckoutContent() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create order')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `Failed to create order (${response.status})`)
       }
 
       const orderData = await response.json()

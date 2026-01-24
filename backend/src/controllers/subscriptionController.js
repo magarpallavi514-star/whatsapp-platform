@@ -404,13 +404,20 @@ export const createOrder = async (req, res) => {
     };
     
     const pricingPlanName = planNameMapping[plan.toLowerCase()] || plan;
+    console.log(`🔍 Looking for pricing plan: "${pricingPlanName}" (from input: "${plan}")`);
+    
     const pricingPlan = await PricingPlan.findOne({ name: pricingPlanName, isActive: true });
     
     if (!pricingPlan) {
-      console.error('❌ Pricing plan not found:', pricingPlanName);
+      console.error(`❌ Pricing plan not found: "${pricingPlanName}"`);
+      // List available plans for debugging
+      const availablePlans = await PricingPlan.find({ isActive: true }).select('name monthlyPrice');
+      console.log('📋 Available plans:', availablePlans.map(p => ({ name: p.name, price: p.monthlyPrice })));
+      
       return res.status(404).json({
         success: false,
-        message: 'Pricing plan not found'
+        message: `Pricing plan "${pricingPlanName}" not found`,
+        availablePlans: availablePlans.map(p => p.name)
       });
     }
 
