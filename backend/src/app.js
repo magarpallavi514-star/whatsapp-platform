@@ -31,6 +31,7 @@ import paymentWebhookRoutes from './routes/paymentWebhookRoutes.js';
 import organizationsRoutes from './routes/organizationsRoutes.js';
 import leadRoutes from './routes/leadRoutes.js';
 import paymentReminderRoutes from './routes/paymentReminderRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -201,6 +202,9 @@ app.use('/api/payments', paymentWebhookRoutes);
 
 // Mount billing routes (JWT AUTH for billing and invoices)
 app.use('/api/billing', requireJWT, billingRoutes);
+
+// Mount dashboard routes (JWT AUTH for dashboard statistics)
+app.use('/api/dashboard', requireJWT, dashboardRoutes);
 
 // Mount self-service account routes (JWT AUTH - for dashboard users)
 app.use('/api/account', requireJWT, accountRoutes);

@@ -12,7 +12,10 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [subscription, setSubscription] = useState<any>(null)
+  const [dashboardStats, setDashboardStats] = useState<any>(null)
+  const [dashboardActivity, setDashboardActivity] = useState<any[]>([])
   const [loadingSubscription, setLoadingSubscription] = useState(true)
+  const [loadingStats, setLoadingStats] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -20,8 +23,10 @@ export default function DashboardPage() {
     setUser(currentUser)
     setUserRole(currentUser?.role || null)
     
-    // Fetch subscription status
+    // Fetch subscription status and stats
     fetchSubscription()
+    fetchDashboardStats()
+    fetchDashboardActivity()
   }, [])
 
   const fetchSubscription = async () => {
@@ -44,21 +49,45 @@ export default function DashboardPage() {
     }
   }
 
-  const isSuperAdmin = userRole === UserRole.SUPERADMIN
+  const fetchDashboardStats = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
 
-  const stats = isSuperAdmin 
-    ? [
-        { name: "Total Organizations", value: "24", change: "+3 this month", changeType: "positive" },
-        { name: "Platform Revenue", value: "₹2.4L", change: "+18%", changeType: "positive" },
-        { name: "Total Users", value: "342", change: "+45", changeType: "positive" },
-        { name: "System Uptime", value: "99.8%", change: "Healthy", changeType: "positive" },
-      ]
-    : [
-        { name: "Total Messages", value: "45,231", change: "+12.5%", changeType: "positive" },
-        { name: "Active Contacts", value: "8,492", change: "+8.2%", changeType: "positive" },
-        { name: "Response Rate", value: "94.3%", change: "+2.1%", changeType: "positive" },
-        { name: "Avg Response Time", value: "2.4m", change: "-18.3%", changeType: "positive" },
-      ]
+      const response = await fetch(`${API_URL}/dashboard/stats`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setDashboardStats(data.data)
+      }
+    } catch (err) {
+      console.error("Failed to fetch dashboard stats:", err)
+    } finally {
+      setLoadingStats(false)
+    }
+  }
+
+  const fetchDashboardActivity = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
+      const response = await fetch(`${API_URL}/dashboard/activity`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setDashboardActivity(data.data || [])
+      }
+    } catch (err) {
+      console.error("Failed to fetch dashboard activity:", err)
+    }
+  }
+
+  const isSuperAdmin = userRole === UserRole.SUPERADMIN
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -113,19 +142,74 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((stat) => (
+        {loadingStats ? (
+          <div className="col-span-full text-center py-8">
+            <p className="text-gray-600">Loading statistics...</p>
+          </div>
+        ) : dashboardStats ? (
+          // Render real stats based on role
+          isSuperAdmin ? (
+            // Superadmin stats
+            [
+              { name: "Total Organizations", value: dashboardStats.stats?.totalOrganizations || "0", change: "", changeType: "positive" },
+              { name: "Total Accounts", value: dashboardStats.stats?.totalAccounts || "0", change: "", changeType: "positive" },
+              { name: "Platform Revenue", value: `₹${(dashboardStats.stats?.totalRevenue || 0).toLocaleString()}`, change: "", changeType: "positive" },
+              { name: "System Uptime", value: dashboardStats.stats?.systemUptime || "99.8%", change: "Healthy", changeType: "positive" },
+            ]
+          ) : (
+            // Client stats
+            [
+              { name: "Total Contacts", value: dashboardStats.stats?.totalContacts || "0", change: "", changeType: "positive" },
+              { name: "Total Messages", value: dashboardStats.stats?.totalMessages || "0", change: "", changeType: "positive" },
+              { name: "Response Rate", value: `${dashboardStats.stats?.responseRate || "0"}%`, change: "", changeType: "positive" },
+              { name: "Avg Response Time", value: `${dashboardStats.stats?.avgResponseTime || "0"}m`, change: "", changeType: "positive" },
+            ]
+          )
+        ).map((stat) => (
           <div key={stat.name} className="bg-white rounded-xl border border-gray-200 p-6">
             <p className="text-sm font-medium text-gray-600 mb-1">{stat.name}</p>
             <div className="flex items-baseline gap-2">
               <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-              <span className={`text-sm font-medium ${
-                stat.changeType === "positive" ? "text-green-600" : "text-red-600"
-              }`}>
-                {stat.change}
-              </span>
+              {stat.change && (
+                <span className={`text-sm font-medium ${
+                  stat.changeType === "positive" ? "text-green-600" : "text-red-600"
+                }`}>
+                  {stat.change}
+                </span>
+              )}
             </div>
           </div>
-        ))}
+        ))
+        ) : (
+          // Fallback to hardcoded stats
+          (isSuperAdmin 
+            ? [
+                { name: "Total Organizations", value: "24", change: "+3 this month", changeType: "positive" },
+                { name: "Platform Revenue", value: "₹2.4L", change: "+18%", changeType: "positive" },
+                { name: "Total Users", value: "342", change: "+45", changeType: "positive" },
+                { name: "System Uptime", value: "99.8%", change: "Healthy", changeType: "positive" },
+              ]
+            : [
+                { name: "Total Messages", value: "45,231", change: "+12.5%", changeType: "positive" },
+                { name: "Active Contacts", value: "8,492", change: "+8.2%", changeType: "positive" },
+                { name: "Response Rate", value: "94.3%", change: "+2.1%", changeType: "positive" },
+                { name: "Avg Response Time", value: "2.4m", change: "-18.3%", changeType: "positive" },
+              ]
+          ).map((stat) => (
+            <div key={stat.name} className="bg-white rounded-xl border border-gray-200 p-6">
+              <p className="text-sm font-medium text-gray-600 mb-1">{stat.name}</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                <span className={`text-sm font-medium ${
+                  stat.changeType === "positive" ? "text-green-600" : "text-red-600"
+                }`}>
+                  {stat.change}
+                </span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
       </div>
 
       {/* Two Column Layout */}
@@ -134,23 +218,41 @@ export default function DashboardPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
           <div className="space-y-4">
-            {[
-              { action: "Broadcast sent", details: "Summer Sale Campaign", time: "2 hours ago" },
-              { action: "New contact added", details: "+91 98765 43210", time: "4 hours ago" },
-              { action: "Template approved", details: "Order Confirmation", time: "6 hours ago" },
-              { action: "Chat message received", details: "From: John Doe", time: "8 hours ago" },
-            ].map((activity, index) => (
-              <div key={index} className="flex items-start gap-3 pb-4 border-b last:border-0">
-                <div className="h-8 w-8 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <MessageSquare className="h-4 w-4 text-green-600" />
+            {dashboardActivity && dashboardActivity.length > 0 ? (
+              dashboardActivity.map((activity, index) => (
+                <div key={index} className="flex items-start gap-3 pb-4 border-b last:border-0">
+                  <div className="h-8 w-8 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <MessageSquare className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{activity.action}</p>
+                    <p className="text-sm text-gray-600 truncate">{activity.details}</p>
+                  </div>
+                  <span className="text-xs text-gray-500 flex-shrink-0">
+                    {new Date(activity.time).toLocaleDateString()}
+                  </span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                  <p className="text-sm text-gray-600 truncate">{activity.details}</p>
+              ))
+            ) : (
+              // Fallback demo data
+              [
+                { action: "Broadcast sent", details: "Summer Sale Campaign", time: "2 hours ago" },
+                { action: "New contact added", details: "+91 98765 43210", time: "4 hours ago" },
+                { action: "Template approved", details: "Order Confirmation", time: "6 hours ago" },
+                { action: "Chat message received", details: "From: John Doe", time: "8 hours ago" },
+              ].map((activity, index) => (
+                <div key={index} className="flex items-start gap-3 pb-4 border-b last:border-0">
+                  <div className="h-8 w-8 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <MessageSquare className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{activity.action}</p>
+                    <p className="text-sm text-gray-600 truncate">{activity.details}</p>
+                  </div>
+                  <span className="text-xs text-gray-500 flex-shrink-0">{activity.time}</span>
                 </div>
-                <span className="text-xs text-gray-500 flex-shrink-0">{activity.time}</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

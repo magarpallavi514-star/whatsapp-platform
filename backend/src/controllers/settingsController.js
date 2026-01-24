@@ -102,58 +102,106 @@ export const addPhoneNumber = async (req, res) => {
       });
     }
     
-    // Check if phone number already exists FOR THIS ACCOUNT (check both IDs)
+    // Check if phone number already exists FOR THIS ACCOUNT
     const existing = await PhoneNumber.findOne({ 
-      $or: [
-        { accountId: mongoAccountId, phoneNumberId },
-        { accountId, phoneNumberId }
-      ]
+      accountId: mongoAccountId,
+      phoneNumberId
     });
+    
     if (existing) {
       return res.status(400).json({
         success: false,
-        message: 'This phone number is already connected to your account'
+        message: 'This phone number is already connected to your account',
+        existingId: existing._id
       });
+    }
+    
+    // Check if phone exists in another account (shouldn't happen after unique index fix)
+    // But if it does, allow it - each account can have its own instance
+    const existingInOtherAccount = await PhoneNumber.findOne({ 
+      phoneNumberId,
+      accountId: { $ne: mongoAccountId }
+    });
+    
+    if (existingInOtherAccount) {
+      console.warn(`⚠️  Phone ${phoneNumberId} exists in another account, but allowing this account to add it`);
     }
     
     // Check if this is the first phone number for this account
     const count = await PhoneNumber.countDocuments({ 
-      $or: [
-        { accountId: mongoAccountId },
-        { accountId }
-      ]
+      accountId: mongoAccountId
     });
     const isFirst = count === 0;
     
-    const phoneNumber = await PhoneNumber.create({
-      accountId: mongoAccountId,  // Store MongoDB ObjectId, NOT string
-      phoneNumberId,
-      wabaId,
-      accessToken,
-      displayName: displayName || 'WhatsApp Business',
-      displayPhone: displayPhone || phoneNumberId,
-      isActive: isFirst, // First phone number is active by default
-      verifiedAt: new Date()
-    });
-    
-    res.json({
-      success: true,
-      message: 'Phone number added successfully',
-      phoneNumber: {
-        _id: phoneNumber._id,
-        phoneNumberId: phoneNumber.phoneNumberId,
-        wabaId: phoneNumber.wabaId,
-        displayName: phoneNumber.displayName,
-        displayPhone: phoneNumber.displayPhone,
-        isActive: phoneNumber.isActive
+    try {
+      const phoneNumber = await PhoneNumber.create({
+        accountId: mongoAccountId,  // Store MongoDB ObjectId, NOT string
+        phoneNumberId,
+        wabaId,
+        accessToken,
+        displayName: displayName || 'WhatsApp Business',
+        displayPhone: displayPhone || phoneNumberId,
+        isActive: isFirst, // First phone number is active by default
+        verifiedAt: new Date()
+      });
+      
+      res.json({
+        success: true,
+        message: 'Phone number added successfully',
+        phoneNumber: {
+          _id: phoneNumber._id,
+          phoneNumberId: phoneNumber.phoneNumberId,
+          wabaId: phoneNumber.wabaId,
+          displayName: phoneNumber.displayName,
+          displayPhone: phoneNumber.displayPhone,
+          isActive: phoneNumber.isActive
+        }
+      });
+    } catch (createError) {
+      // Handle E11000 duplicate key error
+      if (createError.code === 11000) {
+        const field = Object.keys(createError.keyPattern || {})[0];
+        
+        // If it's phoneNumberId, check if it's from this account
+        if (field === 'phoneNumberId') {
+          const duplicate = await PhoneNumber.findOne({ phoneNumberId });
+          
+          if (duplicate && duplicate.accountId.toString() === mongoAccountId.toString()) {
+            return res.status(400).json({
+              success: false,
+              message: 'This phone number is already connected to your account',
+              duplicateId: duplicate._id
+            });
+          } else {
+            // Different account has it - try with a different strategy
+            console.warn(`Attempting to handle cross-account duplicate: ${phoneNumberId}`);
+            throw createError;
+          }
+        }
+        
+        throw createError;
       }
-    });
+      
+      throw createError;
+    }
     
   } catch (error) {
     console.error('❌ Add phone number error:', error);
+    
+    // Better error messages
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0];
+      return res.status(409).json({
+        success: false,
+        message: `This ${field} is already in use. Please try a different phone number.`,
+        code: 'DUPLICATE_KEY',
+        field
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message || 'Failed to add phone number'
     });
   }
 };

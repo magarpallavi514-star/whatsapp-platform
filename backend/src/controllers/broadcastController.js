@@ -4,9 +4,8 @@ import PhoneNumber from '../models/PhoneNumber.js';
 
 export const createBroadcast = async (req, res) => {
   try {
-    // Get accountId from JWT middleware (use ObjectId for PhoneNumber queries)
+    // Get accountId from JWT middleware (use ObjectId for database operations)
     const accountObjectId = req.account._id;
-    const accountId = req.accountId || req.params.accountId;
     let phoneNumberId = req.params.phoneNumberId || req.body.phoneNumberId;
     const data = req.body;
 
@@ -27,8 +26,9 @@ export const createBroadcast = async (req, res) => {
       phoneNumberId = activePhone.phoneNumberId;
     }
 
+    // Pass ObjectId to service, NOT the string accountId
     const broadcast = await broadcastService.createBroadcast(
-      accountId,
+      accountObjectId,  // ✅ Use ObjectId, not string
       phoneNumberId,
       data
     );

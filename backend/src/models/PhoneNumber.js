@@ -13,8 +13,9 @@ const phoneNumberSchema = new mongoose.Schema({
   // WABA Credentials
   phoneNumberId: {
     type: String,
-    required: true,
-    unique: true
+    required: true
+    // ⚠️ IMPORTANT: NOT globally unique - each account can have same phone
+    // Uniqueness enforced via compound index below (accountId + phoneNumberId)
   },
   wabaId: {
     type: String,
