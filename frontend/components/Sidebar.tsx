@@ -107,10 +107,12 @@ export default function Sidebar() {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             
             // Lock features requiring active plan if plan is not active
+            // For clients with paid plans (pro/enterprise), show all features
             const lockedFeatures = ['whatsapp', 'contacts', 'broadcasts', 'campaigns', 'chatbot', 'templates']
             const isFeatureLocked = !isSuperAdmin && !isPlanActive && lockedFeatures.some(feature => item.href.includes(feature))
             
             // Always show billing/settings/dashboard, even for pending plans
+            // For paid plans, show all features including chatbot, leads, campaigns
             const alwaysVisible = ['dashboard', 'billing', 'settings']
             const shouldShow = alwaysVisible.some(v => item.href.includes(v)) || isPlanActive || isSuperAdmin
             

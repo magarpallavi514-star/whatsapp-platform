@@ -36,9 +36,9 @@ export const routeAccess = {
   // Templates - Allow USER role for clients
   '/dashboard/templates': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
   
-  // Chatbot - Admin only
-  '/dashboard/chatbot': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
-  '/dashboard/chatbot/builder': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
+  // Chatbot - Allow USER role for clients
+  '/dashboard/chatbot': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
+  '/dashboard/chatbot/builder': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
   
   // Chat/Live Chat - Allow USER role for clients
   '/dashboard/chat': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
@@ -47,6 +47,9 @@ export const routeAccess = {
   '/dashboard/campaigns': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
   '/dashboard/campaigns/new': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
   '/dashboard/campaigns/create': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
+  
+  // Leads - Allow USER role for clients
+  '/dashboard/leads': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
   
   // Analytics - Admin only
   '/dashboard/analytics': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER],
@@ -130,7 +133,7 @@ export const getSidebarItems = (role: UserRole) => {
       label: 'Campaigns',
       href: '/dashboard/campaigns',
       icon: 'Target',
-      roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER]
+      roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER]
     },
     {
       label: 'Analytics',
