@@ -440,28 +440,28 @@ export const createOrder = async (req, res) => {
     // Create unique order ID
     const orderId = `ORDER_${plan.toUpperCase()}_${Date.now()}`;
 
-    // Prepare Cashfree payment session request
+    // Prepare Cashfree payment session request (using snake_case as per Cashfree API v2023-08-01)
     const sessionPayload = {
-      orderId: orderId,
-      orderAmount: amount,
-      orderCurrency: 'INR',
-      customerDetails: {
-        customerId: accountId.toString(),
-        customerEmail: account.email || 'customer@example.com',
-        customerPhone: account.phone || '9999999999'
+      order_id: orderId,
+      order_amount: amount,
+      order_currency: 'INR',
+      customer_details: {
+        customer_id: accountId.toString(),
+        customer_email: account.email || 'customer@example.com',
+        customer_phone: account.phone || '9999999999'
       },
-      orderMeta: {
-        returnUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-success?orderId=${orderId}`,
-        notifyUrl: `${process.env.BACKEND_URL || 'http://localhost:5050'}/api/payments/cashfree`
+      order_meta: {
+        return_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-success?orderId=${orderId}`,
+        notify_url: `${process.env.BACKEND_URL || 'http://localhost:5050'}/api/payments/cashfree`
       },
-      orderNote: `${pricingPlanName} Plan Subscription`
+      order_note: `${pricingPlanName} Plan Subscription`
     };
 
     console.log('🔄 Calling Cashfree API with payload:', {
-      orderId: sessionPayload.orderId,
-      orderAmount: sessionPayload.orderAmount,
-      orderCurrency: sessionPayload.orderCurrency,
-      customerId: sessionPayload.customerDetails.customerId
+      order_id: sessionPayload.order_id,
+      order_amount: sessionPayload.order_amount,
+      order_currency: sessionPayload.order_currency,
+      customer_id: sessionPayload.customer_details.customer_id
     });
 
     // Call Cashfree API to create payment session
@@ -510,8 +510,8 @@ export const createOrder = async (req, res) => {
       paymentGateway: 'cashfree',
       status: 'pending',
       planId: plan,
-      gatewayOrderId: cashfreeData.orderId,
-      paymentSessionId: cashfreeData.paymentSessionId,
+      gatewayOrderId: cashfreeData.order_id || cashfreeData.orderId,
+      paymentSessionId: cashfreeData.payment_session_id || cashfreeData.paymentSessionId,
       metadata: {
         plan,
         planName: pricingPlanName,
@@ -526,7 +526,7 @@ export const createOrder = async (req, res) => {
     res.status(201).json({
       success: true,
       orderId: orderId,
-      paymentSessionId: cashfreeData.paymentSessionId,
+      paymentSessionId: cashfreeData.payment_session_id || cashfreeData.paymentSessionId,
       amount: amount,
       currency: 'INR',
       message: 'Order created successfully'
