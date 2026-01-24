@@ -887,8 +887,10 @@ class WhatsAppService {
       // This ensures the conversation appears in live chat after sending media
       const accountIdStr = accountId instanceof mongoose.Types.ObjectId ? accountId.toString() : accountId;
       const mediaLabel = mediaType === 'image' ? '🖼️ Photo' : 
-                         mediaType === 'video' ? '🎥 Video' : 
-                         '📄 Document';
+                         mediaType === 'video' ? '🎥 Video' :
+                         mediaType === 'audio' ? '🎵 Audio Message' :
+                         mediaType === 'document' ? `📄 ${metadata.filename || 'Document'}` :
+                         `${mediaType}`;
       await Conversation.findOneAndUpdate(
         {
           accountId,

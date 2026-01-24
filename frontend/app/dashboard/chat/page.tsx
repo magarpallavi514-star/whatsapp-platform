@@ -18,6 +18,8 @@ import {
   Image as ImageIcon,
   FileText,
   Play,
+  Music,
+  Download,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ErrorToast } from "@/components/ErrorToast"
@@ -751,15 +753,36 @@ export default function ChatPage() {
           </div>
         )
 
+      case "audio":
+        return (
+          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg min-w-[250px]">
+            <Music className="h-6 w-6 text-green-600 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              {mediaUrl ? (
+                <audio
+                  src={mediaUrl}
+                  controls
+                  className="w-full h-8"
+                />
+              ) : (
+                <p className="text-sm text-gray-500">Audio (downloading...)</p>
+              )}
+            </div>
+          </div>
+        )
+
       case "document":
         return (
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-            <FileText className="h-8 w-8 text-gray-500" />
-            <div className="flex-1">
-              <p className="font-medium text-sm">{content.filename || "Document"}</p>
+          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg w-full">
+            <FileText className="h-8 w-8 text-blue-600 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm text-gray-900 truncate">{content.filename || "Document"}</p>
               {content.fileSize && (
                 <p className="text-xs text-gray-500">
-                  {(content.fileSize / 1024).toFixed(1)} KB
+                  {content.fileSize > 1024 * 1024 
+                    ? (content.fileSize / (1024 * 1024)).toFixed(1) + ' MB'
+                    : (content.fileSize / 1024).toFixed(1) + ' KB'
+                  }
                 </p>
               )}
             </div>
@@ -768,9 +791,11 @@ export default function ChatPage() {
                 href={mediaUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-green-600 hover:text-green-700 text-sm font-medium"
+                className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition flex-shrink-0"
+                title={`Download ${content.filename || 'document'}`}
               >
-                Download
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Download</span>
               </a>
             )}
           </div>
@@ -931,6 +956,11 @@ export default function ChatPage() {
                           <Play className="h-3.5 w-3.5 flex-shrink-0" />
                           <span className="truncate">Video</span>
                         </>
+                      ) : contact.lastMessage?.includes('🎵') || contact.lastMessage?.toLowerCase().includes('audio') ? (
+                        <>
+                          <Music className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate">Audio</span>
+                        </>
                       ) : contact.lastMessage?.includes('📄') || contact.lastMessage?.toLowerCase().includes('document') ? (
                         <>
                           <FileText className="h-3.5 w-3.5 flex-shrink-0" />
@@ -1082,14 +1112,14 @@ export default function ChatPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*,video/*,.pdf,.doc,.docx"
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
                   onChange={handleFileSelect}
                   className="hidden"
                 />
                 <button 
                   onClick={() => fileInputRef.current?.click()}
                   className="p-2 hover:bg-[#e9edef] rounded-full transition flex-shrink-0"
-                  title="Attach file (images, videos, documents)"
+                  title="Attach file (images, videos, documents, audio)"
                 >
                   <Paperclip className="h-6 w-6 text-[#54656f]" />
                 </button>

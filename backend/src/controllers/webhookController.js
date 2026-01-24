@@ -362,9 +362,21 @@ export const handleWebhook = async (req, res) => {
                   console.log('✅ Contact created/updated');
                   
                   // Upsert or update conversation
-                  const lastMessagePreview = messageType === 'text' 
-                    ? (content.text?.substring(0, 200) || '')
-                    : `[${messageType}]`;
+                  let lastMessagePreview = '';
+                  
+                  if (messageType === 'text') {
+                    lastMessagePreview = content.text?.substring(0, 200) || '';
+                  } else if (messageType === 'image') {
+                    lastMessagePreview = '🖼️ Photo';
+                  } else if (messageType === 'video') {
+                    lastMessagePreview = '🎥 Video';
+                  } else if (messageType === 'audio') {
+                    lastMessagePreview = '🎵 Audio Message';
+                  } else if (messageType === 'document') {
+                    lastMessagePreview = '📄 Document: ' + (content.filename || 'Document');
+                  } else {
+                    lastMessagePreview = `[${messageType}]`;
+                  }
                   
                   // ✅ FIX 4: Create/update conversation with proper fields
                   await Conversation.findOneAndUpdate(
