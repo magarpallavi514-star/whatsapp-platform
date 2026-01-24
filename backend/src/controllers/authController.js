@@ -236,17 +236,7 @@ export const login = async (req, res) => {
       });
     }
 
-    // Check if account is still PENDING (payment not completed)
-    if (account.status === 'pending') {
-      console.log('⏳ Account pending payment:', email);
-      return res.status(403).json({
-        success: false,
-        message: 'Please complete payment to activate your account. Redirecting to checkout...',
-        requiresPayment: true
-      });
-    }
-    
-    // Check password - account.password should now be available
+    // Check password - account.password should be available
     if (!account.password) {
       console.log('❌ Account has no password set:', email);
       console.log('   Account details:', {
@@ -272,22 +262,36 @@ export const login = async (req, res) => {
     }
     
     // Account authenticated - generate token
+    // ✅ ALLOW PENDING ACCOUNTS TO LOGIN - They will see payment banner on dashboard
+    // ✅ Users can complete payment from /dashboard/billing page
     const userData = {
       email: account.email,
       accountId: account.accountId,
       name: account.name,
       role: 'user',
+      status: account.status, // ✅ Include status so frontend knows if pending
+      plan: account.plan, // ✅ Include plan details
+      billingCycle: account.billingCycle, // ✅ Include billing cycle
       _id: account._id
     };
     
     const token = generateToken(userData);
-    console.log('✅ Account logged in:', email);
+    
+    // Log appropriate message based on status
+    if (account.status === 'pending') {
+      console.log('⏳ Pending account logged in (payment required):', email);
+    } else {
+      console.log('✅ Account logged in:', email);
+    }
     
     return res.json({
       success: true,
-      message: 'Login successful',
+      message: account.status === 'pending' 
+        ? 'Login successful - Please complete payment to unlock features'
+        : 'Login successful',
       token,
-      user: userData
+      user: userData,
+      requiresPayment: account.status === 'pending' // ✅ Signal to frontend
     });
     
   } catch (error) {
