@@ -19,22 +19,16 @@ class WhatsAppService {
   
   /**
    * Get phone number config with decrypted token
-   * Handles STRING accountId format (Account.accountId, not MongoDB _id)
-   * @param {string} accountId 
+   * accountId is MongoDB ObjectId from req.account._id
+   * @param {ObjectId} accountId 
    * @param {string} phoneNumberId 
    */
   async getPhoneConfig(accountId, phoneNumberId) {
-    // accountId is a STRING from JWT: "6971e3a706837a5539992bee"
-    // PhoneNumber.accountId is stored as STRING (matches Account.accountId)
-    // NO conversion needed - use STRING directly
-    
-    let queryAccountId = accountId;
-    
-    // Keep accountId as STRING - PhoneNumber model stores accountId as String
-    // Do NOT convert to ObjectId
+    // accountId is ObjectId from JWT: req.account._id
+    // PhoneNumber.accountId is stored as ObjectId (MongoDB standard)
     
     const config = await PhoneNumber.findOne({
-      accountId: queryAccountId,
+      accountId,  // Already ObjectId, no conversion needed
       phoneNumberId,
       isActive: true 
     }).select('+accessToken'); // CRITICAL: explicitly select encrypted field

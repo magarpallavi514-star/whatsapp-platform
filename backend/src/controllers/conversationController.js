@@ -52,10 +52,10 @@ export const getConversations = async (req, res) => {
 export const getConversationMessages = async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const { limit = 500, hours = 24 } = req.query;
+    const { limit = 500, hours } = req.query;
     const accountId = req.account._id;  // From JWT middleware
     
-    // Parse conversationId format: accountId_phoneNumberId_customerNumber
+    // Parse conversationId format: accountId_phoneNumberId_userPhone
     let conversation;
     
     // Try to find by the new structure first
@@ -63,11 +63,11 @@ export const getConversationMessages = async (req, res) => {
       const parts = conversationId.split('_');
       if (parts.length >= 3) {
         const phoneNumberId = parts[1];
-        const customerNumber = parts.slice(2).join('_');  // Handle phone numbers with underscores
+        const userPhone = parts.slice(2).join('_');  // Handle phone numbers with underscores
         conversation = await Conversation.findOne({
           accountId,
           phoneNumberId,
-          customerNumber
+          userPhone
         }).lean();
       }
     }
@@ -87,17 +87,22 @@ export const getConversationMessages = async (req, res) => {
       });
     }
     
-    // Calculate time window (last 24 hours by default)
-    const hoursAgo = new Date(Date.now() - hours * 60 * 60 * 1000);
-    
-    // Get messages for this conversation from last 24 hours
-    // CRITICAL: Get most recent messages first, then sort for display
-    const allMessages = await Message.find({
+    // Build query: Load all messages OR filter by hours if specified
+    const query = {
       accountId: conversation.accountId,
       phoneNumberId: conversation.phoneNumberId,
-      recipientPhone: conversation.customerNumber,  // Changed from userPhone to customerNumber
-      createdAt: { $gte: hoursAgo } // Filter by time window
-    })
+      recipientPhone: conversation.userPhone  // Use userPhone from conversation
+    };
+    
+    // Only apply time filter if hours is explicitly specified
+    if (hours) {
+      const hoursAgo = new Date(Date.now() - parseInt(hours) * 60 * 60 * 1000);
+      query.createdAt = { $gte: hoursAgo };
+    }
+    
+    // Get messages for this conversation
+    // CRITICAL: Get most recent messages first, then sort for display
+    const allMessages = await Message.find(query)
       .sort({ createdAt: -1 }) // Get newest messages first
       .limit(parseInt(limit))
       .lean();
@@ -105,7 +110,8 @@ export const getConversationMessages = async (req, res) => {
     // Reverse to show oldest-first for chat display
     const messages = allMessages.reverse();
     
-    console.log(`📨 Fetched ${messages.length} messages from last ${hours} hours for conversation ${conversationId}`);
+    const timeRange = hours ? `from last ${hours} hours` : 'all messages';
+    console.log(`📨 Fetched ${messages.length} ${timeRange} for conversation ${conversationId}`);
     
     res.json({
       success: true,
