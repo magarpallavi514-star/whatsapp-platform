@@ -225,7 +225,7 @@ export const login = async (req, res) => {
     
     // Check for registered user in database
     console.log('🔍 Checking Account collection for:', email);
-    const account = await Account.findOne({ email });
+    const account = await Account.findOne({ email }).select('+password'); // Explicitly select password field
     
     if (!account) {
       console.log('❌ Account not found:', email);
@@ -245,7 +245,15 @@ export const login = async (req, res) => {
       });
     }
     
-    // Check password
+    // Check password - account.password should now be available
+    if (!account.password) {
+      console.log('❌ Account has no password set:', email);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+    
     const isPasswordValid = await bcrypt.compare(password, account.password);
     if (!isPasswordValid) {
       console.log('❌ Invalid password for account:', email);

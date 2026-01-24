@@ -111,7 +111,13 @@ function CheckoutContent() {
       
       script.onerror = (error) => {
         console.error('❌ Failed to load Cashfree SDK script:', error)
-        setError('Payment gateway unavailable. This may be a temporary issue. Please try again.')
+        console.error('   Script URL: https://sdk.cashfree.com/js/cashfree.js')
+        console.error('   Error type:', error instanceof Event ? error.type : typeof error)
+        console.error('   This could be:')
+        console.error('   1. Cashfree CDN is temporarily down')
+        console.error('   2. Network connectivity issue')
+        console.error('   3. Browser security (CORS/CSP)')
+        setError('Cashfree SDK failed to load. This might be a CDN issue. Try refreshing the page.')
         setCashfreeLoaded(false)
       }
 
@@ -142,6 +148,7 @@ function CheckoutContent() {
       }
 
       // Create order from backend (backend will calculate amount dynamically for security)
+      console.log('📝 Creating order with:', { plan: planId, billingCycle, gateway: 'cashfree' })
       const response = await fetch(`${API_URL}/subscriptions/create-order`, {
         method: 'POST',
         headers: {
@@ -157,18 +164,21 @@ function CheckoutContent() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
+        console.error('❌ Order creation failed:', { status: response.status, error: errorData })
         throw new Error(errorData.message || `Failed to create order (${response.status})`)
       }
 
       const orderData = await response.json()
-      console.log('✅ Order created:', { orderId: orderData.orderId, paymentSessionId: orderData.paymentSessionId?.substring(0, 30) + '...' })
+      console.log('✅ Order created:', { orderId: orderData.orderId, amount: orderData.amount, paymentSessionId: orderData.paymentSessionId?.substring(0, 30) + '...' })
 
       // Initialize Cashfree checkout
       const cashfree = (window as any).Cashfree
       if (!cashfree) {
+        console.error('❌ Cashfree SDK not available on window object')
         throw new Error('Cashfree SDK not available. Please refresh the page and try again.')
       }
 
+      console.log('🔐 Initializing Cashfree checkout...')
       const checkoutOptions = {
         paymentSessionId: orderData.paymentSessionId,
         redirectTarget: '_self',
