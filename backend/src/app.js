@@ -29,6 +29,7 @@ import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import billingRoutes from './routes/billingRoutes.js';
 import paymentWebhookRoutes from './routes/paymentWebhookRoutes.js';
 import organizationsRoutes from './routes/organizationsRoutes.js';
+import leadRoutes from './routes/leadRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -207,6 +208,9 @@ app.use('/api/admin/organizations', requireJWT, organizationsRoutes);
 
 // Mount integration routes (INTEGRATION TOKEN AUTH - for Enromatics, third-party apps)
 app.use('/api/integrations', integrationsRoutes);
+
+// Leads management (with JWT and subscription)
+app.use('/api/leads', requireJWT, requireSubscription, leadRoutes);
 
 // Mount API routes (API KEY AUTH - for external integrations only)
 app.use('/api/stats', authenticate, statsRoutes);

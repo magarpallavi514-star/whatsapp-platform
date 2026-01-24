@@ -118,7 +118,13 @@ export const getSidebarItems = (role: UserRole) => {
       label: 'Chatbot',
       href: '/dashboard/chatbot',
       icon: 'Bot',
-      roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER]
+      roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER]
+    },
+    {
+      label: 'Leads',
+      href: '/dashboard/leads',
+      icon: 'Target',
+      roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER]
     },
     {
       label: 'Campaigns',
@@ -130,7 +136,7 @@ export const getSidebarItems = (role: UserRole) => {
       label: 'Analytics',
       href: '/dashboard/analytics',
       icon: 'BarChart3',
-      roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER]
+      roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER]
     },
     {
       label: 'Team',
