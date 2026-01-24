@@ -57,7 +57,8 @@ export const login = async (req, res) => {
         email: 'superadmin@test.com',
         accountId: 'pixels_internal',
         name: 'SuperAdmin (Demo)',
-        role: 'superadmin'
+        role: 'superadmin',
+        workspaceId: 'pixels_internal' // Add workspaceId for subdomain architecture
       };
       
       // Ensure demo account exists in database
@@ -272,7 +273,8 @@ export const login = async (req, res) => {
       status: account.status, // ✅ Include status so frontend knows if pending
       plan: account.plan, // ✅ Include plan details
       billingCycle: account.billingCycle, // ✅ Include billing cycle
-      _id: account._id
+      _id: account._id,
+      workspaceId: account._id.toString() // ✅ Add workspaceId for subdomain architecture
     };
     
     const token = generateToken(userData);
@@ -440,12 +442,66 @@ export const signup = async (req, res) => {
       status: 'pending' // Account is PENDING until payment succeeds
     });
 
+    // Generate subdomain for multi-tenancy (format: company-name or user-first-name)
+    // Fallback: use accountId if no company/name available
+    let subdomain = '';
+    try {
+      if (company && company.trim()) {
+        // Convert company name to valid subdomain (lowercase, hyphens, no special chars)
+        subdomain = company
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '-')  // Replace non-alphanumeric with hyphens
+          .replace(/-+/g, '-')           // Replace multiple hyphens with single
+          .replace(/^-|-$/g, '');         // Remove leading/trailing hyphens
+      } else if (name && name.trim()) {
+        // Use first name if company not provided
+        const firstName = name.trim().split(' ')[0];
+        subdomain = firstName
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+      } else {
+        // Fallback: use first part of email (before @)
+        subdomain = email
+          .split('@')[0]
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+      }
+      
+      // Ensure subdomain is not empty and has minimum length
+      if (subdomain.length < 3) {
+        subdomain = `user-${accountId.substring(0, 8)}`.toLowerCase();
+      }
+      
+      // Check if subdomain already exists - add suffix if needed
+      let originalSubdomain = subdomain;
+      let counter = 1;
+      let existingSubdomain = await Account.findOne({ subdomain });
+      
+      while (existingSubdomain) {
+        subdomain = `${originalSubdomain}-${counter}`;
+        existingSubdomain = await Account.findOne({ subdomain });
+        counter++;
+      }
+      
+      newAccount.subdomain = subdomain;
+      console.log(`✅ Generated subdomain: ${subdomain}`);
+    } catch (err) {
+      console.error('⚠️ Error generating subdomain:', err.message);
+      // Continue without subdomain - it's not critical for login
+    }
+
     await newAccount.save();
 
     console.log('✅ New account created (PENDING - awaiting payment):');
     console.log('  AccountId:', accountId);
     console.log('  Email:', email);
     console.log('  Name:', name);
+    console.log('  Subdomain:', subdomain);
     console.log('  Status: PENDING (will be activated after payment)');
     console.log('  Selected Plan:', planName);
     console.log('  Billing Cycle:', cycle);
@@ -505,7 +561,8 @@ export const signup = async (req, res) => {
       email: newAccount.email,
       name: newAccount.name,
       role: 'user',
-      status: 'pending' // Mark token as pending
+      status: 'pending', // Mark token as pending
+      workspaceId: newAccount._id.toString() // Add workspaceId for subdomain architecture
     };
 
     // Generate JWT token

@@ -42,6 +42,18 @@ const accountSchema = new mongoose.Schema({
     default: 'America/New_York'
   },
   
+  // Multi-Tenancy: Subdomain for workspace identification
+  // Format: client-a, client-b, my-company (lowercase, hyphens only)
+  subdomain: {
+    type: String,
+    unique: true,
+    sparse: true,  // Allow null for old accounts
+    lowercase: true,
+    trim: true,
+    match: /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/,  // Valid subdomain format
+    index: true
+  },
+  
   // WhatsApp WABA ID (Meta Business Account ID for webhook routing)
   wabaId: {
     type: String,
@@ -121,6 +133,7 @@ const accountSchema = new mongoose.Schema({
 accountSchema.index({ accountId: 1 });
 accountSchema.index({ type: 1, status: 1 });
 accountSchema.index({ apiKeyHash: 1 });
+accountSchema.index({ subdomain: 1 });  // For workspace lookup by subdomain
 
 // Hash function for API keys
 accountSchema.statics.hashApiKey = function(apiKey) {

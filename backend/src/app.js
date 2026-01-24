@@ -8,6 +8,7 @@ import path from 'path';
 import { authenticate } from './middlewares/auth.js';
 import { requireJWT } from './middlewares/jwtAuth.js';
 import requireSubscription from './middlewares/requireSubscription.js';
+import { subdomainDetectionMiddleware } from './middlewares/subdomainDetection.js';
 
 // Import routes
 import webhookRoutes from './routes/webhookRoutes.js';
@@ -86,6 +87,9 @@ app.use(cors({
 // JSON and URL-encoded body parsing (JWT is stateless - no session needed)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Subdomain detection middleware (RUNS FIRST - extracts workspace context from URL)
+app.use(subdomainDetectionMiddleware);
 
 // Serve static files (uploads)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
