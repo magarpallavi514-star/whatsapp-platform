@@ -84,9 +84,9 @@ function CheckoutContent() {
         return
       }
 
-      console.log('📥 Loading Cashfree SDK from CDN...')
+      console.log('📥 Loading Cashfree SDK v3 from CDN...')
       const script = document.createElement('script')
-      script.src = 'https://sdk.cashfree.com/js/cashfree.js'
+      script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js'
       script.async = true
       script.type = 'text/javascript'
       
@@ -178,8 +178,7 @@ function CheckoutContent() {
       console.log('✅ Order created:', { orderId: orderData.orderId, amount: orderData.amount, paymentSessionId: orderData.paymentSessionId?.substring(0, 30) + '...' })
 
       // Initialize Cashfree checkout
-      const cashfree = (window as any).Cashfree
-      if (!cashfree) {
+      if (!(window as any).Cashfree) {
         console.error('❌ Cashfree SDK not available on window object')
         throw new Error('Cashfree SDK not available. Please refresh the page and try again.')
       }
@@ -187,26 +186,24 @@ function CheckoutContent() {
       console.log('🔐 Initializing Cashfree checkout...')
       console.log('Payment Session ID:', orderData.paymentSessionId?.substring(0, 30) + '...')
       
-      const checkoutOptions = {
-        paymentSessionId: orderData.paymentSessionId,
-        redirectTarget: '_self'
-      }
-
-      // Cashfree v3 checkout - returns a promise
-      console.log('Calling cashfree.checkout with options:', JSON.stringify(checkoutOptions))
       try {
-        const result = await cashfree.checkout(checkoutOptions)
-        console.log('Cashfree checkout result:', result)
+        // Initialize Cashfree SDK properly (v3 style)
+        const cashfree = await (window as any).Cashfree({
+          mode: 'production'
+        })
         
-        // If successful, payment will redirect automatically
-        // If user closes or error occurs, we get here
-        if (result && result.error) {
-          console.error('Cashfree checkout error:', result.error)
-          setError('Payment cancelled or failed. Please try again.')
-          setIsLoading(false)
-        }
+        console.log('✅ Cashfree SDK initialized, opening checkout...')
+        
+        // Open checkout with session ID
+        await cashfree.checkout({
+          paymentSessionId: orderData.paymentSessionId,
+          redirectTarget: '_self'
+        })
+        
+        // If we reach here, user closed the modal (payment may be completed or cancelled)
+        console.log('Cashfree checkout closed or completed')
       } catch (checkoutError) {
-        console.error('Cashfree checkout exception:', checkoutError)
+        console.error('Cashfree checkout error:', checkoutError)
         setError('Payment gateway error. Please try again.')
         setIsLoading(false)
       }
