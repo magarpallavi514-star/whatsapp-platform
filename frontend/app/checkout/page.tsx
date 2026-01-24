@@ -61,18 +61,31 @@ function CheckoutContent() {
     ? (allPlans.find((p: any) => p.planId?.includes(planId) || p.name.toLowerCase() === planId.toLowerCase()) || allPlans[0])
     : fallbackPlans[planId as keyof typeof fallbackPlans] || fallbackPlans.starter
 
+  const [cashfreeLoaded, setCashfreeLoaded] = useState(false)
+
   useEffect(() => {
     console.log('📋 Checkout Info:', { planId, allPlans: allPlans.length, selectedPlan: plan?.name, planPrice: plan?.monthlyPrice });
+    
     // Load Cashfree script
-    const script = document.createElement('script')
-    script.src = 'https://sdk.cashfree.com/js/cashfree.js'
-    script.async = true
-    document.body.appendChild(script)
+    if (!(window as any).Cashfree) {
+      const script = document.createElement('script')
+      script.src = 'https://sdk.cashfree.com/js/cashfree.js'
+      script.async = true
+      script.onload = () => {
+        console.log('✅ Cashfree SDK loaded')
+        setCashfreeLoaded(true)
+      }
+      script.onerror = () => {
+        console.error('❌ Failed to load Cashfree SDK')
+        setError('Failed to load payment gateway. Please try again.')
+      }
+      document.body.appendChild(script)
+    } else {
+      setCashfreeLoaded(true)
+    }
 
     return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script)
-      }
+      // Cleanup is handled by Next.js
     }
   }, [])
 
@@ -80,6 +93,11 @@ function CheckoutContent() {
     try {
       setIsLoading(true)
       setError(null)
+
+      // Check if Cashfree is loaded
+      if (!cashfreeLoaded) {
+        throw new Error('Payment gateway is loading. Please wait...')
+      }
 
       const token = localStorage.getItem('token')
       if (!token) {
@@ -106,11 +124,12 @@ function CheckoutContent() {
       }
 
       const orderData = await response.json()
+      console.log('✅ Order created:', { orderId: orderData.orderId, paymentSessionId: orderData.paymentSessionId?.substring(0, 30) + '...' })
 
       // Initialize Cashfree checkout
       const cashfree = (window as any).Cashfree
       if (!cashfree) {
-        throw new Error('Cashfree SDK not loaded')
+        throw new Error('Cashfree SDK not available. Please refresh the page and try again.')
       }
 
       const checkoutOptions = {
@@ -328,16 +347,28 @@ function CheckoutContent() {
                 </div>
               )}
 
+              {!cashfreeLoaded && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
+                  <Loader className="h-5 w-5 animate-spin text-blue-600 flex-shrink-0" />
+                  <p className="text-sm text-blue-700">Initializing secure payment gateway...</p>
+                </div>
+              )}
+
               {/* Continue Button */}
               <button
                 onClick={handlePayment}
-                disabled={isLoading}
+                disabled={isLoading || !cashfreeLoaded}
                 className="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-base mb-4"
               >
                 {isLoading ? (
                   <>
                     <Loader className="h-5 w-5 animate-spin" />
                     Processing...
+                  </>
+                ) : !cashfreeLoaded ? (
+                  <>
+                    <Loader className="h-5 w-5 animate-spin" />
+                    Loading Payment Gateway...
                   </>
                 ) : (
                   <>
