@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { authService } from '@/lib/auth'
+import { API_URL } from '@/lib/config/api'
 import { AlertCircle, CheckCircle, Clock, DollarSign, Loader } from 'lucide-react'
 
 interface BillingData {
@@ -16,10 +17,12 @@ interface BillingData {
 
 interface PaymentResponse {
   success: boolean
-  data?: {
-    paymentSessionId: string
-    orderId: string
-  }
+  orderId?: string
+  paymentSessionId?: string
+  amount?: number
+  currency?: string
+  billingCycle?: string
+  message?: string
   error?: string
 }
 
@@ -70,7 +73,7 @@ export default function BillingPage() {
 
     try {
       // Call subscription endpoint to create/update order for retry
-      const response = await fetch('/api/subscriptions/create-order', {
+      const response = await fetch(`${API_URL}/subscriptions/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -82,14 +85,30 @@ export default function BillingPage() {
         })
       })
 
+      // Check if response is OK before parsing JSON
       if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.message || 'Failed to create payment order')
+        let errorMessage = 'Failed to create payment order'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.message || errorMessage
+        } catch (e) {
+          // If response is not JSON, use status text
+          errorMessage = `Server error: ${response.status} ${response.statusText}`
+        }
+        throw new Error(errorMessage)
       }
 
-      const data: PaymentResponse = await response.json()
-      if (!data.success || !data.data?.paymentSessionId) {
-        throw new Error('Invalid payment session response')
+      // Parse successful response
+      let data: PaymentResponse
+      try {
+        data = await response.json()
+      } catch (e) {
+        console.error('Failed to parse response:', e)
+        throw new Error('Invalid response from server. Please try again.')
+      }
+
+      if (!data.success || !data.paymentSessionId) {
+        throw new Error(data.error || 'Invalid payment session response')
       }
 
       // Initialize Cashfree checkout
@@ -99,11 +118,11 @@ export default function BillingPage() {
       }
 
       const checkoutOptions = {
-        paymentSessionId: data.data.paymentSessionId,
+        paymentSessionId: data.paymentSessionId,
         redirectTarget: '_self',
         onSuccess: (response: any) => {
           // Payment successful - webhook will update account status
-          router.push(`/payment-success?orderId=${data.data?.orderId || ''}&status=success`)
+          router.push(`/payment-success?orderId=${data.orderId || ''}&status=success`)
         },
         onFailure: (response: any) => {
           setError('Payment failed. Please try again.')
@@ -113,6 +132,7 @@ export default function BillingPage() {
 
       cashfree.checkout(checkoutOptions)
     } catch (err) {
+      console.error('Payment error:', err)
       setError(err instanceof Error ? err.message : 'Failed to process payment')
       setRetrying(false)
     }
