@@ -9,7 +9,6 @@ import Payment from '../models/Payment.js';
 import Invoice from '../models/Invoice.js';
 import Message from '../models/Message.js';
 import Contact from '../models/Contact.js';
-import Organization from '../models/Organization.js';
 
 /**
  * Get dashboard stats for current user
@@ -37,8 +36,8 @@ export const getDashboardStats = async (req, res) => {
       // SUPERADMIN: Platform-wide statistics
       console.log('📊 Fetching platform stats for superadmin');
 
-      // Get organization stats
-      const organizations = await Organization.countDocuments();
+      // Get organization count (count all client accounts as organizations)
+      const organizations = await Account.countDocuments({ type: 'client' });
       const accounts = await Account.countDocuments({ type: 'client' });
 
       // Get revenue from paid payments
