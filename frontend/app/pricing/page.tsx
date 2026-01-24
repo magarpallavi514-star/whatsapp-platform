@@ -1,311 +1,403 @@
 'use client'
 
-import { Check, X, ArrowRight } from 'lucide-react'
+import { Check, ChevronRight, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import { Button } from '@/components/ui/button'
-import { ErrorToast } from '@/components/ErrorToast'
+import { PlanAgreementModal } from '@/components/PlanAgreementModal'
+import { BookDemoModal } from '@/components/BookDemoModal'
 import { API_URL } from '@/lib/config/api'
 
 export default function PricingPage() {
-  const router = useRouter()
   const [plans, setPlans] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [error, setError] = useState<string>("")
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
+  const [showAgreementModal, setShowAgreementModal] = useState(false)
+  const [showDemoModal, setShowDemoModal] = useState(false)
+  const [selectedPlanName, setSelectedPlanName] = useState<string>("")
+
+  const fallbackPlans = [
+    {
+      planId: 'starter',
+      name: 'Starter',
+      description: 'Perfect for getting started',
+      monthlyPrice: 2499,
+      setupFee: 3000,
+      isPopular: false,
+      features: {
+        included: [
+          '1 WhatsApp Number',
+          'Broadcast Messaging',
+          'Basic Chatbot (Menu-driven)',
+          'Live Chat Dashboard',
+          '3 Team Agents',
+          'Contact Management',
+          'Basic Analytics',
+          'Email Notifications',
+          'Standard Support',
+        ],
+      },
+    },
+    {
+      planId: 'pro',
+      name: 'Pro',
+      description: 'For scaling businesses',
+      monthlyPrice: 4999,
+      setupFee: 3000,
+      isPopular: true,
+      features: {
+        included: [
+          '3 WhatsApp Numbers',
+          'Everything in Starter',
+          'Advanced Chatbot (Logic-based)',
+          'Campaign Automation',
+          '10 Team Agents',
+          'Scheduled Broadcasting',
+          'Advanced Analytics & Reports',
+          'Webhook Support',
+          'Priority Support 24/7',
+          'Agent Routing & Tagging',
+        ],
+      },
+    },
+  ]
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    setIsAuthenticated(!!token)
+    const fetchPlans = async () => {
+      try {
+        const response = await fetch(`${API_URL}/pricing/plans/public`)
+        const data = await response.json()
+        setPlans(data.data || fallbackPlans)
+      } catch (err) {
+        console.error('Failed to fetch plans:', err)
+        setPlans(fallbackPlans)
+      } finally {
+        setIsLoading(false)
+      }
+    }
     fetchPlans()
   }, [])
 
-  const fetchPlans = async () => {
-    try {
-      const response = await fetch(`${API_URL}/pricing/plans`)
-      const data = await response.json()
-      setPlans(data.data || [])
-    } catch (err) {
-      console.error('Failed to fetch plans:', err)
-      // Fallback plans
-      setPlans([
-        {
-          planId: 'starter',
-          name: 'Starter',
-          description: 'Perfect for getting started',
-          monthlyPrice: 2499,
-          setupFee: 3000,
-          isPopular: false,
-          features: {
-            included: [
-              '1 WhatsApp Number',
-              'Broadcast Messaging',
-              'Basic Chatbot (Menu-driven)',
-              'Live Chat Dashboard',
-              '3 Team Agents',
-              'Contact Management',
-              'Basic Analytics',
-              'Email Notifications',
-              'Standard Support',
-            ],
-          },
-        },
-        {
-          planId: 'pro',
-          name: 'Pro',
-          description: 'For scaling businesses',
-          monthlyPrice: 4999,
-          setupFee: 3000,
-          isPopular: true,
-          features: {
-            included: [
-              '3 WhatsApp Numbers',
-              'Everything in Starter',
-              'Advanced Chatbot (Logic-based)',
-              'Campaign Automation',
-              '10 Team Agents',
-              'Scheduled Broadcasting',
-              'Advanced Analytics & Reports',
-              'SMS Gateway Integration',
-              'Webhook Support',
-              'Priority Support',
-            ],
-          },
-        },
-      ])
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const plansToDisplay = isLoading ? fallbackPlans : (plans.length > 0 ? plans : fallbackPlans)
 
-  const handleGetStarted = (planId: string, planName: string) => {
-    // Always go to new integrated checkout page
-    // It handles both authentication and payment
-    router.push(`/checkout?plan=${encodeURIComponent(planName)}`)
-  }
+  const comparisonFeatures = [
+    { name: 'WhatsApp Numbers', starter: '1', pro: '3' },
+    { name: 'Team Agents', starter: '3', pro: '10' },
+    { name: 'Broadcast Messages', starter: 'Limited', pro: 'Unlimited' },
+    { name: 'Chatbot Type', starter: 'Basic (Menu)', pro: 'Advanced (Logic)' },
+    { name: 'Campaign Automation', starter: '❌', pro: '✓' },
+    { name: 'Scheduled Broadcasting', starter: '❌', pro: '✓' },
+    { name: 'Advanced Analytics', starter: 'Basic', pro: 'Advanced' },
+    { name: 'Webhook Support', starter: '❌', pro: '✓' },
+    { name: 'API Access', starter: '❌', pro: 'Limited' },
+    { name: 'Live Chat Dashboard', starter: '✓', pro: '✓' },
+    { name: 'Contact Management', starter: '✓', pro: '✓' },
+    { name: 'Email Notifications', starter: '✓', pro: '✓' },
+    { name: 'Support Level', starter: 'Standard', pro: 'Priority 24/7' },
+    { name: 'Agent Routing', starter: '❌', pro: '✓' },
+  ]
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className='min-h-screen bg-white'>
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-green-50 to-white">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">Simple, Transparent Pricing</h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Choose the perfect plan for your business. Scale as you grow.
-          </p>
-
-          {/* Billing Toggle */}
-          <div className="flex items-center justify-center gap-4 mb-12">
-            <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-green-600' : 'text-gray-600'}`}>
-              Monthly
-            </span>
-            <button
-              onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
-              className="relative inline-flex h-8 w-14 items-center rounded-full bg-gray-300"
-            >
-              <span
-                className={`inline-block h-6 w-6 transform rounded-full bg-white transition ${
-                  billingCycle === 'annual' ? 'translate-x-7' : 'translate-x-1'
-                }`}
-              />
-            </button>
-            <span className={`text-sm font-medium ${billingCycle === 'annual' ? 'text-green-600' : 'text-gray-600'}`}>
-              Annual <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full ml-2">Save 15%</span>
-            </span>
-          </div>
+      {/* HERO */}
+      <section className='pt-32 pb-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-green-50 to-white'>
+        <div className='max-w-5xl mx-auto text-center'>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h1 className='text-6xl font-bold text-gray-900 mb-6'>Transparent Pricing</h1>
+            <p className='text-xl text-gray-600 mb-8 max-w-3xl mx-auto'>
+              No hidden fees. No surprises. Just simple, straightforward pricing that scales with your business.
+            </p>
+          </motion.div>
         </div>
       </section>
 
-      {/* Pricing Cards */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          {isLoading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600">Loading plans...</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
-              {plans.map((plan) => (
-                <div
-                  key={plan.planId}
-                  className={`rounded-xl border-2 p-8 relative ${
-                    plan.isPopular
-                      ? 'border-green-600 bg-green-50 shadow-xl'
-                      : 'border-gray-200 bg-white hover:shadow-lg transition-shadow'
-                  }`}
-                >
+      {/* PRICING CARDS */}
+      <section className='py-20 px-4 sm:px-6 lg:px-8 bg-white'>
+        <div className='max-w-5xl mx-auto'>
+          <div className='grid lg:grid-cols-2 gap-8 mb-16'>
+            {plansToDisplay.map((plan: any, idx: number) => (
+              <motion.div
+                key={plan.planId}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: idx * 0.15 }}
+                viewport={{ once: true }}
+                whileHover={{ scale: 1.02, transition: { duration: 0.3 } }}
+                className={`rounded-2xl border-2 overflow-hidden transition-all ${
+                  plan.isPopular
+                    ? 'border-gray-300 shadow-2xl lg:scale-105 bg-white'
+                    : 'border-gray-200 shadow-lg hover:shadow-xl bg-white'
+                }`}
+              >
+                {/* Header */}
+                <div className={`p-8 bg-gray-50 text-gray-900`}>
                   {plan.isPopular && (
-                    <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                      <span className="bg-green-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                        Most Popular
-                      </span>
-                    </div>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4 }}
+                      className='mb-4 inline-block bg-gray-200 text-gray-900 px-4 py-1.5 rounded-full text-xs font-bold tracking-wide'
+                    >
+                      🌟 RECOMMENDED
+                    </motion.div>
                   )}
+                  <h3 className='text-3xl font-bold mb-2'>{plan.name}</h3>
+                  <p className={`mb-6 text-sm text-gray-600`}>
+                    {plan.description}
+                  </p>
 
-                  <h3 className="text-3xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                  <p className="text-gray-600 mb-6">{plan.description}</p>
-
-                  {/* Pricing */}
-                  <div className="mb-6 pb-6 border-b border-gray-200">
-                    <div className="mb-4">
-                      <span className="text-5xl font-bold text-gray-900">
-                        ₹{billingCycle === 'monthly' ? plan.monthlyPrice : Math.floor(plan.monthlyPrice * 12 * 0.85)}
-                      </span>
-                      <span className="text-gray-600"> / {billingCycle === 'monthly' ? 'month' : 'year'}</span>
+                  {/* Price */}
+                  <div className='mb-6'>
+                    <div className='flex items-baseline gap-1 mb-2'>
+                      <span className='text-5xl font-bold'>₹{plan.monthlyPrice.toLocaleString()}</span>
+                      <span className={`text-gray-600`}>/month</span>
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">
-                      One-time setup fee: <span className="font-semibold">₹{plan.setupFee?.toLocaleString()}</span>
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {billingCycle === 'annual' && '15% discount applied on annual billing'}
+                    <p className={`text-sm text-gray-600`}>
+                      + ₹{(plan.setupFee || 3000).toLocaleString()} setup (one-time)
                     </p>
                   </div>
 
-                  {/* Features */}
-                  <div className="mb-8 space-y-3">
-                    {plan.features?.included?.map((feature: string) => (
-                      <div key={feature} className="flex gap-3 items-start">
-                        <Check className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                        <span className="text-gray-700">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* CTA Button */}
-                  <button
-                    onClick={() => handleGetStarted(plan.planId, plan.name)}
-                    className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition ${
-                      plan.isPopular
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'border-2 border-green-600 text-green-600 hover:bg-green-50'
-                    }`}
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setSelectedPlanName(plan.name)
+                      setShowAgreementModal(true)
+                    }}
+                    className={`w-full py-3 px-6 rounded-lg font-bold text-center transition-all bg-gray-200 text-gray-900 hover:bg-gray-300`}
                   >
                     Get Started
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
+                  </motion.button>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
 
-      {/* FAQ Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">Frequently Asked Questions</h2>
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Do you offer a free trial?</h3>
-              <p className="text-gray-700">
-                Yes! We offer a 7-day free trial for all plans. No credit card required to get started.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Can I upgrade or downgrade anytime?</h3>
-              <p className="text-gray-700">
-                Absolutely. You can upgrade or downgrade your plan at any time. Changes take effect immediately.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">What payment methods do you accept?</h3>
-              <p className="text-gray-700">
-                We accept all major credit cards, debit cards, and digital wallets through our Cashfree payment gateway.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Do you offer refunds?</h3>
-              <p className="text-gray-700">
-                Yes. If you're not satisfied within 15 days, we offer a full refund (excluding setup fee). See our Refund Policy for details.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Is there a contract lock-in period?</h3>
-              <p className="text-gray-700">
-                No contracts required. Cancel anytime. We're confident you'll love our service.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Do you offer custom plans?</h3>
-              <p className="text-gray-700">
-                For enterprise customers with 10,000+ messages/month, we offer custom plans. Contact our sales team.
-              </p>
-            </div>
+                {/* Features */}
+                <div className={`p-8 ${plan.isPopular ? 'bg-white text-gray-900' : ''}`}>
+                  <p className='font-semibold text-sm mb-6 text-gray-700 uppercase tracking-wide'>Included Features</p>
+                  <motion.ul
+                    initial='hidden'
+                    whileInView='visible'
+                    transition={{ staggerChildren: 0.05 }}
+                    variants={{
+                      hidden: { opacity: 0 },
+                      visible: { opacity: 1 },
+                    }}
+                    className='space-y-4'
+                  >
+                    {plan.features?.included?.map((feature: string, i: number) => (
+                      <motion.li
+                        key={feature}
+                        variants={{
+                          hidden: { opacity: 0, x: -10 },
+                          visible: { opacity: 1, x: 0 },
+                        }}
+                        transition={{ duration: 0.3 }}
+                        className='flex gap-3 items-start'
+                      >
+                        <Check className='h-5 w-5 text-green-600 flex-shrink-0 mt-0.5' />
+                        <span className='text-gray-700'>{feature}</span>
+                      </motion.li>
+                    ))}
+                  </motion.ul>
+                </div>
+              </motion.div>
+            ))}
           </div>
+
+          {/* Info */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            viewport={{ once: true }}
+            className='bg-green-50 border border-green-200 rounded-xl p-6 mb-16'
+          >
+            <p className='text-green-900'>
+              <strong>💡 Tip:</strong> Choose Pro if you need multiple numbers, advanced automation, and priority support. Start with Starter and upgrade anytime.
+            </p>
+          </motion.div>
         </div>
       </section>
 
-      {/* Comparison Table */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">Plan Comparison</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+      {/* DETAILED COMPARISON TABLE */}
+      <section className='py-20 px-4 sm:px-6 lg:px-8 bg-gray-50'>
+        <div className='max-w-6xl mx-auto'>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className='text-center mb-16'
+          >
+            <h2 className='text-4xl font-bold text-gray-900 mb-4'>Detailed Comparison</h2>
+            <p className='text-gray-600'>See exactly what's included in each plan</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            viewport={{ once: true }}
+            className='overflow-x-auto'
+          >
+            <table className='w-full'>
               <thead>
-                <tr className="bg-gray-50 border-b-2 border-gray-200">
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Feature</th>
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Starter</th>
-                  <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Pro</th>
+                <tr className='border-b-2 border-gray-300'>
+                  <th className='text-left py-4 px-6 font-bold text-gray-900'>Feature</th>
+                  <th className='text-center py-4 px-6 font-bold text-gray-900'>Starter</th>
+                  <th className='text-center py-4 px-6 font-bold text-green-600'>Pro</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-gray-200">
-                  <td className="px-6 py-3 text-sm text-gray-600">WhatsApp Numbers</td>
-                  <td className="px-6 py-3 text-center"><Check className="h-5 w-5 text-green-600 mx-auto" /></td>
-                  <td className="px-6 py-3 text-center text-sm font-semibold">3</td>
-                </tr>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <td className="px-6 py-3 text-sm text-gray-600">Team Members</td>
-                  <td className="px-6 py-3 text-center"><Check className="h-5 w-5 text-green-600 mx-auto" /> 3</td>
-                  <td className="px-6 py-3 text-center text-sm font-semibold">10</td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="px-6 py-3 text-sm text-gray-600">API Access</td>
-                  <td className="px-6 py-3 text-center"><Check className="h-5 w-5 text-green-600 mx-auto" /></td>
-                  <td className="px-6 py-3 text-center"><Check className="h-5 w-5 text-green-600 mx-auto" /></td>
-                </tr>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <td className="px-6 py-3 text-sm text-gray-600">Priority Support</td>
-                  <td className="px-6 py-3 text-center"><X className="h-5 w-5 text-gray-400 mx-auto" /></td>
-                  <td className="px-6 py-3 text-center"><Check className="h-5 w-5 text-green-600 mx-auto" /></td>
-                </tr>
+                {comparisonFeatures.map((feature, i) => (
+                  <motion.tr
+                    key={i}
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    transition={{ duration: 0.3, delay: i * 0.05 }}
+                    viewport={{ once: true }}
+                    className={i % 2 === 0 ? 'bg-white hover:bg-green-50' : 'bg-gray-100 hover:bg-green-50'}
+                  >
+                    <td className='py-4 px-6 font-medium text-gray-900'>{feature.name}</td>
+                    <td className='text-center py-4 px-6 text-gray-700'>{feature.starter}</td>
+                    <td className='text-center py-4 px-6 text-green-600 font-bold'>{feature.pro}</td>
+                  </motion.tr>
+                ))}
               </tbody>
             </table>
-          </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-green-600 to-green-700">
-        <div className="max-w-4xl mx-auto text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">Ready to grow your business?</h2>
-          <p className="text-lg mb-8 opacity-90">
-            Start free today. No credit card required. Upgrade anytime.
-          </p>
-          <button
-            onClick={() => {
-              const firstPlan = plans[0];
-              if (firstPlan) {
-                handleGetStarted(firstPlan.planId, firstPlan.name);
-              }
-            }}
-            className="bg-white text-green-600 hover:bg-gray-100 px-8 py-3 rounded-lg font-semibold text-lg transition"
+      {/* FAQ */}
+      <section className='py-20 px-4 sm:px-6 lg:px-8 bg-white'>
+        <div className='max-w-3xl mx-auto'>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className='text-center mb-16'
           >
-            Start Your Free Trial
-          </button>
+            <h2 className='text-4xl font-bold text-gray-900 mb-4'>Frequently Asked Questions</h2>
+          </motion.div>
+
+          <motion.div
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.1,
+                },
+              },
+            }}
+            initial='hidden'
+            whileInView='visible'
+            viewport={{ once: true }}
+            className='space-y-4'
+          >
+            {[
+              {
+                q: 'Can I change plans later?',
+                a: 'Yes! You can upgrade or downgrade your plan anytime. Changes take effect on your next billing cycle.',
+              },
+              {
+                q: 'Do you offer annual billing?',
+                a: 'Currently, we bill monthly. Contact us if you need annual billing options.',
+              },
+              {
+                q: 'How do I get started?',
+                a: 'Book a demo with our team to understand your needs and get personalized guidance. We\'ll schedule a time that works for you.',
+              },
+              {
+                q: 'What about message costs?',
+                a: 'Messages are billed separately at Meta\'s rates (approximately ₹0.15 per message). The plan covers platform features only.',
+              },
+              {
+                q: 'Can I get a custom plan?',
+                a: 'Absolutely! For enterprises with special needs, book a demo or contact our sales team for a custom proposal.',
+              },
+              {
+                q: 'What if I need help choosing?',
+                a: 'Our team is happy to help! Contact us and we\'ll recommend the best plan for your use case.',
+              },
+            ].map((faq, i) => (
+              <motion.details
+                key={i}
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+                transition={{ duration: 0.3 }}
+                className='group border border-gray-200 rounded-lg p-6 cursor-pointer hover:border-green-600 hover:shadow-lg transition-all'
+              >
+                <summary className='flex items-center justify-between font-bold text-gray-900'>
+                  {faq.q}
+                  <motion.div
+                    animate={{ rotate: 0 }}
+                    className='group-open:rotate-90 transition-transform text-green-600'
+                  >
+                    <ChevronRight className='h-5 w-5' />
+                  </motion.div>
+                </summary>
+                <motion.p
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  transition={{ duration: 0.3 }}
+                  className='text-gray-600 mt-4 leading-relaxed'
+                >
+                  {faq.a}
+                </motion.p>
+              </motion.details>
+            ))}
+          </motion.div>
         </div>
       </section>
+
+      {/* CTA */}
+      <section className='py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-green-600 to-green-700'>
+        <div className='max-w-4xl mx-auto text-center text-white'>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <h2 className='text-4xl font-bold mb-6'>Ready to grow your business?</h2>
+            <p className='text-lg text-green-100 mb-8 max-w-2xl mx-auto'>
+              Book a demo today and see how Replysys can transform your customer engagement.
+            </p>
+            <button
+              onClick={() => setShowDemoModal(true)}
+              className='bg-white text-green-600 hover:bg-gray-100 px-8 py-4 rounded-lg font-bold text-lg inline-flex items-center gap-2 transition-all shadow-lg'
+            >
+              Book Your Demo <ArrowRight className='h-5 w-5' />
+            </button>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* MODALS */}
+      <PlanAgreementModal
+        isOpen={showAgreementModal}
+        planName={selectedPlanName}
+        onClose={() => {
+          setShowAgreementModal(false)
+          setSelectedPlanName('')
+        }}
+        onConfirm={() => {
+          window.location.href = `/checkout?plan=${encodeURIComponent(selectedPlanName)}`
+        }}
+      />
+
+      <BookDemoModal isOpen={showDemoModal} onClose={() => setShowDemoModal(false)} />
 
       <Footer />
     </div>

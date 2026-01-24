@@ -13,17 +13,17 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition">
-            <div className="h-10 w-10 bg-green-600 rounded-lg flex items-center justify-center">
-              <MessageSquare className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-xl font-bold text-gray-900">
-              Pixels<span className="text-green-600">WhatsApp</span>
+          <Link href="/" className="hover:opacity-80 transition">
+            <span className="text-4xl font-extrabold text-black lowercase">
+              replysys
             </span>
           </Link>
 
           {/* Links - Hidden on mobile */}
           <div className="hidden md:flex items-center gap-8">
+            <Link href="/" className="text-sm text-gray-600 hover:text-green-600 transition">
+              Home
+            </Link>
             <Link href="/#features" className="text-sm text-gray-600 hover:text-green-600 transition">
               Features
             </Link>
@@ -65,6 +65,13 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div className="md:hidden pb-4 border-t border-gray-200 bg-white">
             <div className="flex flex-col gap-4 pt-4">
+              <Link
+                href="/"
+                className="text-sm text-gray-600 hover:text-green-600 transition"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Home
+              </Link>
               <Link
                 href="/#features"
                 className="text-sm text-gray-600 hover:text-green-600 transition"

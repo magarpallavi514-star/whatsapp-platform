@@ -37,6 +37,21 @@ const sendViaZepto = async (to, subject, htmlbody) => {
 };
 
 export const emailService = {
+  // Generic send email function
+  sendEmail: async (to, subject, htmlbody) => {
+    try {
+      if (!ENABLE_EMAIL) {
+        console.log('✅ Email service disabled - skipping');
+        return { success: true, skipped: true };
+      }
+      await sendViaZepto(to, subject, htmlbody);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error sending email:', error.message);
+      return { success: false, error: error.message };
+    }
+  },
+
   // Send welcome email on signup
   sendWelcomeEmail: async (email, name) => {
     try {

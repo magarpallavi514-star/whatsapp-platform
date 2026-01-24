@@ -35,6 +35,7 @@ import paymentReminderRoutes from './routes/paymentReminderRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
+import demoRoutes from './routes/demoRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -184,6 +185,9 @@ app.use('/api/webhooks', webhookRoutes);
 // Mount auth routes (NO AUTH - public login/logout)
 app.use('/api/auth', authRoutes);
 
+// Mount demo routes (PUBLIC - anyone can book a demo)
+app.use('/api/demo', demoRoutes);
+
 // Mount settings routes (JWT AUTH only - users need to configure phones even without subscription)
 app.use('/api/settings', requireJWT, settingsRoutes);
 
@@ -220,6 +224,9 @@ app.use('/api/admin/organizations', requireJWT, organizationsRoutes);
 
 // Mount admin routes (JWT AUTH - for superadmin)
 app.use('/api/admin', requireJWT, adminRoutes);
+
+// Mount demo admin routes (JWT AUTH - for superadmin)
+app.use('/api/admin/demo-requests', requireJWT, demoRoutes);
 
 // Mount payment reminder routes (JWT AUTH - for admin)
 app.use('/api/admin/payment-reminders', requireJWT, paymentReminderRoutes);

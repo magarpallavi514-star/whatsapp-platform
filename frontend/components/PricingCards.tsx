@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Check, X } from 'lucide-react';
 import { ErrorToast } from './ErrorToast';
+import { PlanAgreementModal } from './PlanAgreementModal';
 import Link from 'next/link';
 
 interface Feature {
@@ -33,6 +34,8 @@ export default function PricingCards() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const [showAgreementModal, setShowAgreementModal] = useState(false);
+  const [selectedPlanName, setSelectedPlanName] = useState<string>('');
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -164,8 +167,11 @@ export default function PricingCards() {
                 </div>
 
                 {/* CTA Button */}
-                <Link
-                  href={`/checkout?plan=${encodeURIComponent(plan.name)}&cycle=${billingCycle}`}
+                <button
+                  onClick={() => {
+                    setSelectedPlanName(plan.name);
+                    setShowAgreementModal(true);
+                  }}
                   className={`block w-full py-3 px-4 rounded-lg font-semibold text-center transition-all mb-8 ${
                     plan.isPopular
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
@@ -173,7 +179,7 @@ export default function PricingCards() {
                   }`}
                 >
                   Get Started
-                </Link>
+                </button>
 
                 {/* Limits */}
                 {Object.keys(plan.limits).length > 0 && (
@@ -260,6 +266,20 @@ export default function PricingCards() {
           </div>
         </div>
       </div>
+
+      {/* Plan Agreement Modal */}
+      <PlanAgreementModal
+        isOpen={showAgreementModal}
+        planName={selectedPlanName}
+        onClose={() => {
+          setShowAgreementModal(false);
+          setSelectedPlanName('');
+        }}
+        onConfirm={() => {
+          // Redirect to checkout after agreement
+          window.location.href = `/checkout?plan=${encodeURIComponent(selectedPlanName)}&cycle=${billingCycle}`;
+        }}
+      />
     </div>
   );
 }
