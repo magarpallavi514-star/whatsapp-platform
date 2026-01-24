@@ -145,6 +145,14 @@ export const addPhoneNumber = async (req, res) => {
         verifiedAt: new Date()
       });
       
+      // ✅ NEW: Save wabaId to Account for webhook routing
+      await Account.findByIdAndUpdate(
+        mongoAccountId,
+        { $set: { wabaId } },
+        { new: true }
+      );
+      console.log('✅ WABA ID saved to account for webhook routing:', wabaId);
+      
       res.json({
         success: true,
         message: 'Phone number added successfully',

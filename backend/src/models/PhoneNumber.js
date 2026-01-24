@@ -93,5 +93,6 @@ const phoneNumberSchema = new mongoose.Schema({
 // Compound index for account + phoneNumberId
 phoneNumberSchema.index({ accountId: 1, phoneNumberId: 1 });
 phoneNumberSchema.index({ accountId: 1, isActive: 1 });
+phoneNumberSchema.index({ wabaId: 1 });  // For webhook routing
 
 export default mongoose.model('PhoneNumber', phoneNumberSchema);

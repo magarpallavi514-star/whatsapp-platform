@@ -3,6 +3,7 @@ import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 import Contact from '../models/Contact.js';
 import PhoneNumber from '../models/PhoneNumber.js';
+import Account from '../models/Account.js';
 import { downloadAndUploadMedia, getMediaTypeFromMime } from '../services/s3Service.js';
 import { broadcastNewMessage, broadcastConversationUpdate } from '../services/socketService.js';
 
@@ -140,20 +141,61 @@ export const handleWebhook = async (req, res) => {
                 continue;
               }
               
-              // Find which account this phone belongs to
-              // CRITICAL: Must use .select('+accessToken') to retrieve encrypted field
+              // ✅ CRITICAL FIX: Find account by WABA ID FIRST
+              const wabaId = entry.id;  // Meta sends WABA ID as entry.id
+              console.log('📍 WABA ID from webhook:', wabaId);
+              
+              let targetAccountId = null;
+              let targetAccount = null;
+              
+              // Step 1: Find account by WABA ID (PRIMARY)
+              const account = await Account.findOne({ wabaId });
+              if (account) {
+                targetAccountId = account._id;
+                targetAccount = account;
+                console.log('✅ Account found by WABA ID:', targetAccountId);
+              } else {
+                console.log('⚠️ WABA ID not found in Account:', wabaId);
+                // Step 1B: Fallback - find by phoneNumberId (for backward compatibility)
+                const fallbackPhone = await PhoneNumber.findOne({ 
+                  phoneNumberId,
+                  isActive: true 
+                });
+                if (!fallbackPhone) {
+                  console.log('❌ Phone number not configured in system:', phoneNumberId);
+                  continue;
+                }
+                const fallbackAccount = await Account.findById(fallbackPhone.accountId);
+                if (!fallbackAccount) {
+                  console.log('❌ Account not found for phone config');
+                  continue;
+                }
+                targetAccountId = fallbackPhone.accountId;
+                targetAccount = fallbackAccount;
+                console.log('⚠️ Using fallback: Found account via phoneNumberId:', targetAccountId);
+              }
+              
+              // Verify we have account
+              if (!targetAccountId) {
+                console.log('❌ CRITICAL: Could not determine account for message');
+                continue;
+              }
+              
+              // Step 2: Get phone config with account verification
               const phoneConfig = await PhoneNumber.findOne({ 
+                accountId: targetAccountId,
                 phoneNumberId,
                 isActive: true 
               }).select('+accessToken');
               
               if (!phoneConfig) {
-                console.log('❌ Phone number not configured in system:', phoneNumberId);
+                console.log('❌ Phone number not configured for this account:', phoneNumberId);
                 continue;
               }
               
               const accountId = phoneConfig.accountId;
               console.log('✅ Found account:', accountId);
+              console.log('✅ Account verified with WABA ID:', wabaId);
               
               // Debug: Verify token is present (log length, not the actual token)
               if (!phoneConfig.accessToken) {

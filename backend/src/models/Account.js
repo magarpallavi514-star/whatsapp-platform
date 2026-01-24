@@ -42,6 +42,13 @@ const accountSchema = new mongoose.Schema({
     default: 'America/New_York'
   },
   
+  // WhatsApp WABA ID (Meta Business Account ID for webhook routing)
+  wabaId: {
+    type: String,
+    index: true,
+    sparse: true  // Optional - only for accounts with WABA
+  },
+  
   // Password (hashed with bcrypt)
   password: {
     type: String,
