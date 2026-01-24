@@ -144,8 +144,9 @@ export default function ChatPage() {
     isFetchingRef.current = true
     setIsLoading(true)
     try {
+      // Load ALL messages (no hours limit) - backend loads up to 500 by default
       const response = await fetch(
-        `${API_URL}/conversations/${encodeURIComponent(conversationId)}/messages?limit=500&hours=24`,
+        `${API_URL}/conversations/${encodeURIComponent(conversationId)}/messages?limit=500`,
         {
           headers: getHeaders(),
         }
@@ -153,10 +154,10 @@ export default function ChatPage() {
       if (response.ok) {
         const data = await response.json()
         const fetchedMessages = data.messages || []
-        console.log('📨 Fetched', fetchedMessages.length, 'messages')
+        console.log('📨 Fetched', fetchedMessages.length, 'messages (all history)')
         if (fetchedMessages.length > 0) {
-          console.log('🕐 Last message timestamp:', fetchedMessages[fetchedMessages.length - 1].createdAt, 
-            '→', new Date(fetchedMessages[fetchedMessages.length - 1].createdAt).toLocaleTimeString())
+          console.log('🕐 First message:', new Date(fetchedMessages[0].createdAt).toLocaleString())
+          console.log('🕐 Last message:', new Date(fetchedMessages[fetchedMessages.length - 1].createdAt).toLocaleString())
         }
         
         // Smart merge: preserve any messages we created locally (with correct timestamps)
@@ -536,13 +537,22 @@ export default function ChatPage() {
     };
   }, [selectedContact?.id]);
 
-  // Poll conversations list every 5 seconds as fallback
+  // Poll conversations list ONLY every 10 seconds (not per-conversation)
+  // Messages have their own separate polling
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchConversations()
-    }, 5000) // Check every 5 seconds for real-time updates
-
-    return () => clearInterval(interval)
+    // Don't poll if no conversation selected yet
+    let interval: NodeJS.Timeout;
+    
+    const startPolling = () => {
+      interval = setInterval(() => {
+        fetchConversations()
+      }, 10000) // Check every 10 seconds - reduced from 5 to avoid conflicts
+    }
+    
+    startPolling()
+    return () => {
+      if (interval) clearInterval(interval)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -571,11 +581,14 @@ export default function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContact?.id])
 
-  // Poll ONLY for new incoming messages, never overwrite existing ones
+  // Poll ONLY for new incoming messages (not outbound), never overwrite existing ones
   useEffect(() => {
     if (!selectedContact) return
 
-    const pollInterval = setInterval(async () => {
+    let pollInterval: NodeJS.Timeout;
+    let lastFetchTime = Date.now();
+    
+    const pollForNewMessages = async () => {
       const currentId = selectedContactIdRef.current
       if (!currentId) return
 
@@ -591,59 +604,38 @@ export default function ChatPage() {
           const newMessages = data.messages || []
           
           setMessages(prev => {
-            // Only check if there are MORE messages (new incoming)
-            if (newMessages.length > prev.length) {
-              // Add only the new messages that don't exist
-              const existingIds = new Set(prev.map(m => m._id))
-              const trulyNewMessages = newMessages.filter((m: Message) => !existingIds.has(m._id))
-              
-              if (trulyNewMessages.length > 0 && trulyNewMessages[0].direction === "inbound") {
-                // New inbound message - add it and update conversation
-                const lastNew = trulyNewMessages[trulyNewMessages.length - 1]
-                
-                // Generate preview based on message type
-                let messagePreview = '[Media]'
-                if (lastNew.messageType === 'text') {
-                  messagePreview = lastNew.content?.text?.substring(0, 50) || ''
-                } else if (lastNew.messageType === 'image') {
-                  messagePreview = '🖼️ Photo'
-                } else if (lastNew.messageType === 'video') {
-                  messagePreview = '🎥 Video'
-                } else if (lastNew.messageType === 'document') {
-                  messagePreview = '📄 Document'
-                }
-                
-                setConversations(convs => {
-                  const updated = convs.map(conv => 
-                    conv.id === currentId 
-                      ? { 
-                          ...conv, 
-                          lastMessage: messagePreview,
-                          lastMessageTime: lastNew.createdAt,
-                          unreadCount: (conv.unreadCount || 0) + trulyNewMessages.length
-                        }
-                      : conv
-                  )
-                  return updated.sort((a, b) => {
-                    if (a.id === currentId) return -1
-                    if (b.id === currentId) return 1
-                    return new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime()
-                  })
-                })
-                shouldScrollRef.current = true
-                return [...prev, ...trulyNewMessages]
-              }
+            // Don't replace if no messages fetched
+            if (!newMessages || newMessages.length === 0) {
+              return prev
             }
-            // No new messages or no changes - keep existing
+            
+            // Only add truly new messages that weren't there before
+            const existingIds = new Set(prev.map(m => m._id))
+            const incomingNewMessages = newMessages.filter((m: Message) => {
+              return !existingIds.has(m._id) && m.direction === "inbound"
+            })
+            
+            if (incomingNewMessages.length > 0) {
+              console.log(`📬 Found ${incomingNewMessages.length} new inbound messages`)
+              shouldScrollRef.current = true
+              return [...prev, ...incomingNewMessages]
+            }
+            
+            // No new messages - keep existing state
             return prev
           })
         }
       } catch (error) {
         console.error("Error polling for new messages:", error)
       }
-    }, 5000) // Check every 5 seconds for real-time updates
+    }
+    
+    // Start polling after initial load
+    pollInterval = setInterval(pollForNewMessages, 6000) // Check every 6 seconds for new incoming
 
-    return () => clearInterval(pollInterval)
+    return () => {
+      if (pollInterval) clearInterval(pollInterval)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContact?.id, API_URL])
 
