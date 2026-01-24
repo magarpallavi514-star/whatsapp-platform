@@ -81,7 +81,7 @@ const accountSchema = new mongoose.Schema({
   // Subscription (Phase 2)
   plan: {
     type: String,
-    enum: ['free', 'basic', 'pro', 'enterprise', 'starter'], // Support dynamic plan names
+    enum: ['free', 'starter', 'pro', 'enterprise', 'custom'], // Lowercase versions of PricingPlan names
     default: 'free'
   },
   billingCycle: {

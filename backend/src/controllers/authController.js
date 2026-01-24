@@ -377,27 +377,33 @@ export const signup = async (req, res) => {
     const accountId = `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Fetch pricing plan to get the plan name (selectedPlan might be a plan ID from API)
-    let planName = selectedPlan.toLowerCase();
+    // PricingPlan.name is 'Starter', 'Pro', etc. but Account model enum expects lowercase
+    let planName = selectedPlan.toLowerCase(); // Default fallback
+    
     try {
-      // Try to find plan by planId, _id, or name
-      const pricingPlan = await PricingPlan.findOne({
-        $or: [
-          { _id: selectedPlan },
-          { planId: selectedPlan },
-          { name: { $regex: selectedPlan, $options: 'i' } }
-        ],
-        isActive: true
+      // Query by planId first (exact match) - planId is like "plan_4fe55bd0ea1d"
+      let pricingPlan = await PricingPlan.findOne({ 
+        planId: selectedPlan,
+        isActive: true 
       });
       
+      // If not found by planId, try by name
+      if (!pricingPlan) {
+        pricingPlan = await PricingPlan.findOne({
+          name: { $regex: selectedPlan, $options: 'i' },
+          isActive: true
+        });
+      }
+      
       if (pricingPlan) {
-        planName = pricingPlan.name.toLowerCase(); // Use actual plan name from database
-        console.log(`🔍 Plan found: "${planName}" (from input: "${selectedPlan}")`);
+        planName = pricingPlan.name.toLowerCase(); // Convert 'Starter' → 'starter'
+        console.log(`✅ Plan resolved: "${pricingPlan.name}" → "${planName}" (planId: ${pricingPlan.planId})`);
       } else {
-        console.log(`⚠️ Plan not found in database, using input directly: "${selectedPlan}"`);
+        console.log(`⚠️ Plan "${selectedPlan}" not found in database. Using lowercase as fallback: "${planName}"`);
       }
     } catch (err) {
-      console.log(`⚠️ Could not fetch plan details:`, err.message);
-      // Continue with selectedPlan as fallback
+      console.error(`❌ Error querying PricingPlan:`, err.message);
+      console.log(`   Continuing with fallback planName: "${planName}"`);
     }
 
     // Create new account with PENDING status (will be activated after payment)
