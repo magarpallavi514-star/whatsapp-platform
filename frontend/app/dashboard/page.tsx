@@ -148,7 +148,7 @@ export default function DashboardPage() {
           </div>
         ) : dashboardStats ? (
           // Render real stats based on role
-          isSuperAdmin ? (
+          (isSuperAdmin ? (
             // Superadmin stats
             [
               { name: "Total Organizations", value: dashboardStats.stats?.totalOrganizations || "0", change: "", changeType: "positive" },
@@ -164,22 +164,21 @@ export default function DashboardPage() {
               { name: "Response Rate", value: `${dashboardStats.stats?.responseRate || "0"}%`, change: "", changeType: "positive" },
               { name: "Avg Response Time", value: `${dashboardStats.stats?.avgResponseTime || "0"}m`, change: "", changeType: "positive" },
             ]
-          )
-        ).map((stat) => (
-          <div key={stat.name} className="bg-white rounded-xl border border-gray-200 p-6">
-            <p className="text-sm font-medium text-gray-600 mb-1">{stat.name}</p>
-            <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-              {stat.change && (
-                <span className={`text-sm font-medium ${
-                  stat.changeType === "positive" ? "text-green-600" : "text-red-600"
-                }`}>
-                  {stat.change}
-                </span>
-              )}
+          )).map((stat) => (
+            <div key={stat.name} className="bg-white rounded-xl border border-gray-200 p-6">
+              <p className="text-sm font-medium text-gray-600 mb-1">{stat.name}</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                {stat.change && (
+                  <span className={`text-sm font-medium ${
+                    stat.changeType === "positive" ? "text-green-600" : "text-red-600"
+                  }`}>
+                    {stat.change}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        ))
+          ))
         ) : (
           // Fallback to hardcoded stats
           (isSuperAdmin 
@@ -209,7 +208,6 @@ export default function DashboardPage() {
             </div>
           ))
         )}
-      </div>
       </div>
 
       {/* Two Column Layout */}
