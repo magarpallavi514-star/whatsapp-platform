@@ -14,6 +14,8 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const [plans, setPlans] = useState<any[]>([])
+  const [loadingPlans, setLoadingPlans] = useState(true)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -21,6 +23,40 @@ export default function RegisterPage() {
     password: '',
     selectedPlan: '' // Add plan selection
   })
+
+  // Fetch pricing plans
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        setLoadingPlans(true)
+        const response = await fetch(`${API_URL}/pricing/plans/public`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.data && data.data.length > 0) {
+            setPlans(data.data)
+            // Auto-select first plan
+            if (!formData.selectedPlan) {
+              setFormData(prev => ({
+                ...prev,
+                selectedPlan: data.data[0].planId?.toLowerCase() || 'starter'
+              }))
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch pricing plans:', err)
+        // Use fallback plans if API fails
+        setPlans([
+          { planId: 'starter', name: 'Starter', monthlyPrice: 2499 },
+          { planId: 'pro', name: 'Pro', monthlyPrice: 4999 }
+        ])
+      } finally {
+        setLoadingPlans(false)
+      }
+    }
+
+    fetchPlans()
+  }, [])
 
   // 🔐 SESSION GUARD: Check if user is already logged in
   useEffect(() => {
@@ -253,35 +289,36 @@ export default function RegisterPage() {
                 Select Your Plan
               </label>
               <div className="grid grid-cols-2 gap-3">
-                {/* Starter Plan */}
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, selectedPlan: 'starter' }))}
-                  disabled={loading || success}
-                  className={`p-4 rounded-lg border-2 transition font-medium text-sm ${
-                    formData.selectedPlan === 'starter'
-                      ? 'border-green-600 bg-green-50 text-green-700'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                  } disabled:opacity-50`}
-                >
-                  <div className="font-bold text-base">Starter</div>
-                  <div className="text-xs mt-1">₹2,499/month</div>
-                </button>
-
-                {/* Pro Plan */}
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, selectedPlan: 'pro' }))}
-                  disabled={loading || success}
-                  className={`p-4 rounded-lg border-2 transition font-medium text-sm ${
-                    formData.selectedPlan === 'pro'
-                      ? 'border-green-600 bg-green-50 text-green-700'
-                      : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                  } disabled:opacity-50`}
-                >
-                  <div className="font-bold text-base">Pro</div>
-                  <div className="text-xs mt-1">₹4,999/month</div>
-                </button>
+                {loadingPlans ? (
+                  <div className="col-span-2 text-center py-8">
+                    <Loader className="h-5 w-5 animate-spin text-gray-400 mx-auto" />
+                    <p className="text-sm text-gray-500 mt-2">Loading plans...</p>
+                  </div>
+                ) : plans.length > 0 ? (
+                  plans.map((plan: any) => {
+                    const planId = plan.planId?.toLowerCase() || plan.name?.toLowerCase();
+                    return (
+                      <button
+                        key={planId}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, selectedPlan: planId }))}
+                        disabled={loading || success}
+                        className={`p-4 rounded-lg border-2 transition font-medium text-sm ${
+                          formData.selectedPlan === planId
+                            ? 'border-green-600 bg-green-50 text-green-700'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                        } disabled:opacity-50`}
+                      >
+                        <div className="font-bold text-base">{plan.name}</div>
+                        <div className="text-xs mt-1">₹{plan.monthlyPrice?.toLocaleString()}/month</div>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="col-span-2 text-center py-4">
+                    <p className="text-sm text-gray-500">No plans available</p>
+                  </div>
+                )}
               </div>
             </div>
 

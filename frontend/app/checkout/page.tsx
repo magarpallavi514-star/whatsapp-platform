@@ -67,22 +67,57 @@ function CheckoutContent() {
     console.log('📋 Checkout Info:', { planId, allPlans: allPlans.length, selectedPlan: plan?.name, planPrice: plan?.monthlyPrice });
     
     // Load Cashfree script
-    if (!(window as any).Cashfree) {
+    const loadCashfreeSDK = () => {
+      if ((window as any).Cashfree) {
+        console.log('✅ Cashfree SDK already loaded')
+        setCashfreeLoaded(true)
+        return
+      }
+
+      // Check if script already exists
+      const existingScript = document.querySelector('script[src*="cashfree.js"]')
+      if (existingScript) {
+        console.log('⏳ Cashfree script already being loaded')
+        return
+      }
+
+      console.log('📥 Loading Cashfree SDK from CDN...')
       const script = document.createElement('script')
       script.src = 'https://sdk.cashfree.com/js/cashfree.js'
       script.async = true
+      script.type = 'text/javascript'
+      
       script.onload = () => {
-        console.log('✅ Cashfree SDK loaded')
-        setCashfreeLoaded(true)
+        console.log('✅ Cashfree SDK script loaded successfully')
+        // Wait for window.Cashfree to be available
+        const checkCashfree = setInterval(() => {
+          if ((window as any).Cashfree) {
+            console.log('✅ Cashfree SDK initialized')
+            setCashfreeLoaded(true)
+            clearInterval(checkCashfree)
+          }
+        }, 100)
+        
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          clearInterval(checkCashfree)
+          if (!(window as any).Cashfree) {
+            console.error('⏱️ Cashfree SDK timeout')
+            setCashfreeLoaded(true) // Allow fallback
+          }
+        }, 5000)
       }
-      script.onerror = () => {
-        console.error('❌ Failed to load Cashfree SDK')
-        setError('Failed to load payment gateway. Please try again.')
+      
+      script.onerror = (error) => {
+        console.error('❌ Failed to load Cashfree SDK script:', error)
+        setError('Payment gateway unavailable. This may be a temporary issue. Please try again.')
+        setCashfreeLoaded(false)
       }
-      document.body.appendChild(script)
-    } else {
-      setCashfreeLoaded(true)
+
+      document.head.appendChild(script)
     }
+
+    loadCashfreeSDK()
 
     return () => {
       // Cleanup is handled by Next.js
