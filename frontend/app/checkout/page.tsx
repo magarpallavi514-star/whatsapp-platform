@@ -63,72 +63,31 @@ function CheckoutContent() {
     : fallbackPlans[planId as keyof typeof fallbackPlans] || fallbackPlans.starter
 
   const [cashfreeLoaded, setCashfreeLoaded] = useState(false)
-  const [sdkLoadError, setSdkLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     console.log('📋 Checkout Info:', { planId, allPlans: allPlans.length, selectedPlan: plan?.name, planPrice: plan?.monthlyPrice });
     
-    // Load Cashfree script
-    const loadCashfreeSDK = () => {
-      if ((window as any).Cashfree) {
-        console.log('✅ Cashfree SDK already loaded')
-        setCashfreeLoaded(true)
-        setSdkLoadError(null)
-        return
-      }
-
-      // Check if script already exists
-      const existingScript = document.querySelector('script[src*="cashfree.js"]')
-      if (existingScript) {
-        console.log('⏳ Cashfree script already being loaded')
-        return
-      }
-
-      console.log('📥 Loading Cashfree SDK v3 from CDN...')
-      const script = document.createElement('script')
-      script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js'
-      script.async = true
-      script.type = 'text/javascript'
-      
-      script.onload = () => {
-        console.log('✅ Cashfree SDK script loaded successfully, waiting for initialization...')
-        // Wait for window.Cashfree to be available
-        let checkAttempts = 0
-        const maxAttempts = 50 // 50 * 100ms = 5 seconds
-        
-        const checkCashfree = setInterval(() => {
-          checkAttempts++
-          if ((window as any).Cashfree) {
-            console.log('✅ Cashfree SDK initialized on attempt:', checkAttempts)
-            setCashfreeLoaded(true)
-            setSdkLoadError(null)
-            clearInterval(checkCashfree)
-          } else if (checkAttempts >= maxAttempts) {
-            console.error('⏱️ Cashfree SDK timeout after 5 seconds')
-            clearInterval(checkCashfree)
-            setSdkLoadError('Cashfree SDK initialization timeout. Please refresh the page.')
-            setCashfreeLoaded(false)
-          }
-        }, 100)
-      }
-      
-      script.onerror = (error) => {
-        console.error('❌ Failed to load Cashfree SDK script:', error)
-        console.error('   Script URL: https://sdk.cashfree.com/js/cashfree.js')
-        console.error('   Error type:', error instanceof Event ? error.type : typeof error)
-        const errorMsg = 'Cashfree SDK failed to load. This might be a CDN issue. Try refreshing the page.'
-        setSdkLoadError(errorMsg)
-        setError(errorMsg)
-        setCashfreeLoaded(false)
-      }
-
-      document.head.appendChild(script)
+    // Load Cashfree SDK v3 - Simple approach (like Enromatics)
+    const script = document.createElement('script')
+    script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js'
+    script.async = true
+    script.type = 'text/javascript'
+    
+    script.onload = () => {
+      console.log('✅ Cashfree SDK v3 loaded successfully')
+      setCashfreeLoaded(true)
     }
-
-    loadCashfreeSDK()
-
+    
+    script.onerror = (error) => {
+      console.error('❌ Failed to load Cashfree SDK:', error)
+      setError('Payment gateway failed to load. Please refresh the page.')
+      setCashfreeLoaded(false)
+    }
+    
+    document.body.appendChild(script)  // Append to body, not head
+    
     return () => {
-      // Cleanup is handled by Next.js
+      // Cleanup handled by Next.js
     }
   }, [])
 
@@ -137,14 +96,9 @@ function CheckoutContent() {
       setIsLoading(true)
       setError(null)
 
-      // Check if Cashfree SDK failed to load
-      if (sdkLoadError) {
-        throw new Error(sdkLoadError)
-      }
-
-      // Check if Cashfree is loaded
-      if (!cashfreeLoaded) {
-        throw new Error('Payment gateway is still loading. Please wait a moment and try again.')
+      // Check if Cashfree SDK loaded (VERIFICATION - OPTION C)
+      if (!cashfreeLoaded || !(window as any).Cashfree) {
+        throw new Error('Payment gateway not ready. Please refresh the page and try again.')
       }
 
       const token = localStorage.getItem('token')
@@ -425,7 +379,7 @@ function CheckoutContent() {
                 </div>
               )}
 
-              {!cashfreeLoaded && !sdkLoadError && (
+              {!cashfreeLoaded && (
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
                   <Loader className="h-5 w-5 animate-spin text-blue-600 flex-shrink-0" />
                   <p className="text-sm text-blue-700">Initializing secure payment gateway...</p>
