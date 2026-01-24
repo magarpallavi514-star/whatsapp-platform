@@ -117,6 +117,15 @@ async function activateSubscription(payment) {
   try {
     const { accountId, planId } = payment;
 
+    // 🔓 ACTIVATE ACCOUNT - Change status from 'pending' to 'active'
+    console.log('🔓 Activating account:', accountId);
+    const account = await Account.findOne({ _id: accountId });
+    if (account && account.status === 'pending') {
+      account.status = 'active';
+      await account.save();
+      console.log('✅ Account activated after successful payment:', accountId);
+    }
+
     // Check if subscription already exists
     let subscription = await Subscription.findOne({ accountId: accountId });
 

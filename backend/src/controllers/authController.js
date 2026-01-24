@@ -223,37 +223,48 @@ export const login = async (req, res) => {
     }
     
     // Check for registered user in database
-    console.log('🔍 Checking User collection for:', email);
-    const user = await User.findOne({ email });
+    console.log('🔍 Checking Account collection for:', email);
+    const account = await Account.findOne({ email });
     
-    if (!user) {
-      console.log('❌ User not found:', email);
+    if (!account) {
+      console.log('❌ Account not found:', email);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+
+    // Check if account is still PENDING (payment not completed)
+    if (account.status === 'pending') {
+      console.log('⏳ Account pending payment:', email);
+      return res.status(403).json({
+        success: false,
+        message: 'Please complete payment to activate your account. Redirecting to checkout...',
+        requiresPayment: true
+      });
+    }
+    
+    // Check password
+    const isPasswordValid = await bcrypt.compare(password, account.password);
+    if (!isPasswordValid) {
+      console.log('❌ Invalid password for account:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
       });
     }
     
-    // Check password (plain text for now - should be hashed in production)
-    if (!user.password || user.password !== password) {
-      console.log('❌ Invalid password for user:', email);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-    
-    // User authenticated - generate token
+    // Account authenticated - generate token
     const userData = {
-      email: user.email,
-      accountId: user.accountId,
-      name: user.name || user.email,
-      role: user.role || 'user',
-      _id: user._id
+      email: account.email,
+      accountId: account.accountId,
+      name: account.name,
+      role: 'user',
+      _id: account._id
     };
     
     const token = generateToken(userData);
-    console.log('✅ User logged in:', email);
+    console.log('✅ Account logged in:', email);
     
     return res.json({
       success: true,
@@ -361,7 +372,7 @@ export const signup = async (req, res) => {
     // Generate unique accountId
     const accountId = `acc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create new account
+    // Create new account with PENDING status (will be activated after payment)
     const newAccount = new Account({
       accountId,
       name: name.trim(),
@@ -371,28 +382,31 @@ export const signup = async (req, res) => {
       phone: phone?.trim() || undefined,
       type: 'client',
       plan: mappedPlan, // Set to mapped plan (basic or pro)
-      status: 'active'
+      status: 'pending' // Account is PENDING until payment succeeds
     });
 
     await newAccount.save();
 
-    console.log('✅ New account created:');
+    console.log('✅ New account created (PENDING - awaiting payment):');
     console.log('  AccountId:', accountId);
     console.log('  Email:', email);
     console.log('  Name:', name);
+    console.log('  Status: PENDING (will be activated after payment)');
     console.log('  Selected Plan (Frontend):', selectedPlan.toLowerCase());
     console.log('  Mapped Plan (Backend):', mappedPlan);
 
-    // 📝 NOTE: NO AUTO INVOICE CREATION
+    // 📝 NOTE: Account is PENDING until payment completes
     // Invoice will be created after user completes payment for selected plan
-    // User will be redirected to checkout to pay for plan
+    // Webhook will activate the account when payment succeeds
 
     // Create user object for token
+    // Use a temporary token that only allows checkout
     const user = {
       accountId,
       email: newAccount.email,
       name: newAccount.name,
-      role: 'user' // Regular user role
+      role: 'user',
+      status: 'pending' // Mark token as pending
     };
 
     // Generate JWT token
@@ -400,7 +414,7 @@ export const signup = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Account created successfully! Redirecting to checkout...',
+      message: 'Account created! Completing payment to activate...',
       token,
       user,
       selectedPlan: selectedPlan.toLowerCase(),
