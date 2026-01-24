@@ -17,6 +17,7 @@ import mongoose from 'mongoose';
  * Get all registered users/organizations
  * @route GET /api/admin/organizations
  * IMPORTANT: Query BOTH User and Account models (new accounts use Account model)
+ * INCLUDES: Basic info + Payment Details + Subscription Status
  */
 export const getAllOrganizations = async (req, res) => {
   try {
@@ -29,6 +30,34 @@ export const getAllOrganizations = async (req, res) => {
     const accounts = await Account.find({})
       .select('-apiKeyHash -password') // Exclude sensitive fields
       .sort({ createdAt: -1 });
+
+    // Fetch related data for all accounts
+    const accountIds = accounts.filter(acc => acc.type !== 'internal').map(acc => acc._id);
+    
+    // Get subscriptions for these accounts
+    const subscriptions = await Subscription.find({ accountId: { $in: accountIds } })
+      .lean();
+    
+    // Get invoices for these accounts
+    const invoices = await Invoice.find({ accountId: { $in: accountIds } })
+      .lean()
+      .sort({ createdAt: -1 });
+
+    // Create lookup maps for faster access
+    const subscriptionMap = {};
+    const invoiceMap = {};
+    
+    subscriptions.forEach(sub => {
+      if (!subscriptionMap[sub.accountId]) {
+        subscriptionMap[sub.accountId] = sub;
+      }
+    });
+    
+    invoices.forEach(inv => {
+      if (!invoiceMap[inv.accountId]) {
+        invoiceMap[inv.accountId] = inv;
+      }
+    });
 
     // Combine and format both sources
     const allOrganizations = [
@@ -46,24 +75,58 @@ export const getAllOrganizations = async (req, res) => {
         nextBillingDate: user.nextBillingDate,
         totalPayments: user.totalPayments || 0,
         createdAt: user.createdAt,
-        source: 'legacy' // Mark as legacy User model
+        source: 'legacy', // Mark as legacy User model
+        // Payment/Subscription data
+        subscription: null,
+        invoice: null,
+        paymentStatus: 'N/A'
       })),
       // From Account model
-      ...accounts.filter(acc => acc.type !== 'internal').map(account => ({
-        _id: account._id,
-        accountId: account.accountId,
-        email: account.email,
-        name: account.name,
-        phoneNumber: account.phone || '',
-        plan: account.plan || 'free',
-        status: account.status,
-        role: 'user',
-        billingCycle: account.billingCycle || 'monthly',
-        nextBillingDate: null,
-        totalPayments: 0,
-        createdAt: account.createdAt,
-        source: 'new_signup' // Mark as new signup flow
-      }))
+      ...accounts.filter(acc => acc.type !== 'internal').map(account => {
+        const accountIdStr = account._id.toString();
+        const subscription = subscriptionMap[accountIdStr];
+        const invoice = invoiceMap[accountIdStr];
+        
+        return {
+          _id: account._id,
+          accountId: account.accountId,
+          email: account.email,
+          name: account.name,
+          phoneNumber: account.phone || '',
+          company: account.company || '',
+          mobileNumber: account.mobileNumber || '',
+          website: account.website || '',
+          plan: account.plan || 'free',
+          status: account.status,
+          role: 'user',
+          billingCycle: account.billingCycle || 'monthly',
+          nextBillingDate: subscription?.nextRenewalDate || null,
+          totalPayments: subscription?.paymentAmount || 0,
+          subdomain: account.subdomain || null,
+          createdAt: account.createdAt,
+          source: 'new_signup', // Mark as new signup flow
+          // ✅ Payment/Subscription data
+          subscription: subscription ? {
+            _id: subscription._id,
+            orderId: subscription.orderId,
+            paymentAmount: subscription.paymentAmount,
+            paymentStatus: subscription.paymentStatus,
+            paymentMethod: subscription.paymentMethod,
+            nextRenewalDate: subscription.nextRenewalDate,
+            createdAt: subscription.createdAt
+          } : null,
+          invoice: invoice ? {
+            _id: invoice._id,
+            invoiceNumber: invoice.invoiceNumber,
+            amount: invoice.amount,
+            status: invoice.status,
+            dueDate: invoice.dueDate,
+            paidDate: invoice.paidDate,
+            createdAt: invoice.createdAt
+          } : null,
+          paymentStatus: subscription?.paymentStatus || account.status === 'active' ? 'paid' : 'pending'
+        }
+      })
     ];
 
     // Sort by creation date (newest first)
@@ -75,7 +138,9 @@ export const getAllOrganizations = async (req, res) => {
       summary: {
         total: allOrganizations.length,
         legacy: users.length,
-        new_signups: accounts.filter(acc => acc.type !== 'internal').length
+        new_signups: accounts.filter(acc => acc.type !== 'internal').length,
+        activeSubscriptions: subscriptions.length,
+        pendingInvoices: invoices.filter(inv => inv.status === 'pending').length
       }
     });
   } catch (error) {

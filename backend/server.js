@@ -1,6 +1,7 @@
 import app, { setupSocketIO } from './src/app.js';
 import connectDB from './src/config/database.js';
 import { initSocketIO } from './src/services/socketService.js';
+import { startPaymentTimeoutScheduler } from './src/schedulers/paymentTimeoutScheduler.js';
 import http from 'http';
 
 // Get port from environment
@@ -50,6 +51,9 @@ const startServer = async () => {
     // Connect to MongoDB
     console.log('🔄 Connecting to MongoDB...');
     await connectDB();
+    
+    // Start payment timeout scheduler
+    startPaymentTimeoutScheduler();
     
     // Start server with Socket.io
     server.listen(PORT, () => {

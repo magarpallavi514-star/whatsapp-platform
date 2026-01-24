@@ -138,26 +138,47 @@ export default function OrganizationsPage() {
     setIsDetailDrawerOpen(true)
     setIsEditMode(false)
     
-    // Fetch invoices for this organization
+    // ✅ Fetch invoices AND subscription for this organization
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${API_URL}/billing/invoices?accountId=${org._id}`, {
+      
+      // Fetch invoices
+      const invoiceResponse = await fetch(`${API_URL}/billing/invoices?accountId=${org._id}`, {
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         }
       })
       
-      if (response.ok) {
-        const data = await response.json()
-        setSelectedOrg((prev: any) => ({
-          ...prev,
-          _invoices: data.data || []
-        }))
+      let invoices = []
+      if (invoiceResponse.ok) {
+        const data = await invoiceResponse.json()
+        invoices = data.data || []
       }
+      
+      // ✅ Fetch subscription details
+      const subscriptionResponse = await fetch(`${API_URL}/subscriptions?accountId=${org._id}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      })
+      
+      let subscription = null
+      if (subscriptionResponse.ok) {
+        const data = await subscriptionResponse.json()
+        subscription = data.data || null
+      }
+      
+      // ✅ Update selectedOrg with both invoices and subscription
+      setSelectedOrg((prev: any) => ({
+        ...prev,
+        _invoices: invoices,
+        subscription: subscription  // Add subscription data
+      }))
     } catch (err) {
-      console.error("Error fetching invoices:", err)
-      // Continue without invoices - they'll show "No invoices" message
+      console.error("Error fetching invoices/subscription:", err)
+      // Continue without data - they'll show "No data" message
     }
   }
 
@@ -823,6 +844,29 @@ export default function OrganizationsPage() {
                           {selectedOrg.createdAt ? new Date(selectedOrg.createdAt).toLocaleDateString('en-IN') : "N/A"}
                         </p>
                       </div>
+                      
+                      {/* ✅ Plan Amount */}
+                      {selectedOrg.plan && selectedOrg.plan !== "free" && availablePlans.length > 0 && (() => {
+                        const planObj = availablePlans.find((p: any) => 
+                          p.name?.toLowerCase() === selectedOrg.plan?.toLowerCase()
+                        );
+                        
+                        let amount = 0;
+                        if (selectedOrg.billingCycle === "monthly") {
+                          amount = planObj?.monthlyPrice || 0;
+                        } else if (selectedOrg.billingCycle === "quarterly") {
+                          amount = planObj?.quarterlyPrice || 0;
+                        } else if (selectedOrg.billingCycle === "annual") {
+                          amount = planObj?.annualPrice || 0;
+                        }
+                        
+                        return (
+                          <div className="col-span-2 px-4 py-3 border-2 border-green-400 bg-green-50 rounded-lg">
+                            <p className="text-xs font-semibold text-green-700 uppercase">Plan Amount ({selectedOrg.billingCycle})</p>
+                            <p className="text-2xl font-bold text-green-700 mt-1">₹{amount?.toLocaleString('en-IN')}</p>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -842,6 +886,98 @@ export default function OrganizationsPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* ✅ Subscription Details */}
+                  {selectedOrg.subscription && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Subscription Details</h3>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-600 uppercase">Order ID</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">{selectedOrg.subscription.orderId || "N/A"}</p>
+                        </div>
+                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-600 uppercase">Payment Amount</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">₹{selectedOrg.subscription.paymentAmount || "0"}</p>
+                        </div>
+                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-600 uppercase">Payment Status</p>
+                          <span className={`inline-block text-xs font-bold mt-1 px-3 py-1 rounded-full ${
+                            selectedOrg.subscription.paymentStatus === 'completed'
+                              ? "bg-green-200 text-green-800"
+                              : selectedOrg.subscription.paymentStatus === 'pending'
+                              ? "bg-amber-200 text-amber-800"
+                              : "bg-red-200 text-red-800"
+                          }`}>
+                            {selectedOrg.subscription.paymentStatus || "N/A"}
+                          </span>
+                        </div>
+                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-600 uppercase">Payment Method</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1 capitalize">{selectedOrg.subscription.paymentMethod || "N/A"}</p>
+                        </div>
+                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-600 uppercase">Next Renewal Date</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">
+                            {selectedOrg.subscription.nextRenewalDate 
+                              ? new Date(selectedOrg.subscription.nextRenewalDate).toLocaleDateString('en-IN') 
+                              : "Not Set"}
+                          </p>
+                        </div>
+                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-600 uppercase">Subscription Created</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">
+                            {selectedOrg.subscription.createdAt 
+                              ? new Date(selectedOrg.subscription.createdAt).toLocaleDateString('en-IN') 
+                              : "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ✅ Invoice Details */}
+                  {selectedOrg.invoice && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Invoice Details</h3>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-600 uppercase">Invoice Number</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">{selectedOrg.invoice.invoiceNumber || "N/A"}</p>
+                        </div>
+                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-600 uppercase">Amount</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">₹{selectedOrg.invoice.amount || "0"}</p>
+                        </div>
+                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-600 uppercase">Status</p>
+                          <span className={`inline-block text-xs font-bold mt-1 px-3 py-1 rounded-full ${
+                            selectedOrg.invoice.status === 'paid'
+                              ? "bg-green-200 text-green-800"
+                              : "bg-amber-200 text-amber-800"
+                          }`}>
+                            {selectedOrg.invoice.status || "N/A"}
+                          </span>
+                        </div>
+                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-600 uppercase">Due Date</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">
+                            {selectedOrg.invoice.dueDate 
+                              ? new Date(selectedOrg.invoice.dueDate).toLocaleDateString('en-IN') 
+                              : "N/A"}
+                          </p>
+                        </div>
+                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs font-semibold text-gray-600 uppercase">Paid Date</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-1">
+                            {selectedOrg.invoice.paidDate 
+                              ? new Date(selectedOrg.invoice.paidDate).toLocaleDateString('en-IN') 
+                              : "Not Paid"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Invoices Section */}
                   <div className="space-y-4">
@@ -1089,16 +1225,44 @@ export default function OrganizationsPage() {
 
               {/* Plan Details (for payment reminder) */}
               {emailType === "payment_reminder" && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                   <p className="text-sm text-blue-900">
                     <strong>Current Plan:</strong> {selectedOrgForEmail.plan || "Free"}
                   </p>
                   <p className="text-sm text-blue-900">
+                    <strong>Billing Cycle:</strong> {selectedOrgForEmail.billingCycle || "Monthly"}
+                  </p>
+                  <p className="text-sm text-blue-900">
                     <strong>Status:</strong> {selectedOrgForEmail.status || "Inactive"}
                   </p>
-                  {selectedOrgForEmail.plan && selectedOrgForEmail.plan !== "free" && (
+                  
+                  {/* ✅ Plan Amount from available plans */}
+                  {selectedOrgForEmail.plan && selectedOrgForEmail.plan !== "free" && availablePlans.length > 0 && (
+                    (() => {
+                      const planObj = availablePlans.find((p: any) => 
+                        p.name?.toLowerCase() === selectedOrgForEmail.plan?.toLowerCase()
+                      );
+                      
+                      let amount = 0;
+                      if (selectedOrgForEmail.billingCycle === "monthly") {
+                        amount = planObj?.monthlyPrice || 0;
+                      } else if (selectedOrgForEmail.billingCycle === "quarterly") {
+                        amount = planObj?.quarterlyPrice || 0;
+                      } else if (selectedOrgForEmail.billingCycle === "annual") {
+                        amount = planObj?.annualPrice || 0;
+                      }
+                      
+                      return amount > 0 ? (
+                        <p className="text-sm font-bold text-green-700 bg-green-100 px-3 py-2 rounded">
+                          Amount Due: ₹{amount?.toLocaleString('en-IN')} ({selectedOrgForEmail.billingCycle})
+                        </p>
+                      ) : null;
+                    })()
+                  )}
+                  
+                  {selectedOrgForEmail.plan && selectedOrgForEmail.plan !== "free" && selectedOrgForEmail.nextBillingDate && (
                     <p className="text-sm text-blue-900">
-                      <strong>Next Billing:</strong> {selectedOrgForEmail.nextBillingDate ? new Date(selectedOrgForEmail.nextBillingDate).toLocaleDateString() : "N/A"}
+                      <strong>Next Billing:</strong> {new Date(selectedOrgForEmail.nextBillingDate).toLocaleDateString()}
                     </p>
                   )}
                 </div>

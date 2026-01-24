@@ -843,5 +843,122 @@ export const emailService = {
       console.error('❌ Payment confirmation email (with snapshot) failed:', error.message);
       return { success: false, error: error.message };
     }
+  },
+
+  // ✅ Send payment failed/timeout email
+  sendPaymentFailedEmail: async ({ email, name, plan, amount, paymentDeadline, retryLink, reason }) => {
+    try {
+      console.log('📧 [EMAIL SERVICE] Sending payment failed email...');
+      console.log('  To:', email);
+      console.log('  Plan:', plan);
+      console.log('  Reason:', reason);
+      
+      if (!ENABLE_EMAIL) {
+        console.log('✅ Email service disabled - skipping');
+        return { success: true };
+      }
+
+      const planDisplay = {
+        starter: 'Starter',
+        pro: 'Pro',
+        enterprise: 'Enterprise',
+        custom: 'Custom'
+      }[plan] || plan;
+
+      const htmlbody = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; }
+              .header h1 { margin: 0; font-size: 24px; }
+              .content { background: white; padding: 30px; }
+              .alert-box { background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 6px; margin: 20px 0; }
+              .alert-title { color: #991b1b; font-weight: 600; }
+              .plan-details { background: #f9fafb; padding: 15px; border-radius: 6px; margin: 20px 0; }
+              .plan-row { display: flex; justify-content: space-between; padding: 8px 0; }
+              .plan-label { font-weight: 600; color: #666; }
+              .plan-value { font-weight: bold; }
+              .amount { font-size: 24px; color: #ef4444; font-weight: bold; }
+              .button { background: #ef4444; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block; margin: 20px 0; font-weight: bold; }
+              .button:hover { background: #dc2626; }
+              .button-container { text-align: center; }
+              .deadline { background: #fef3c7; border: 1px solid #fcd34d; padding: 12px; border-radius: 6px; color: #92400e; font-weight: 600; margin: 20px 0; }
+              .footer { text-align: center; color: #999; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>❌ Payment Failed</h1>
+              </div>
+
+              <div class="content">
+                <p>Hi ${name},</p>
+
+                <div class="alert-box">
+                  <div class="alert-title">⚠️ Payment Timeout</div>
+                  <p style="margin: 10px 0 0 0; color: #7f1d1d;">${reason}</p>
+                </div>
+
+                <p>Your subscription activation is on hold. To activate your ${planDisplay} plan and start using Replysys, please complete the payment.</p>
+
+                <div class="plan-details">
+                  <div class="plan-row">
+                    <span class="plan-label">Plan:</span>
+                    <span class="plan-value">${planDisplay}</span>
+                  </div>
+                  <div class="plan-row">
+                    <span class="plan-label">Amount Due:</span>
+                    <span class="amount">₹${amount?.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                <div class="deadline">
+                  ⏰ Complete payment by ${paymentDeadline?.toLocaleDateString('en-IN')} to keep your plan reserved.
+                </div>
+
+                <div class="button-container">
+                  <a href="${retryLink}" class="button">Retry Payment Now</a>
+                </div>
+
+                <h3 style="color: #374151; margin-top: 30px;">What Happens Next?</h3>
+                <ul style="color: #666; line-height: 1.8;">
+                  <li>✅ Click "Retry Payment" to complete your subscription</li>
+                  <li>✅ Once payment is successful, all features will be immediately activated</li>
+                  <li>❌ If payment is not completed within 24 hours, your plan reservation will be cancelled</li>
+                </ul>
+
+                <p style="margin-top: 30px; color: #999;">
+                  <strong>Need help?</strong> Our support team is here to assist. Reply to this email or contact us at support@replysys.com
+                </p>
+              </div>
+
+              <div class="footer">
+                <p>© ${new Date().getFullYear()} Replysys. All rights reserved.</p>
+                <p>This is an automated message, please do not reply with sensitive information.</p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      await sendViaZepto(
+        email,
+        '❌ Payment Failed - Please Retry',
+        htmlbody
+      );
+
+      console.log('✅ Payment failed email sent to', email);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Payment failed email failed:', error.message);
+      if (error.response?.data) {
+        console.error('  Response:', error.response.data);
+      }
+      return { success: false, error: error.message };
+    }
   }
 };

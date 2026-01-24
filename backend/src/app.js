@@ -34,6 +34,7 @@ import leadRoutes from './routes/leadRoutes.js';
 import paymentReminderRoutes from './routes/paymentReminderRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import jobRoutes from './routes/jobRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -222,6 +223,9 @@ app.use('/api/admin', requireJWT, adminRoutes);
 
 // Mount payment reminder routes (JWT AUTH - for admin)
 app.use('/api/admin/payment-reminders', requireJWT, paymentReminderRoutes);
+
+// Mount job routes (JWT AUTH - for admin)
+app.use('/api/jobs', requireJWT, jobRoutes);
 
 // Mount integration routes (INTEGRATION TOKEN AUTH - for Enromatics, third-party apps)
 app.use('/api/integrations', integrationsRoutes);
