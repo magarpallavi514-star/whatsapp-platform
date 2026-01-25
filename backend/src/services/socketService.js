@@ -149,9 +149,15 @@ export const initSocketIO = (server) => {
       }
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason) => {
       console.log(`❌ User disconnected: ${socket.id} (${socket.email})`);
+      console.log('  Disconnect reason:', reason);
+      console.log('  Socket state:', socket.connected);
       userConversations.delete(socket.id);
+    });
+
+    socket.on('error', (error) => {
+      console.error(`❌ Socket error for ${socket.email}:`, error);
     });
   });
 
