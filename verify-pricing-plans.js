@@ -33,7 +33,7 @@ async function verifyPricingPlans() {
           description: 'Perfect for getting started',
           monthlyPrice: 2499,
           yearlyPrice: 24990,
-          setupFee: 3000,
+          setupFee: 0,
           isActive: true
         },
         {
@@ -42,7 +42,7 @@ async function verifyPricingPlans() {
           description: 'For scaling businesses',
           monthlyPrice: 4999,
           yearlyPrice: 49990,
-          setupFee: 3000,
+          setupFee: 0,
           isActive: true
         }
       ], null, 2));

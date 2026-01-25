@@ -37,7 +37,7 @@ async function seedPricingPlans() {
         description: 'Perfect for getting started',
         monthlyPrice: 2499,
         yearlyPrice: 24990,
-        setupFee: 3000,
+        setupFee: 0,
         currency: 'INR',
         isActive: true,
         features: ['Up to 100 contacts', 'Basic messaging', 'Email support']
@@ -48,7 +48,7 @@ async function seedPricingPlans() {
         description: 'For scaling businesses',
         monthlyPrice: 4999,
         yearlyPrice: 49990,
-        setupFee: 3000,
+        setupFee: 0,
         currency: 'INR',
         isActive: true,
         features: ['Up to 1000 contacts', 'Advanced messaging', 'Priority support', 'Custom templates']
