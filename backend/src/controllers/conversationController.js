@@ -12,17 +12,35 @@ import whatsappService from '../services/whatsappService.js';
  */
 export const getConversations = async (req, res) => {
   try {
-    // Use ObjectId for database queries (Conversation.accountId is ObjectId type)
+    // ✅ CRITICAL FIX: Use MongoDB ObjectId (Conversation.accountId is ObjectId type)
     const accountId = req.account._id;
-    const { phoneNumberId, status, limit = 50 } = req.query;
+    
+    // ✅ CRITICAL FIX: Resolve phoneNumberId from multiple sources (REQUIRED)
+    let phoneNumberId = req.query.phoneNumberId || req.headers['x-phone-number-id'];
+    
+    // If phoneNumberId still missing, get from middleware (if resolvePhoneNumber was used)
+    if (!phoneNumberId && req.phoneNumberId) {
+      phoneNumberId = req.phoneNumberId;
+    }
+    
+    const { status, limit = 50 } = req.query;
     
     console.log('🔍 DEBUG - Get Conversations:');
-    console.log('  accountId:', accountId, '(type:', typeof accountId, ')');
-    console.log('  phoneNumberId:', phoneNumberId);
-    console.log('  Query:', { accountId, phoneNumberId, status });
+    console.log('  accountId:', accountId.toString(), '(type: ObjectId)');
+    console.log('  phoneNumberId:', phoneNumberId, '(type: string)');
+    console.log('  Query:', { accountId: accountId.toString(), phoneNumberId, status });
     
-    const query = { accountId };
-    if (phoneNumberId) query.phoneNumberId = phoneNumberId;
+    // ✅ CRITICAL: Always scope by phoneNumberId (WATI requirement)
+    if (!phoneNumberId) {
+      return res.status(400).json({
+        success: false,
+        message: 'phoneNumberId is required',
+        hint: 'Pass phoneNumberId as query param, header (x-phone-number-id), or use middleware resolvePhoneNumber',
+        received: { phoneNumberIdFromQuery: req.query.phoneNumberId, phoneNumberIdFromHeader: req.headers['x-phone-number-id'], phoneNumberIdFromMiddleware: req.phoneNumberId }
+      });
+    }
+    
+    const query = { accountId, phoneNumberId };
     if (status) query.status = status;
     
     const conversations = await Conversation.find(query)
@@ -60,6 +78,9 @@ export const getConversationMessages = async (req, res) => {
     const { conversationId } = req.params;
     const { limit = 500, hours } = req.query;
     const accountId = req.account._id;  // From JWT middleware
+    
+    // ✅ CRITICAL FIX: Resolve phoneNumberId (required for scoping)
+    let phoneNumberId = req.query.phoneNumberId || req.headers['x-phone-number-id'] || req.phoneNumberId;
     
     // Parse conversationId format: accountId_phoneNumberId_userPhone
     let conversation;
@@ -146,6 +167,9 @@ export const replyToConversation = async (req, res) => {
     const { conversationId } = req.params;
     const { messageType, message, templateName, templateParams } = req.body;
     const accountId = req.account._id;  // From JWT middleware
+    
+    // ✅ CRITICAL FIX: Resolve phoneNumberId
+    let phoneNumberId = req.query.phoneNumberId || req.headers['x-phone-number-id'] || req.phoneNumberId;
     
     // Parse conversationId format: accountId_phoneNumberId_customerNumber
     // OR use it as a MongoDB ObjectId lookup

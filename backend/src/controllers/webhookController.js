@@ -195,7 +195,9 @@ export const handleWebhook = async (req, res) => {
               
               const accountId = phoneConfig.accountId;
               console.log('✅ Found account:', accountId);
+              console.log('✅ Account ObjectId type:', typeof accountId, '(should be object)');
               console.log('✅ Account verified with WABA ID:', wabaId);
+              console.log('✅ Phone Number ID:', phoneNumberId, '(should be string)');
               
               // Debug: Verify token is present (log length, not the actual token)
               if (!phoneConfig.accessToken) {
