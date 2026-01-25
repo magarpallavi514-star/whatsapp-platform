@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1] - 2026-01-25 - HOTFIX DEPLOYMENT
+
+### 🔄 Revert to Stable
+- Reverted role system changes to commit 5d2731b
+- All original RBAC features restored
+- Backend and Frontend fully synced
+
 ## [1.1.0] - 2026-01-19 - STABLE RELEASE
 
 ### 🎯 Major Achievement
