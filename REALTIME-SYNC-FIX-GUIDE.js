@@ -29,7 +29,7 @@ const handleNewMessage = (data: any) => {
 /**
  * AFTER:
  */
-const handleNewMessage = (data: any) => {
+const handleNewMessage = (data) => {
   const { conversationId, message } = data;
   console.log('💬 New message received:', conversationId, message);
   

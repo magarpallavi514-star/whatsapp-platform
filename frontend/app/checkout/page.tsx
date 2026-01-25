@@ -341,12 +341,31 @@ function CheckoutContent() {
       </nav>
 
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        {/* Limited Time Offer Banner */}
+        <div className="max-w-6xl mx-auto mb-6 sm:mb-8">
+          <div className="bg-gradient-to-r from-white via-orange-100 to-purple-100 text-gray-900 rounded-2xl p-4 sm:p-6 shadow-lg border-2 border-gray-200">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 sm:gap-3 flex-1">
+                <span className="text-2xl sm:text-3xl animate-bounce">🎉</span>
+                <div className="min-w-0">
+                    <p className="font-bold text-base sm:text-lg text-gray-900">⏰ Limited Time Offer!</p>
+                    <p className="text-xs sm:text-sm text-gray-700 line-clamp-2">Get up to {Math.max(selectedPlan?.quarterlyDiscount || 0, selectedPlan?.annualDiscount || 0)}% off on longer plans</p>
+                </div>
+              </div>
+              <div className="text-right whitespace-nowrap">
+                <p className="text-xs font-semibold text-orange-600">Offer expires soon</p>
+                <p className="text-lg sm:text-2xl font-bold">SAVE BIG</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column: Plan Selection & Tenure */}
           <div className="lg:col-span-2">
             {/* Step 1: Select Plan */}
-            <div className="bg-white rounded-2xl border border-gray-300 p-8 mb-8 shadow-sm hover:shadow-md transition">
-              <h2 className="text-2xl font-bold text-black mb-6">1. Select Your Plan</h2>
+            <div className="bg-white rounded-2xl border border-gray-300 p-4 sm:p-8 mb-6 sm:mb-8 shadow-sm hover:shadow-md transition">
+              <h2 className="text-xl sm:text-2xl font-bold text-black mb-4 sm:mb-6">1. Select Your Plan</h2>
 
               {isLoadingPlans ? (
                 <div className="text-center py-8">
@@ -375,41 +394,47 @@ function CheckoutContent() {
 
             {/* Step 2: Select Tenure */}
             {selectedPlan && (
-              <div className="bg-white rounded-2xl border border-gray-300 p-8 mb-8 shadow-sm hover:shadow-md transition">
-                <h2 className="text-2xl font-bold text-black mb-6">2. Choose Billing Period</h2>
+              <div className="bg-white rounded-2xl border border-gray-300 p-4 sm:p-8 mb-6 sm:mb-8 shadow-sm hover:shadow-md transition">
+                <h2 className="text-xl sm:text-2xl font-bold text-black mb-4 sm:mb-6">2. Choose Billing Period</h2>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   {[
-                    { value: 'monthly' as const, label: '1 Month', savings: 0 },
-                    { value: 'quarterly' as const, label: '3 Months', savings: 5 },
-                    { value: 'annual' as const, label: '12 Months', savings: 15 }
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => setSelectedTenure(option.value)}
-                      className={`p-4 rounded-xl border-2 text-center transition relative ${
-                        selectedTenure === option.value
-                          ? 'border-black bg-gray-50'
-                          : 'border-gray-300 bg-white hover:border-gray-400'
-                      }`}
-                    >
-                      {option.savings > 0 && (
-                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                          <span className="bg-black text-white text-xs px-2 py-1 rounded-full">
-                            Save {option.savings}%
-                          </span>
-                        </div>
-                      )}
-                      <p className="text-sm font-bold text-black">{option.label}</p>
-                    </button>
-                  ))}
+                    { value: 'monthly' as const, label: '1 Month', discountKey: 'monthlyDiscount' },
+                    { value: 'quarterly' as const, label: '3 Months', discountKey: 'quarterlyDiscount' },
+                    { value: 'annual' as const, label: '12 Months', discountKey: 'annualDiscount' }
+                  ].map((option) => {
+                    const discountPercent = selectedPlan?.[option.discountKey as keyof typeof selectedPlan] || 0
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() => setSelectedTenure(option.value)}
+                        className={`p-2 sm:p-4 rounded-xl border-2 text-center transition relative ${
+                          selectedTenure === option.value
+                            ? 'border-green-600 bg-green-50'
+                            : 'border-gray-300 bg-white hover:border-gray-400'
+                        }`}
+                      >
+                        {discountPercent > 0 && (
+                          <div className="absolute -top-2 sm:-top-3 left-1/2 transform -translate-x-1/2">
+                            <span className="bg-red-600 text-white text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full animate-pulse text-xs">
+                              💰 Save {discountPercent}%
+                            </span>
+                          </div>
+                        )}
+                        <p className="text-xs sm:text-sm font-bold text-black">{option.label}</p>
+                        {discountPercent > 0 && (
+                          <p className="text-xs text-green-700 mt-1 font-semibold">Best Deal!</p>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}
 
             {/* Step 3: Authentication */}
-            <div className="bg-white rounded-2xl border border-gray-300 p-8 shadow-sm hover:shadow-md transition">
-              <h2 className="text-2xl font-bold text-black mb-6">3. Login or Register</h2>
+            <div className="bg-white rounded-2xl border border-gray-300 p-4 sm:p-8 shadow-sm hover:shadow-md transition">
+              <h2 className="text-xl sm:text-2xl font-bold text-black mb-4 sm:mb-6">3. Login or Register</h2>
 
               {!isAuthenticated ? (
                 <div className="space-y-4">
@@ -578,8 +603,15 @@ function CheckoutContent() {
 
           {/* Right Column: Order Summary */}
           <div className="lg:col-span-1">
-            <div className="sticky top-24 bg-white rounded-2xl border border-gray-300 p-6 shadow-lg">
-              <h3 className="text-xl font-bold text-black mb-6">Order Summary</h3>
+            {/* Limited Time Offer Banner */}
+            <div className="mb-4 sm:mb-6 bg-gradient-to-r from-white via-orange-100 to-purple-100 rounded-2xl p-3 sm:p-4 text-gray-900 shadow-lg border-2 border-gray-200">
+              <p className="text-center font-bold text-sm sm:text-lg text-gray-900">⏰ LIMITED TIME OFFER!</p>
+              <p className="text-center text-xs sm:text-sm mt-1 sm:mt-2 text-gray-700">Save UP TO {Math.max(selectedPlan?.quarterlyDiscount || 0, selectedPlan?.annualDiscount || 0)}% with longer billing periods</p>
+              <p className="text-center text-xs mt-1 sm:mt-2 font-semibold text-gray-800">Offer ends soon - Don't miss out!</p>
+            </div>
+
+            <div className="sticky top-20 sm:top-24 bg-white rounded-2xl border border-gray-300 p-4 sm:p-6 shadow-lg">
+              <h3 className="text-lg sm:text-xl font-bold text-black mb-4 sm:mb-6">Order Summary</h3>
 
               {selectedPlan && (
                 <div className="space-y-4 pb-6 border-b border-gray-300">
@@ -608,10 +640,10 @@ function CheckoutContent() {
                   )}
 
                   {selectedTenure !== 'monthly' && (
-                    <div>
-                      <p className="text-sm text-gray-700">Discount</p>
-                      <p className="font-semibold text-black">
-                        -{selectedTenure === 'quarterly' ? '5' : '15'}%
+                    <div className="bg-purple-50 border border-purple-300 rounded-lg p-3">
+                      <p className="text-sm text-gray-700">Discount (Limited Time)</p>
+                      <p className="font-bold text-purple-700 text-lg">
+                        -{selectedTenure === 'quarterly' ? (selectedPlan?.quarterlyDiscount || 0) : (selectedPlan?.annualDiscount || 0)}%
                       </p>
                     </div>
                   )}
@@ -619,12 +651,21 @@ function CheckoutContent() {
               )}
 
               {/* Total Amount */}
-              <div className="mb-6 py-4">
-                <div className="flex justify-between items-baseline">
-                  <span className="text-gray-700">Total Amount</span>
-                  <span className="text-3xl font-bold text-black">₹{finalAmount.toLocaleString()}</span>
+              <div className="mb-4 sm:mb-6 py-3 sm:py-4 bg-gray-50 rounded-lg p-3 sm:p-4">
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className="text-xs sm:text-sm text-gray-700 font-semibold">Total Amount</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-black">₹{finalAmount.toLocaleString()}</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">Secured by Cashfree</p>
+                {selectedTenure !== 'monthly' && (
+                  <div className="bg-green-100 border border-green-400 rounded p-2 mt-2 sm:mt-3">
+                    <p className="text-xs font-bold text-green-700">
+                      ✓ You're saving ₹{(
+                        (selectedPlan.monthlyPrice * (selectedTenure === 'quarterly' ? 3 : 12)) - finalAmount
+                      ).toLocaleString()}!
+                    </p>
+                  </div>
+                )}
+                <p className="text-xs text-gray-500 mt-1 sm:mt-2">Secured by Cashfree</p>
               </div>
 
               {/* Payment Button */}
@@ -649,16 +690,16 @@ function CheckoutContent() {
 
               {/* Error Message */}
               {error && (
-                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
-                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-700">{error}</p>
+                <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
+                  <AlertCircle className="h-4 sm:h-5 w-4 sm:w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs sm:text-sm text-red-700">{error}</p>
                 </div>
               )}
 
               {/* Security badges */}
-              <div className="mt-6 pt-6 border-t border-gray-300 space-y-3">
-                <div className="flex items-center gap-2 text-sm text-gray-700">
-                  <Shield className="h-4 w-4 text-black" />
+              <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-300 space-y-2 sm:space-y-3">
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-700">
+                  <Shield className="h-4 w-4 text-black flex-shrink-0" />
                   <span>SSL Secured</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-700">
