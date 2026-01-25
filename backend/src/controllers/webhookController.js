@@ -381,15 +381,19 @@ export const handleWebhook = async (req, res) => {
                   
                   // ✅ CRITICAL FIX: Create conversation first to get MongoDB _id
                   // This ID will be used for Socket.io broadcasting and must match API format
+                  const workspaceId = targetAccount.defaultWorkspaceId || targetAccountId;  // Use default workspace or fallback to account
+                  
                   const conversationDoc = await Conversation.findOneAndUpdate(
                     {
                       accountId,
+                      workspaceId,
                       phoneNumberId,
                       customerNumber: message.from
                     },
                     {
                       $setOnInsert: {
                         accountId,
+                        workspaceId,
                         phoneNumberId,
                         customerNumber: message.from,
                         startedAt: new Date()

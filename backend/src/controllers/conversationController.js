@@ -14,6 +14,7 @@ export const getConversations = async (req, res) => {
   try {
     // ✅ CRITICAL FIX: Use MongoDB ObjectId (Conversation.accountId is ObjectId type)
     const accountId = req.account._id;
+    const workspaceId = req.workspace?._id || req.account._id;  // Default to accountId if no workspace
     
     // ✅ CRITICAL FIX: Resolve phoneNumberId from multiple sources (REQUIRED)
     let phoneNumberId = req.query.phoneNumberId || req.headers['x-phone-number-id'];
@@ -27,8 +28,9 @@ export const getConversations = async (req, res) => {
     
     console.log('🔍 DEBUG - Get Conversations:');
     console.log('  accountId:', accountId.toString(), '(type: ObjectId)');
+    console.log('  workspaceId:', workspaceId.toString(), '(type: ObjectId)');
     console.log('  phoneNumberId:', phoneNumberId, '(type: string)');
-    console.log('  Query:', { accountId: accountId.toString(), phoneNumberId, status });
+    console.log('  Query:', { accountId: accountId.toString(), workspaceId: workspaceId.toString(), phoneNumberId, status });
     
     // ✅ CRITICAL: Always scope by phoneNumberId (WATI requirement)
     if (!phoneNumberId) {
@@ -40,7 +42,7 @@ export const getConversations = async (req, res) => {
       });
     }
     
-    const query = { accountId, phoneNumberId };
+    const query = { accountId, workspaceId, phoneNumberId };
     if (status) query.status = status;
     
     const conversations = await Conversation.find(query)
@@ -78,6 +80,7 @@ export const getConversationMessages = async (req, res) => {
     const { conversationId } = req.params;
     const { limit = 500, hours } = req.query;
     const accountId = req.account._id;  // From JWT middleware
+    const workspaceId = req.workspace?._id || req.account._id;  // Default to accountId if no workspace
     
     // ✅ CRITICAL FIX: Resolve phoneNumberId (required for scoping)
     let phoneNumberId = req.query.phoneNumberId || req.headers['x-phone-number-id'] || req.phoneNumberId;
@@ -89,11 +92,12 @@ export const getConversationMessages = async (req, res) => {
     if (conversationId.includes('_')) {
       const parts = conversationId.split('_');
       if (parts.length >= 3) {
-        const phoneNumberId = parts[1];
+        const extractedPhoneNumberId = parts[1];
         const userPhone = parts.slice(2).join('_');  // Handle phone numbers with underscores
         conversation = await Conversation.findOne({
           accountId,
-          phoneNumberId,
+          workspaceId,
+          phoneNumberId: extractedPhoneNumberId,
           userPhone
         }).lean();
       }
@@ -103,7 +107,8 @@ export const getConversationMessages = async (req, res) => {
     if (!conversation) {
       conversation = await Conversation.findOne({
         _id: conversationId,
-        accountId
+        accountId,
+        workspaceId
       }).lean();
     }
     
@@ -167,6 +172,7 @@ export const replyToConversation = async (req, res) => {
     const { conversationId } = req.params;
     const { messageType, message, templateName, templateParams } = req.body;
     const accountId = req.account._id;  // From JWT middleware
+    const workspaceId = req.workspace?._id || req.account._id;  // Default to accountId if no workspace
     
     // ✅ CRITICAL FIX: Resolve phoneNumberId
     let phoneNumberId = req.query.phoneNumberId || req.headers['x-phone-number-id'] || req.phoneNumberId;
@@ -175,16 +181,17 @@ export const replyToConversation = async (req, res) => {
     // OR use it as a MongoDB ObjectId lookup
     let conversation;
     
-    // Try to find by the new structure first (accountId, phoneNumberId, customerNumber)
+    // Try to find by the new structure first (accountId, workspaceId, phoneNumberId, customerNumber)
     // Extract from conversationId if it's in old format
     if (conversationId.includes('_')) {
       const parts = conversationId.split('_');
       if (parts.length >= 3) {
-        const phoneNumberId = parts[1];
+        const extractedPhoneNumberId = parts[1];
         const customerNumber = parts.slice(2).join('_');  // Handle phone numbers with underscores
         conversation = await Conversation.findOne({
           accountId,
-          phoneNumberId,
+          workspaceId,
+          phoneNumberId: extractedPhoneNumberId,
           customerNumber
         }).lean();
       }
@@ -194,7 +201,8 @@ export const replyToConversation = async (req, res) => {
     if (!conversation) {
       conversation = await Conversation.findOne({
         _id: conversationId,
-        accountId
+        accountId,
+        workspaceId
       }).lean();
     }
     

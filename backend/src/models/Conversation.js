@@ -16,6 +16,14 @@ const conversationSchema = new mongoose.Schema({
     index: true
   },
   
+  // Workspace isolation (for multi-workspace accounts)
+  workspaceId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Workspace',
+    required: true,
+    index: true
+  },
+  
   // Phone number this conversation belongs to
   phoneNumberId: {
     type: String,
@@ -87,16 +95,18 @@ const conversationSchema = new mongoose.Schema({
 });
 
 // Indexes for inbox queries
-conversationSchema.index({ accountId: 1, phoneNumberId: 1, lastMessageAt: -1 });
-conversationSchema.index({ accountId: 1, status: 1, lastMessageAt: -1 });
-conversationSchema.index({ accountId: 1, unreadCount: 1 });
+conversationSchema.index({ accountId: 1, workspaceId: 1, phoneNumberId: 1, lastMessageAt: -1 });
+conversationSchema.index({ accountId: 1, workspaceId: 1, status: 1, lastMessageAt: -1 });
+conversationSchema.index({ workspaceId: 1, phoneNumberId: 1, lastMessageAt: -1 });
+conversationSchema.index({ accountId: 1, workspaceId: 1, unreadCount: 1 });
 conversationSchema.index({ conversationId: 1 });
 conversationSchema.index({ userPhone: 1 });
 
 // Static method to get conversations with preview
-conversationSchema.statics.getInboxList = async function(accountId, phoneNumberId, limit = 50) {
+conversationSchema.statics.getInboxList = async function(accountId, workspaceId, phoneNumberId, limit = 50) {
   return this.find({ 
     accountId, 
+    workspaceId,
     ...(phoneNumberId && { phoneNumberId })
   })
   .sort({ lastMessageAt: -1 })
