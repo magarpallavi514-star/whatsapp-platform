@@ -278,7 +278,7 @@ export const replyToConversation = async (req, res) => {
       {
         accountId: conversation.accountId,
         phoneNumberId: conversation.phoneNumberId,
-        customerNumber: conversation.customerNumber
+        userPhone: conversation.userPhone
       },
       {
         $set: {
