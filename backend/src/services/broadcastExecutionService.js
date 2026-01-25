@@ -29,6 +29,9 @@ export class BroadcastExecutionService {
    * Execute broadcast with throttling
    */
   async executeBroadcast(accountId, broadcastId, phoneNumberId) {
+    // ⚠️ CRITICAL: Ensure accountId is string for conversationId consistency
+    const accountIdStr = accountId.toString ? accountId.toString() : accountId;
+    
     const broadcast = await Broadcast.findOne({
       _id: broadcastId,
       accountId
@@ -46,7 +49,7 @@ export class BroadcastExecutionService {
     console.log(`📢 STARTING BROADCAST EXECUTION`);
     console.log(`${'═'.repeat(60)}`);
     console.log(`Broadcast ID: ${broadcastId}`);
-    console.log(`Account ID: ${accountId}`);
+    console.log(`Account ID: ${accountIdStr}`);
     console.log(`Phone Number ID: ${phoneNumberId}`);
     console.log(`Message Type: ${broadcast.messageType}`);
 
@@ -81,8 +84,8 @@ export class BroadcastExecutionService {
       const recipient = recipients[i];
 
       try {
-        // Send message
-        await this.sendBroadcastMessage(accountId, phoneNumberId, broadcast, recipient);
+        // Send message (pass accountIdStr for consistent conversationId format)
+        await this.sendBroadcastMessage(accountIdStr, phoneNumberId, broadcast, recipient);
         sent++;
 
         broadcast.stats.sent = sent;

@@ -80,31 +80,41 @@ class WhatsAppService {
   /**
    * Helper: Find or create conversation for outbound messages
    * CRITICAL: All messages must have a conversationId for real-time sync
+   * ⚠️ IDEMPOTENT: Uses upsert to prevent E11000 duplicate key errors in broadcast loops
    */
   async getOrCreateConversation(accountId, phoneNumberId, recipientPhone, workspaceId = null) {
     try {
-      // Try to find existing conversation
-      let conversation = await Conversation.findOne({
-        accountId,
-        phoneNumberId,
-        userPhone: recipientPhone
-      });
-
-      if (!conversation) {
-        // Create new conversation
-        const conversationId = `${accountId.toString()}_${phoneNumberId}_${recipientPhone}`;
-        conversation = await Conversation.create({
+      const conversationId = `${accountId.toString()}_${phoneNumberId}_${recipientPhone}`;
+      
+      // ✅ ATOMIC UPSERT: Prevents duplicate key errors in concurrent broadcast loops
+      const conversation = await Conversation.findOneAndUpdate(
+        {
           accountId,
-          workspaceId: workspaceId || accountId, // Use provided workspace or account ID
           phoneNumberId,
-          userPhone: recipientPhone,
-          conversationId,
-          lastMessageAt: new Date(),
-          status: 'open'
-        });
-        console.log('✅ Created conversation:', conversation._id);
-      }
-
+          userPhone: recipientPhone
+        },
+        {
+          $setOnInsert: {
+            accountId,
+            workspaceId: workspaceId || accountId,
+            phoneNumberId,
+            userPhone: recipientPhone,
+            conversationId,
+            lastMessageAt: new Date(),
+            status: 'open'
+          },
+          $set: {
+            lastMessageAt: new Date(),
+            status: 'open'
+          }
+        },
+        { 
+          upsert: true, 
+          new: true,
+          runValidators: false // Skip validators on upsert to avoid conflicts
+        }
+      );
+      
       return conversation;
     } catch (error) {
       console.error('⚠️ Error in getOrCreateConversation:', error.message);
