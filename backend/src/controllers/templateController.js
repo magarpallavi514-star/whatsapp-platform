@@ -101,7 +101,7 @@ export const createTemplate = async (req, res) => {
       // File was uploaded
       mediaFileName = req.file.originalname;
       mediaFilePath = `/uploads/templates/${req.file.filename}`;
-      finalMediaUrl = `${process.env.API_URL || 'http://localhost:5050/api'}${mediaFilePath}`;
+      finalMediaUrl = `${process.env.BACKEND_URL || 'https://whatsapp-platform-production-e48b.up.railway.app'}/api${mediaFilePath}`;
     }
     
     if (!name || !content) {

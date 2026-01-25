@@ -68,7 +68,7 @@ router.post('/book', async (req, res) => {
         <p><strong>Phone:</strong> ${phone || 'Not provided'}</p>
         <p><strong>Company:</strong> ${company || 'Not provided'}</p>
         <p><strong>Message:</strong> ${message || 'No message'}</p>
-        <p><a href="${process.env.ADMIN_DASHBOARD_URL || 'http://localhost:3000/superadmin'}/demo-requests/${demoRequest._id}">View in Dashboard</a></p>
+        <p><a href="${process.env.ADMIN_DASHBOARD_URL || 'https://replysys.com/superadmin'}/demo-requests/${demoRequest._id}">View in Dashboard</a></p>
       `
     )
 

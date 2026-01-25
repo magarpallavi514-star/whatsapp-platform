@@ -377,9 +377,32 @@ export const handleWebhook = async (req, res) => {
                       content = { raw: message };
                   }
                   
-                  // Create conversation ID (unique per sender + account + phone)
-                  const conversationId = `${accountId}_${phoneNumberId}_${message.from}`;
-                  console.log('Conversation ID:', conversationId);
+                  // ✅ CRITICAL FIX: Create conversation first to get MongoDB _id
+                  // This ID will be used for Socket.io broadcasting and must match API format
+                  const conversationDoc = await Conversation.findOneAndUpdate(
+                    {
+                      accountId,
+                      phoneNumberId,
+                      customerNumber: message.from
+                    },
+                    {
+                      $setOnInsert: {
+                        accountId,
+                        phoneNumberId,
+                        customerNumber: message.from,
+                        startedAt: new Date()
+                      },
+                      $set: {
+                        lastMessageAt: new Date(parseInt(message.timestamp) * 1000),
+                        status: 'open'
+                      }
+                    },
+                    { upsert: true, new: true }
+                  );
+                  
+                  // Use MongoDB _id for Socket.io broadcasting
+                  const conversationId = conversationDoc._id.toString();
+                  console.log('✅ Conversation ID (MongoDB _id):', conversationId);
                   
                   // Upsert or update contact
                   const contactData = {
@@ -420,20 +443,10 @@ export const handleWebhook = async (req, res) => {
                     lastMessagePreview = `[${messageType}]`;
                   }
                   
-                  // ✅ FIX 4: Create/update conversation with proper fields
-                  await Conversation.findOneAndUpdate(
+                  // ✅ Update conversation with message preview and unread count
+                  await Conversation.findByIdAndUpdate(
+                    conversationDoc._id,
                     {
-                      accountId,
-                      phoneNumberId,
-                      customerNumber: message.from
-                    },
-                    {
-                      $setOnInsert: {
-                        accountId,
-                        phoneNumberId,
-                        customerNumber: message.from,
-                        startedAt: new Date()
-                      },
                       $set: {
                         lastMessageAt: new Date(parseInt(message.timestamp) * 1000),
                         lastMessagePreview,
@@ -441,11 +454,10 @@ export const handleWebhook = async (req, res) => {
                         status: 'open'
                       },
                       $inc: { unreadCount: 1 }
-                    },
-                    { upsert: true, new: true }
+                    }
                   );
                   
-                  console.log('✅ Conversation created/updated');
+                  console.log('✅ Conversation updated with message preview');
                   
                   // Save incoming message to Message collection
                   const inboxMessage = {

@@ -32,9 +32,15 @@ export const getConversations = async (req, res) => {
     
     console.log('  Found:', conversations.length, 'conversations');
     
+    // ✅ CRITICAL FIX: Ensure conversationId field for Socket.io matching
+    const formattedConversations = conversations.map(conv => ({
+      ...conv,
+      conversationId: conv._id.toString()  // MongoDB _id as Socket.io conversation ID
+    }));
+    
     res.json({
       success: true,
-      conversations
+      conversations: formattedConversations
     });
     
   } catch (error) {

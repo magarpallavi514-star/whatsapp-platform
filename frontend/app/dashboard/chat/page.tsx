@@ -479,14 +479,28 @@ export default function ChatPage() {
       const { conversationId, message } = data;
       console.log('💬 New message received:', conversationId, message);
       
+      // ✅ DEBUG: Log ID matching for real-time sync troubleshooting
+      console.log('%c🔍 CONVERSATION ID DEBUG', 'color: #ff6b6b; font-weight: bold', {
+        broadcastConversationId: conversationId,
+        selectedContactId: selectedContact?.id,
+        selectedContactPhone: selectedContact?.phone,
+        messageFrom: message.recipientPhone,
+        messageType: message.messageType,
+        match: conversationId === selectedContact?.id,
+        timestamp: new Date().toLocaleTimeString()
+      });
+      
       // Update messages if we're viewing this conversation
       if (selectedContact?.id === conversationId) {
+        console.log('%c✅ IDS MATCH - Adding message to view', 'color: #51cf66; font-weight: bold');
         setMessages(prev => {
           // Check if message already exists
           if (prev.some(m => m._id === message._id)) return prev;
           return [...prev, message];
         });
         shouldScrollRef.current = true;
+      } else {
+        console.log('%c❌ IDS DO NOT MATCH - Message NOT added to current view', 'color: #ff6b6b; font-weight: bold');
       }
       
       // Update conversation last message
