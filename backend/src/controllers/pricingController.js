@@ -73,7 +73,9 @@ export const createPricingPlan = async (req, res) => {
       setupFee,
       currency,
       monthlyDiscount,
+      quarterlyDiscount,
       yearlyDiscount,
+      annualDiscount,
       limits,
       features,
       isPopular
@@ -109,7 +111,9 @@ export const createPricingPlan = async (req, res) => {
       setupFee: setupFee || 0,
       currency: currency || 'USD',
       monthlyDiscount: monthlyDiscount || 0,
+      quarterlyDiscount: quarterlyDiscount || 0,
       yearlyDiscount: yearlyDiscount || 0,
+      annualDiscount: annualDiscount || 0,
       limits: limits || {},
       features: features || { included: [], excluded: [] },
       isPopular: isPopular || false
