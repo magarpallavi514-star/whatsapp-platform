@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, CheckCircle, Loader, MessageSquare, ArrowLeft, Zap, Shield, Clock, Eye, EyeOff } from 'lucide-react'
+import { AlertCircle, CheckCircle, Loader, ArrowLeft, Shield, Clock, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ErrorToast } from '@/components/ErrorToast'
 import Link from 'next/link'
@@ -325,10 +325,7 @@ function CheckoutContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="flex items-center gap-2">
-              <div className="h-10 w-10 bg-black rounded-lg flex items-center justify-center">
-                <MessageSquare className="h-6 w-6 text-white" />
-              </div>
-              <span className="font-bold text-lg hidden sm:inline">Pixels</span>
+              <span className="text-2xl font-extrabold text-green-600">replysys</span>
             </Link>
             <Link href="/pricing">
               <Button variant="outline" size="sm" className="flex items-center gap-2">
