@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Bot, Plus, Play, Pause, Edit, Trash2, X, Search, MessageSquare, Zap, List } from "lucide-react"
+import { Bot, Plus, Play, Pause, Edit, Trash2, X, Search, MessageSquare, Zap, List, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ErrorToast } from "@/components/ErrorToast"
 import { authService } from "@/lib/auth"
@@ -121,6 +121,12 @@ export default function ChatbotPage() {
   const [newButtonTitle, setNewButtonTitle] = useState('');
   const [newButtonUrl, setNewButtonUrl] = useState('');
   const [newListItem, setNewListItem] = useState({ title: '', description: '' });
+
+  // Leads state
+  const [showLeadsDrawer, setShowLeadsDrawer] = useState(false);
+  const [selectedBotForLeads, setSelectedBotForLeads] = useState<Chatbot | null>(null);
+  const [leads, setLeads] = useState<any[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
 
   useEffect(() => {
     fetchBots();
@@ -282,6 +288,76 @@ export default function ChatbotPage() {
       }
     } catch (error) {
       console.error('Failed to delete chatbot:', error);
+    }
+  };
+
+  const fetchLeads = async (chatbotId: string) => {
+    setLeadsLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/chatbots/${chatbotId}/leads`, {
+        headers: getHeaders()
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setLeads(data.data || []);
+      } else {
+        console.error('Failed to fetch leads');
+      }
+    } catch (error) {
+      console.error('Failed to fetch leads:', error);
+    } finally {
+      setLeadsLoading(false);
+    }
+  };
+
+  const openLeadsDrawer = (bot: Chatbot) => {
+    setSelectedBotForLeads(bot);
+    setShowLeadsDrawer(true);
+    fetchLeads(bot._id);
+  };
+
+  const convertLeadToClient = async (leadId: string, responses: any) => {
+    if (!confirm('Convert this lead to a client contact?')) return;
+
+    try {
+      const response = await fetch(`${API_URL}/chatbots/leads/${leadId}/convert`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ responses })
+      });
+
+      if (response.ok) {
+        // Refresh leads list
+        if (selectedBotForLeads) {
+          await fetchLeads(selectedBotForLeads._id);
+        }
+      } else {
+        console.error('Failed to convert lead');
+      }
+    } catch (error) {
+      console.error('Failed to convert lead:', error);
+    }
+  };
+
+  const deleteLead = async (leadId: string) => {
+    if (!confirm('Delete this lead?')) return;
+
+    try {
+      const response = await fetch(`${API_URL}/chatbots/leads/${leadId}`, {
+        method: 'DELETE',
+        headers: getHeaders()
+      });
+
+      if (response.ok) {
+        // Refresh leads list
+        if (selectedBotForLeads) {
+          await fetchLeads(selectedBotForLeads._id);
+        }
+      } else {
+        console.error('Failed to delete lead');
+      }
+    } catch (error) {
+      console.error('Failed to delete lead:', error);
     }
   };
 
@@ -507,6 +583,15 @@ export default function ChatbotPage() {
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                 <p className="text-sm text-gray-600">Last active: {getLastActiveText(bot)}</p>
                 <div className="flex gap-2">
+                  <Button 
+                    onClick={() => openLeadsDrawer(bot)}
+                    variant="outline" 
+                    size="sm"
+                    className="text-blue-600 hover:text-blue-700"
+                  >
+                    <Users className="h-4 w-4 mr-1" />
+                    Leads
+                  </Button>
                   <Button 
                     onClick={() => toggleBot(bot._id)}
                     variant="outline" 
@@ -1111,6 +1196,95 @@ export default function ChatbotPage() {
               <Button onClick={handleCreateOrUpdate} className="bg-green-600 hover:bg-green-700">
                 {editingBot ? 'Update Bot' : 'Create Bot'}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Leads Drawer */}
+      {showLeadsDrawer && selectedBotForLeads && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setShowLeadsDrawer(false)} />
+          <div className="absolute right-0 top-0 h-full w-full max-w-4xl bg-white shadow-xl flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Leads - {selectedBotForLeads.name}
+              </h2>
+              <button
+                onClick={() => setShowLeadsDrawer(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {leadsLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                    <p className="mt-2 text-gray-600">Loading leads...</p>
+                  </div>
+                </div>
+              ) : leads.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-600">No leads yet</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="text-left px-4 py-3 font-semibold text-gray-900">Phone</th>
+                        <th className="text-left px-4 py-3 font-semibold text-gray-900">Status</th>
+                        <th className="text-left px-4 py-3 font-semibold text-gray-900">Date</th>
+                        <th className="text-left px-4 py-3 font-semibold text-gray-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leads.map((lead: any) => (
+                        <tr key={lead._id} className="border-b border-gray-200 hover:bg-gray-50">
+                          <td className="px-4 py-3 text-gray-900">{lead.customerPhone}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                              lead.status === 'new' ? 'bg-blue-100 text-blue-800' :
+                              lead.status === 'contacted' ? 'bg-yellow-100 text-yellow-800' :
+                              lead.status === 'converted' ? 'bg-green-100 text-green-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-600 text-sm">
+                            {new Date(lead.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-2">
+                              {lead.status !== 'converted' && (
+                                <button
+                                  onClick={() => convertLeadToClient(lead._id, lead.responses)}
+                                  className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                                >
+                                  Convert
+                                </button>
+                              )}
+                              <button
+                                onClick={() => deleteLead(lead._id)}
+                                className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </div>

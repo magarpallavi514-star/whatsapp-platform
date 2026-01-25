@@ -1601,6 +1601,22 @@ class WhatsAppService {
     try {
       console.log('📊 Workflow completed. Collected data:', Object.fromEntries(session.responses));
       
+      // Import ChatbotLead model
+      const ChatbotLead = (await import('../models/ChatbotLead.js')).default;
+      
+      // Save lead with collected responses
+      const lead = await ChatbotLead.create({
+        chatbotId: session.ruleId,
+        accountId: session.accountId,
+        phoneNumberId: session.phoneNumberId,
+        customerPhone: session.contactPhone,
+        responses: Object.fromEntries(session.responses),
+        workflowSessionId: session._id.toString(),
+        status: 'new'
+      });
+      
+      console.log('💾 Lead saved:', lead._id);
+      
       // Build summary message
       let summaryText = '✅ *Thank you for completing the form!*\n\n';
       summaryText += '*Your responses:*\n';
@@ -1620,6 +1636,7 @@ class WhatsAppService {
         { 
           campaign: 'workflow_completed', 
           sessionId: session._id.toString(),
+          leadId: lead._id.toString(),
           responses: Object.fromEntries(session.responses)
         }
       );

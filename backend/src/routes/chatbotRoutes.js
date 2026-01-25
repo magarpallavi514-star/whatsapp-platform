@@ -6,7 +6,11 @@ import {
   updateChatbot,
   toggleChatbot,
   deleteChatbot,
-  getChatbotInteractions
+  getChatbotInteractions,
+  getChatbotLeads,
+  updateLead,
+  convertLeadToClient,
+  deleteLead
 } from '../controllers/chatbotController.js';
 
 const router = express.Router();
@@ -33,5 +37,19 @@ router.patch('/:id/toggle', toggleChatbot);
 
 // Delete chatbot
 router.delete('/:id', deleteChatbot);
+
+// ===== LEADS ROUTES =====
+
+// Get all leads for a chatbot
+router.get('/:chatbotId/leads', getChatbotLeads);
+
+// Update lead status/notes
+router.patch('/leads/:leadId', updateLead);
+
+// Convert lead to contact
+router.post('/leads/:leadId/convert', convertLeadToClient);
+
+// Delete lead
+router.delete('/leads/:leadId', deleteLead);
 
 export default router;

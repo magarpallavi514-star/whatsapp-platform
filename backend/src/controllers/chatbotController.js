@@ -1,5 +1,7 @@
 import KeywordRule from '../models/KeywordRule.js';
 import Message from '../models/Message.js';
+import ChatbotLead from '../models/ChatbotLead.js';
+import Contact from '../models/Contact.js';
 
 /**
  * Chatbot Controller - Manage keyword-based automation rules
@@ -379,6 +381,145 @@ export const getChatbotInteractions = async (req, res) => {
     console.error('❌ Get chatbot interactions error:', error);
     res.status(500).json({ 
       error: 'Failed to fetch interactions',
+      message: error.message 
+    });
+  }
+};
+
+/**
+ * Get all leads for a specific chatbot
+ */
+export const getChatbotLeads = async (req, res) => {
+  try {
+    const { accountId } = req;
+    const { chatbotId } = req.params;
+    
+    if (!accountId || !chatbotId) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+    
+    const leads = await ChatbotLead.find({ 
+      accountId, 
+      chatbotId 
+    }).sort({ createdAt: -1 });
+    
+    res.json({ 
+      success: true, 
+      data: leads 
+    });
+  } catch (error) {
+    console.error('❌ Error fetching leads:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch leads',
+      message: error.message 
+    });
+  }
+};
+
+/**
+ * Update lead status
+ */
+export const updateLead = async (req, res) => {
+  try {
+    const { accountId } = req;
+    const { leadId } = req.params;
+    const { status, notes } = req.body;
+    
+    const lead = await ChatbotLead.findOneAndUpdate(
+      { _id: leadId, accountId },
+      { status, notes },
+      { new: true }
+    );
+    
+    if (!lead) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+    
+    res.json({ success: true, data: lead });
+  } catch (error) {
+    console.error('❌ Error updating lead:', error);
+    res.status(500).json({ 
+      error: 'Failed to update lead',
+      message: error.message 
+    });
+  }
+};
+
+/**
+ * Convert lead to client contact
+ */
+export const convertLeadToClient = async (req, res) => {
+  try {
+    const { accountId } = req;
+    const { leadId } = req.params;
+    
+    // Get the lead
+    const lead = await ChatbotLead.findOne({ _id: leadId, accountId });
+    if (!lead) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+    
+    // Extract contact info from responses
+    const contactName = lead.responses.name || `Contact-${lead.customerPhone}`;
+    const contactEmail = lead.responses.email || undefined;
+    const contactPhone = lead.customerPhone;
+    
+    // Create contact
+    const contact = await Contact.create({
+      accountId,
+      name: contactName,
+      phone: contactPhone,
+      email: contactEmail,
+      source: 'chatbot_lead',
+      metadata: {
+        leadId: lead._id.toString(),
+        chatbotId: lead.chatbotId,
+        responses: lead.responses
+      }
+    });
+    
+    // Update lead as converted
+    lead.status = 'converted';
+    lead.convertedContactId = contact._id.toString();
+    lead.convertedAt = new Date();
+    lead.convertedBy = accountId;
+    await lead.save();
+    
+    console.log('✅ Lead converted to contact:', contact._id);
+    
+    res.json({ 
+      success: true, 
+      message: 'Lead converted to contact',
+      data: { lead, contact } 
+    });
+  } catch (error) {
+    console.error('❌ Error converting lead:', error);
+    res.status(500).json({ 
+      error: 'Failed to convert lead',
+      message: error.message 
+    });
+  }
+};
+
+/**
+ * Delete lead
+ */
+export const deleteLead = async (req, res) => {
+  try {
+    const { accountId } = req;
+    const { leadId } = req.params;
+    
+    const result = await ChatbotLead.findOneAndDelete({ _id: leadId, accountId });
+    
+    if (!result) {
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+    
+    res.json({ success: true, message: 'Lead deleted' });
+  } catch (error) {
+    console.error('❌ Error deleting lead:', error);
+    res.status(500).json({ 
+      error: 'Failed to delete lead',
       message: error.message 
     });
   }
