@@ -141,7 +141,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     { name: "Campaigns", icon: Calendar, href: "/dashboard/campaigns", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER] },
     
     // Admin-only pages
-    { name: "Chatbot", icon: Bot, href: "/dashboard/chatbot", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT] },
+    { name: "Chatbot", icon: Bot, href: "/dashboard/chatbot", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER] },
     { name: "Analytics", icon: BarChart3, href: "/dashboard/analytics", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER] },
   ]
 
