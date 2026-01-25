@@ -185,11 +185,39 @@ export class BroadcastExecutionService {
         messageId = result.messageId;
       }
 
-      // Log message to database
+      // ✅ FIX: Find or create conversation FIRST (required for message.conversationId)
+      const Conversation = (await import('../models/Conversation.js')).default;
+      const workspaceId = broadcast.workspaceId || accountId; // Use broadcast workspace or account
+      
+      const conversation = await Conversation.findOneAndUpdate(
+        {
+          accountId,
+          workspaceId,
+          phoneNumberId,
+          customerNumber: recipientPhone
+        },
+        {
+          $setOnInsert: {
+            accountId,
+            workspaceId,
+            phoneNumberId,
+            customerNumber: recipientPhone,
+            startedAt: new Date()
+          },
+          $set: {
+            lastMessageAt: new Date(),
+            status: 'open'
+          }
+        },
+        { upsert: true, new: true }
+      );
+
+      // Log message to database WITH conversationId
       const message = new Message({
         accountId,
         phoneNumberId,
-        waMessageId: messageId,  // Use waMessageId, not messageId
+        conversationId: conversation._id,  // ✅ CRITICAL: Link to conversation
+        waMessageId: messageId,
         recipientPhone,
         messageType: broadcast.messageType,
         status: 'sent',
@@ -199,39 +227,6 @@ export class BroadcastExecutionService {
       });
 
       await message.save();
-
-      // ✅ FIX 2: Ensure conversation is created for broadcast recipients
-      // Conversation model uses 'userPhone' field, and requires conversationId
-      const Conversation = (await import('../models/Conversation.js')).default;
-      const conversationId = `${accountId.toString()}_${phoneNumberId}_${recipientPhone}`;
-      
-      try {
-        await Conversation.findOneAndUpdate(
-          {
-            accountId,
-            phoneNumberId,
-            userPhone: recipientPhone
-          },
-          {
-            $setOnInsert: {
-              accountId,
-              phoneNumberId,
-              userPhone: recipientPhone,
-              conversationId: conversationId,
-              lastMessageAt: new Date()
-            },
-            $set: {
-              lastMessageAt: new Date(),
-              lastMessagePreview: `[Broadcast] ${broadcast.messageType}`,
-              status: 'open'
-            }
-          },
-          { upsert: true, new: true }
-        );
-      } catch (convError) {
-        console.warn('⚠️ Conversation creation warning (non-critical):', convError.message);
-        // Don't throw - message was already sent successfully
-      }
 
       return { success: true, messageId };
 

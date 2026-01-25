@@ -77,6 +77,41 @@ class WhatsAppService {
    * @param {string} messageText 
    * @param {object} metadata 
    */
+  /**
+   * Helper: Find or create conversation for outbound messages
+   * CRITICAL: All messages must have a conversationId for real-time sync
+   */
+  async getOrCreateConversation(accountId, phoneNumberId, recipientPhone, workspaceId = null) {
+    try {
+      // Try to find existing conversation
+      let conversation = await Conversation.findOne({
+        accountId,
+        phoneNumberId,
+        customerNumber: recipientPhone
+      });
+
+      if (!conversation) {
+        // Create new conversation
+        conversation = await Conversation.create({
+          accountId,
+          workspaceId: workspaceId || accountId, // Use provided workspace or account ID
+          phoneNumberId,
+          customerNumber: recipientPhone,
+          startedAt: new Date(),
+          lastMessageAt: new Date(),
+          status: 'open'
+        });
+        console.log('✅ Created conversation:', conversation._id);
+      }
+
+      return conversation;
+    } catch (error) {
+      console.error('⚠️ Error in getOrCreateConversation:', error.message);
+      // Create minimal conversation to ensure message can be saved
+      throw error;
+    }
+  }
+
   async sendTextMessage(accountId, phoneNumberId, recipientPhone, messageText, metadata = {}) {
     let message;
     
@@ -337,10 +372,33 @@ class WhatsAppService {
 
       console.log('✅ Validation passed');
 
-      // Create message record
+      // ✅ CRITICAL: Find or create conversation FIRST
+      const Conversation = (await import('../models/Conversation.js')).default;
+      let conversation = await Conversation.findOne({
+        accountId,
+        phoneNumberId,
+        customerNumber: cleanPhone
+      });
+
+      if (!conversation) {
+        const conversationId = `${accountId}_${phoneNumberId}_${cleanPhone}`;
+        conversation = await Conversation.create({
+          accountId,
+          phoneNumberId,
+          customerNumber: cleanPhone,
+          conversationId,
+          startedAt: new Date(),
+          lastMessageAt: new Date(),
+          status: 'open'
+        });
+        console.log('✅ Created conversation for template:', conversation._id);
+      }
+
+      // Create message record WITH conversationId
       message = new Message({
         accountId,
         phoneNumberId,
+        conversationId: conversation._id, // ✅ CRITICAL: Link to conversation
         recipientPhone: cleanPhone,
         messageType: 'template',
         content: {
@@ -1123,12 +1181,15 @@ class WhatsAppService {
 
       console.log('✅ Button message sent:', response.data.messages[0].id);
       
-      // Save to database
+      // ✅ CRITICAL: Find or create conversation FIRST
+      const conversation = await this.getOrCreateConversation(accountId, phoneNumberId, recipientPhone);
+      
+      // Save to database WITH conversationId
       const message = new Message({
         accountId,
         phoneNumberId,
+        conversationId: conversation._id, // ✅ CRITICAL: Link to conversation
         recipientPhone: recipientPhone,
-        conversationId: null, // Will be set by webhook
         direction: 'outbound',
         messageType: 'interactive',
         content: { text: bodyText },
@@ -1201,16 +1262,18 @@ class WhatsAppService {
 
       console.log('✅ List message sent:', response.data.messages[0].id);
       
-      // Save to database
+      // ✅ CRITICAL: Find or create conversation FIRST
+      const conversation = await this.getOrCreateConversation(accountId, phoneNumberId, recipientPhone);
+      
+      // Save to database WITH conversationId
       const message = new Message({
         accountId,
         phoneNumberId,
-        conversationId: null,
+        conversationId: conversation._id, // ✅ CRITICAL: Link to conversation
         direction: 'outbound',
-        from: phoneNumberId,
-        to: recipientPhone,
-        type: 'interactive',
-        content: bodyText,
+        recipientPhone: recipientPhone,
+        messageType: 'interactive',
+        content: { text: bodyText },
         waMessageId: response.data.messages[0].id,
         status: 'sent',
         sentAt: new Date(),
