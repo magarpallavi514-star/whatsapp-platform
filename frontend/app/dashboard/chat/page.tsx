@@ -74,6 +74,8 @@ export default function ChatPage() {
   const [showContactPanel, setShowContactPanel] = useState(true) // Control right panel visibility
   const [contactNotes, setContactNotes] = useState("") // Store contact notes
   const [contactLabels, setContactLabels] = useState<string[]>(["Hot Lead", "Interested"]) // Store contact labels
+  const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]) // Store available phone numbers
+  const [selectedPhoneId, setSelectedPhoneId] = useState<string | null>(null) // Track selected phone number
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -94,9 +96,17 @@ export default function ChatPage() {
   }
 
   // Fetch conversations
-  const fetchConversations = useCallback(async () => {
+  const fetchConversations = useCallback(async (phoneId?: string) => {
     try {
-      const response = await fetch(`${API_URL}/conversations`, {
+      // Use provided phoneId, or selected phone, or first available phone
+      const idToUse = phoneId || selectedPhoneId || (phoneNumbers.length > 0 ? phoneNumbers[0].phoneNumberId : null)
+      
+      if (!idToUse) {
+        console.warn("No phone number selected for conversation fetch")
+        return
+      }
+      
+      const response = await fetch(`${API_URL}/conversations?phoneNumberId=${idToUse}`, {
         headers: getHeaders(),
       })
       if (response.ok) {
@@ -138,7 +148,7 @@ export default function ChatPage() {
     } catch (error) {
       console.error("Error fetching conversations:", error)
     }
-  }, [API_URL])
+  }, [API_URL, selectedPhoneId, phoneNumbers])
 
   // Fetch messages for selected contact
   const fetchMessages = useCallback(async (conversationId: string) => {
@@ -472,9 +482,11 @@ export default function ChatPage() {
       const hasPhones = data.phoneNumbers && data.phoneNumbers.length > 0
       setHasWABA(hasPhones)
 
-      // Only fetch conversations if WABA is connected
+      // Store phone numbers and set first as default
       if (hasPhones) {
-        fetchConversations()
+        setPhoneNumbers(data.phoneNumbers)
+        setSelectedPhoneId(data.phoneNumbers[0].phoneNumberId)
+        // fetchConversations will be called by useEffect when selectedPhoneId changes
       }
     } catch (err) {
       console.error("Error checking WABA:", err)
@@ -483,6 +495,14 @@ export default function ChatPage() {
       setCheckingWABA(false)
     }
   }
+
+  useEffect(() => {
+    // Fetch conversations when selected phone ID changes
+    if (selectedPhoneId) {
+      fetchConversations(selectedPhoneId)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPhoneId])
 
   useEffect(() => {
     // Only fetch if we don't need to check WABA (already checked)
