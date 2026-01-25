@@ -125,14 +125,15 @@ function CheckoutContent() {
     switch (selectedTenure) {
       case 'monthly':
         multiplier = 1
+        discount = (selectedPlan.monthlyDiscount || 0) / 100
         break
       case 'quarterly':
         multiplier = 3
-        discount = 0.05 // 5% discount for 3 months
+        discount = (selectedPlan.quarterlyDiscount || 0) / 100
         break
       case 'annual':
         multiplier = 12
-        discount = 0.15 // 15% discount for annual
+        discount = (selectedPlan.annualDiscount || 0) / 100
         break
     }
 

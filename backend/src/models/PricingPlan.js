@@ -61,7 +61,19 @@ const pricingPlanSchema = new mongoose.Schema({
     min: 0,
     max: 100
   },
+  quarterlyDiscount: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
   yearlyDiscount: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
+  annualDiscount: {
     type: Number,
     default: 0,
     min: 0,

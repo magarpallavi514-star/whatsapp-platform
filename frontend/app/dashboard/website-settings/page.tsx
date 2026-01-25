@@ -372,7 +372,9 @@ export default function WebsiteSettingsPage() {
           setupFee: plan.setupFee || 3000,
           yearlyPrice: plan.monthlyPrice * 10,
           monthlyDiscount: 0,
+          quarterlyDiscount: discounts.quarterlyDiscount || 0,
           yearlyDiscount: 0,
+          annualDiscount: discounts.annualDiscount || 0,
           isPopular: plan.highlighted || false,
           features: plan.features || { included: [], excluded: [] }
         }
