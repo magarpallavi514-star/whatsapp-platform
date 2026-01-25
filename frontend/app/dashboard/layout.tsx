@@ -4,7 +4,7 @@ import {
   MessageSquare, LayoutDashboard, Send, Users, BarChart3, Settings, 
   Bell, Search, ChevronDown, Menu, X, Megaphone, Bot, Calendar,
   FileText, LogOut, User, ChevronLeft, ChevronRight, Building2, 
-  Activity, DollarSign, Sliders, CreditCard, Receipt
+  Activity, DollarSign, Sliders, CreditCard, Receipt, BookOpen
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ErrorToast } from "@/components/ErrorToast"
@@ -127,6 +127,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     
     // SuperAdmin exclusive pages
     { name: "Organizations", icon: Building2, href: "/dashboard/organizations", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
+    { name: "Demo Requests", icon: BookOpen, href: "/dashboard/admin/demo-requests", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     { name: "System Health", icon: Activity, href: "/dashboard/system-health", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     { name: "Platform Billing", icon: DollarSign, href: "/dashboard/platform-billing", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     { name: "Transactions", icon: CreditCard, href: "/dashboard/transactions", roles: [UserRole.SUPERADMIN], superAdminOnly: true },

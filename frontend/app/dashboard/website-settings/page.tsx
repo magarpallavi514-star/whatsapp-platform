@@ -36,7 +36,7 @@ export default function WebsiteSettingsPage() {
   const [isFetching, setIsFetching] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'pricing' | 'features'>('pricing')
+  const [activeTab, setActiveTab] = useState<'pricing' | 'features' | 'discounts'>('pricing')
 
   // Pricing state
   const [plans, setPlans] = useState<PricingPlan[]>([
@@ -104,6 +104,12 @@ export default function WebsiteSettingsPage() {
       included: [],
       excluded: []
     }
+  })
+
+  // Discount state
+  const [discounts, setDiscounts] = useState({
+    quarterlyDiscount: 10,
+    annualDiscount: 20
   })
 
   // Plan features editing state
@@ -479,6 +485,16 @@ export default function WebsiteSettingsPage() {
           }`}
         >
           Features
+        </button>
+        <button
+          onClick={() => setActiveTab('discounts')}
+          className={`px-4 py-3 font-medium border-b-2 transition ${
+            activeTab === 'discounts'
+              ? 'border-green-600 text-green-600'
+              : 'border-transparent text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Discounts
         </button>
       </div>
 
@@ -866,6 +882,81 @@ export default function WebsiteSettingsPage() {
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
                 Save Features
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discounts Tab */}
+      {activeTab === 'discounts' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-6">Plan Discounts</h3>
+            <p className="text-sm text-gray-600 mb-6">Set discounts for quarterly and annual billing periods. These will be applied to all plans.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Quarterly Discount */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Quarterly Discount (%)
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={discounts.quarterlyDiscount}
+                    onChange={(e) => setDiscounts({...discounts, quarterlyDiscount: parseFloat(e.target.value) || 0})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent text-lg"
+                    placeholder="10"
+                  />
+                  <span className="text-gray-600 font-semibold">%</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Applied to 3-month billing periods</p>
+              </div>
+
+              {/* Annual Discount */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Annual Discount (%)
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={discounts.annualDiscount}
+                    onChange={(e) => setDiscounts({...discounts, annualDiscount: parseFloat(e.target.value) || 0})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent text-lg"
+                    placeholder="20"
+                  />
+                  <span className="text-gray-600 font-semibold">%</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Applied to 12-month billing periods</p>
+              </div>
+            </div>
+
+            {/* Discount Preview */}
+            <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-semibold text-blue-900 mb-3">Discount Preview</h4>
+              <div className="space-y-2 text-sm text-blue-800">
+                <p>• Starter Monthly: ₹2,499 → No discount</p>
+                <p>• Starter Quarterly: ₹2,499 × 3 = ₹7,497 → with {discounts.quarterlyDiscount}% off = ₹{(7497 * (1 - discounts.quarterlyDiscount/100)).toFixed(0)}</p>
+                <p>• Starter Annual: ₹2,499 × 12 = ₹29,988 → with {discounts.annualDiscount}% off = ₹{(29988 * (1 - discounts.annualDiscount/100)).toFixed(0)}</p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <Button
+                onClick={() => {
+                  setSuccess('Discounts updated! Click "Save All Changes" to apply.');
+                  setTimeout(() => setSuccess(null), 3000);
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Update Discounts
               </Button>
             </div>
           </div>
