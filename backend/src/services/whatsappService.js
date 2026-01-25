@@ -124,10 +124,32 @@ class WhatsAppService {
       console.log('  Cleaned Phone:', cleanPhone);
       console.log('  Message:', messageText);
       
-      // Create message record (queued state)
+      // ✅ CRITICAL FIX: Find or create conversation FIRST
+      const conversationId = `${accountId.toString()}_${phoneNumberId}_${cleanPhone}`;
+      let conversation = await Conversation.findOne({
+        accountId,
+        phoneNumberId,
+        userPhone: cleanPhone
+      });
+
+      if (!conversation) {
+        conversation = await Conversation.create({
+          accountId,
+          phoneNumberId,
+          conversationId,
+          userPhone: cleanPhone,
+          userName: 'Customer',
+          lastMessageAt: new Date(),
+          status: 'open'
+        });
+        console.log('✅ Created new conversation:', conversation._id);
+      }
+      
+      // Create message record (queued state) - NOW WITH CONVERSATION ID
       message = new Message({
         accountId,
         phoneNumberId,
+        conversationId: conversation._id, // ✅ ADD CONVERSATION ID
         recipientPhone: cleanPhone,
         messageType: 'text',
         content: { text: messageText },
@@ -171,8 +193,8 @@ class WhatsAppService {
       await message.save();
 
       // ✅ FIX 1: Create/update conversation with proper fields
-      // Conversation model requires: accountId, phoneNumberId, userPhone, conversationId, lastMessageAt
-      const conversationId = `${accountId.toString()}_${phoneNumberId}_${cleanPhone}`;
+      // Conversation already created in the fix above, just update last message
+      const conversationIdFormatted = `${accountId.toString()}_${phoneNumberId}_${cleanPhone}`;
       try {
         await Conversation.findOneAndUpdate(
           {
@@ -181,13 +203,6 @@ class WhatsAppService {
             userPhone: cleanPhone
           },
           {
-            $setOnInsert: {
-              accountId,
-              phoneNumberId,
-              userPhone: cleanPhone,
-              conversationId: conversationId,
-              lastMessageAt: new Date()
-            },
             $set: {
               lastMessageAt: new Date(),
               lastMessagePreview: messageText.substring(0, 200),
@@ -817,10 +832,32 @@ class WhatsAppService {
       console.log('  Media Type:', mediaType);
       console.log('  Caption:', caption);
       
-      // Create message record
+      // ✅ CRITICAL FIX: Find or create conversation FIRST
+      const conversationId = `${accountId.toString()}_${phoneNumberId}_${cleanPhone}`;
+      let conversation = await Conversation.findOne({
+        accountId,
+        phoneNumberId,
+        userPhone: cleanPhone
+      });
+
+      if (!conversation) {
+        conversation = await Conversation.create({
+          accountId,
+          phoneNumberId,
+          conversationId,
+          userPhone: cleanPhone,
+          userName: 'Customer',
+          lastMessageAt: new Date(),
+          status: 'open'
+        });
+        console.log('✅ Created new conversation:', conversation._id);
+      }
+      
+      // Create message record - NOW WITH CONVERSATION ID
       message = new Message({
         accountId,
         phoneNumberId,
+        conversationId: conversation._id, // ✅ ADD CONVERSATION ID
         recipientPhone: cleanPhone,
         messageType: mediaType,
         content: { 

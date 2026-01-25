@@ -9,6 +9,14 @@ const phoneNumberSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+
+  // CRITICAL: Workspace/Team isolation within account
+  workspaceId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Workspace',
+    default: null,
+    index: true
+  },
   
   // WABA Credentials
   phoneNumberId: {

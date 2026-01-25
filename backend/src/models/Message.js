@@ -15,6 +15,14 @@ const messageSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+
+  // CRITICAL: Reference to Conversation (for real-time sync)
+  conversationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Conversation',
+    required: true,
+    index: true
+  },
   
   // Message identity
   waMessageId: {
