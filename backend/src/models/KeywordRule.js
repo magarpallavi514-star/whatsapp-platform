@@ -8,8 +8,7 @@ import mongoose from 'mongoose';
 const keywordRuleSchema = new mongoose.Schema({
   // Multi-tenant isolation
   accountId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Account',
+    type: String,
     required: true,
     index: true
   },
