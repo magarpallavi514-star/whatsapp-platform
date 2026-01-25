@@ -87,17 +87,18 @@ class WhatsAppService {
       let conversation = await Conversation.findOne({
         accountId,
         phoneNumberId,
-        customerNumber: recipientPhone
+        userPhone: recipientPhone
       });
 
       if (!conversation) {
         // Create new conversation
+        const conversationId = `${accountId.toString()}_${phoneNumberId}_${recipientPhone}`;
         conversation = await Conversation.create({
           accountId,
           workspaceId: workspaceId || accountId, // Use provided workspace or account ID
           phoneNumberId,
-          customerNumber: recipientPhone,
-          startedAt: new Date(),
+          userPhone: recipientPhone,
+          conversationId,
           lastMessageAt: new Date(),
           status: 'open'
         });
@@ -159,26 +160,8 @@ class WhatsAppService {
       console.log('  Cleaned Phone:', cleanPhone);
       console.log('  Message:', messageText);
       
-      // ✅ CRITICAL FIX: Find or create conversation FIRST
-      const conversationId = `${accountId.toString()}_${phoneNumberId}_${cleanPhone}`;
-      let conversation = await Conversation.findOne({
-        accountId,
-        phoneNumberId,
-        userPhone: cleanPhone
-      });
-
-      if (!conversation) {
-        conversation = await Conversation.create({
-          accountId,
-          phoneNumberId,
-          conversationId,
-          userPhone: cleanPhone,
-          userName: 'Customer',
-          lastMessageAt: new Date(),
-          status: 'open'
-        });
-        console.log('✅ Created new conversation:', conversation._id);
-      }
+      // ✅ CRITICAL FIX: Use helper function for conversation management
+      const conversation = await this.getOrCreateConversation(accountId, phoneNumberId, cleanPhone);
       
       // Create message record (queued state) - NOW WITH CONVERSATION ID
       message = new Message({
@@ -372,27 +355,10 @@ class WhatsAppService {
 
       console.log('✅ Validation passed');
 
-      // ✅ CRITICAL: Find or create conversation FIRST
-      const Conversation = (await import('../models/Conversation.js')).default;
-      let conversation = await Conversation.findOne({
-        accountId,
-        phoneNumberId,
-        customerNumber: cleanPhone
-      });
-
-      if (!conversation) {
-        const conversationId = `${accountId}_${phoneNumberId}_${cleanPhone}`;
-        conversation = await Conversation.create({
-          accountId,
-          phoneNumberId,
-          customerNumber: cleanPhone,
-          conversationId,
-          startedAt: new Date(),
-          lastMessageAt: new Date(),
-          status: 'open'
-        });
-        console.log('✅ Created conversation for template:', conversation._id);
-      }
+      // ✅ CRITICAL: Find or create conversation FIRST (use helper function)
+      const conversation = await this.getOrCreateConversation(accountId, phoneNumberId, cleanPhone);
+      
+      console.log('✅ Conversation ready for template:', conversation._id);
 
       // Create message record WITH conversationId
       message = new Message({
@@ -890,26 +856,8 @@ class WhatsAppService {
       console.log('  Media Type:', mediaType);
       console.log('  Caption:', caption);
       
-      // ✅ CRITICAL FIX: Find or create conversation FIRST
-      const conversationId = `${accountId.toString()}_${phoneNumberId}_${cleanPhone}`;
-      let conversation = await Conversation.findOne({
-        accountId,
-        phoneNumberId,
-        userPhone: cleanPhone
-      });
-
-      if (!conversation) {
-        conversation = await Conversation.create({
-          accountId,
-          phoneNumberId,
-          conversationId,
-          userPhone: cleanPhone,
-          userName: 'Customer',
-          lastMessageAt: new Date(),
-          status: 'open'
-        });
-        console.log('✅ Created new conversation:', conversation._id);
-      }
+      // ✅ CRITICAL FIX: Use helper function for conversation management
+      const conversation = await this.getOrCreateConversation(accountId, phoneNumberId, cleanPhone);
       
       // Create message record - NOW WITH CONVERSATION ID
       message = new Message({

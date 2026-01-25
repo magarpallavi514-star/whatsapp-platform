@@ -177,22 +177,22 @@ export const replyToConversation = async (req, res) => {
     // ✅ CRITICAL FIX: Resolve phoneNumberId
     let phoneNumberId = req.query.phoneNumberId || req.headers['x-phone-number-id'] || req.phoneNumberId;
     
-    // Parse conversationId format: accountId_phoneNumberId_customerNumber
+    // Parse conversationId format: accountId_phoneNumberId_userPhone
     // OR use it as a MongoDB ObjectId lookup
     let conversation;
     
-    // Try to find by the new structure first (accountId, workspaceId, phoneNumberId, customerNumber)
+    // Try to find by the new structure first (accountId, workspaceId, phoneNumberId, userPhone)
     // Extract from conversationId if it's in old format
     if (conversationId.includes('_')) {
       const parts = conversationId.split('_');
       if (parts.length >= 3) {
         const extractedPhoneNumberId = parts[1];
-        const customerNumber = parts.slice(2).join('_');  // Handle phone numbers with underscores
+        const userPhone = parts.slice(2).join('_');  // Handle phone numbers with underscores
         conversation = await Conversation.findOne({
           accountId,
           workspaceId,
           phoneNumberId: extractedPhoneNumberId,
-          customerNumber
+          userPhone
         }).lean();
       }
     }
@@ -246,7 +246,7 @@ export const replyToConversation = async (req, res) => {
       result = await whatsappService.sendTextMessage(
         conversation.accountId,
         conversation.phoneNumberId,
-        conversation.customerNumber,
+        conversation.userPhone,
         message,
         { campaign: 'inbox_reply' }
       );
@@ -261,7 +261,7 @@ export const replyToConversation = async (req, res) => {
       result = await whatsappService.sendTemplateMessage(
         conversation.accountId,
         conversation.phoneNumberId,
-        conversation.customerNumber,
+        conversation.userPhone,
         templateName,
         templateParams || [],
         { campaign: 'inbox_reply' }

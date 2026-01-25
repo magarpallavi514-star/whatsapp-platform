@@ -189,19 +189,21 @@ export class BroadcastExecutionService {
       const Conversation = (await import('../models/Conversation.js')).default;
       const workspaceId = broadcast.workspaceId || accountId; // Use broadcast workspace or account
       
+      const conversationDocId = `${accountId}_${phoneNumberId}_${recipientPhone}`;
       const conversation = await Conversation.findOneAndUpdate(
         {
           accountId,
           workspaceId,
           phoneNumberId,
-          customerNumber: recipientPhone
+          userPhone: recipientPhone
         },
         {
           $setOnInsert: {
             accountId,
             workspaceId,
             phoneNumberId,
-            customerNumber: recipientPhone,
+            userPhone: recipientPhone,
+            conversationId: conversationDocId,
             startedAt: new Date()
           },
           $set: {
