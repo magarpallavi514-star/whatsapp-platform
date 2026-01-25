@@ -22,6 +22,7 @@ interface DemoRequest {
 export default function DemoRequestsPage() {
   const [demoRequests, setDemoRequests] = useState<DemoRequest[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedRequest, setSelectedRequest] = useState<DemoRequest | null>(null)
   const [showConfirmForm, setShowConfirmForm] = useState(false)
   const [formData, setFormData] = useState({
@@ -38,7 +39,8 @@ export default function DemoRequestsPage() {
   const fetchDemoRequests = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('auth_token')
+      setError(null)
+      const token = localStorage.getItem('token')
       const response = await fetch(`${API_URL}/admin/demo-requests`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -46,13 +48,17 @@ export default function DemoRequestsPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch demo requests')
+        const errorData = await response.json()
+        throw new Error(errorData.message || `Failed to fetch demo requests (${response.status})`)
       }
 
       const data = await response.json()
       setDemoRequests(data.demoRequests || [])
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       console.error('Error fetching demo requests:', error)
+      setError(errorMessage)
+      setDemoRequests([])
     } finally {
       setLoading(false)
     }
@@ -63,7 +69,7 @@ export default function DemoRequestsPage() {
 
     try {
       setSubmitting(true)
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('token')
       const response = await fetch(
         `${API_URL}/admin/demo-requests/${selectedRequest._id}/confirm`,
         {
@@ -98,7 +104,7 @@ export default function DemoRequestsPage() {
 
   const handleCancelDemo = async (requestId: string) => {
     try {
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('token')
       const response = await fetch(
         `${API_URL}/admin/demo-requests/${requestId}/cancel`,
         {
@@ -151,6 +157,22 @@ export default function DemoRequestsPage() {
         <h1 className='text-4xl font-bold text-black mb-2'>Demo Requests</h1>
         <p className='text-gray-600'>Manage and confirm demo bookings from potential customers</p>
       </div>
+
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className='mb-6 bg-red-50 border border-red-200 rounded-lg p-4'
+        >
+          <p className='text-red-800 font-medium'>⚠️ Error: {error}</p>
+          <button
+            onClick={fetchDemoRequests}
+            className='mt-2 text-sm text-red-600 hover:text-red-700 font-semibold'
+          >
+            Try again
+          </button>
+        </motion.div>
+      )}
 
       {demoRequests.length === 0 ? (
         <motion.div
