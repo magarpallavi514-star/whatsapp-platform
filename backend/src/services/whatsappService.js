@@ -102,10 +102,6 @@ class WhatsAppService {
             conversationId,
             lastMessageAt: new Date(),
             status: 'open'
-          },
-          $set: {
-            lastMessageAt: new Date(),
-            status: 'open'
           }
         },
         { 
