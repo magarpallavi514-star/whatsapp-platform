@@ -71,6 +71,9 @@ export default function ChatPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [hasWABA, setHasWABA] = useState<boolean | null>(null)
   const [checkingWABA, setCheckingWABA] = useState(true)
+  const [showContactPanel, setShowContactPanel] = useState(true) // Control right panel visibility
+  const [contactNotes, setContactNotes] = useState("") // Store contact notes
+  const [contactLabels, setContactLabels] = useState<string[]>(["Hot Lead", "Interested"]) // Store contact labels
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -195,6 +198,27 @@ export default function ChatPage() {
       isFetchingRef.current = false
     }
   }, [API_URL])
+
+  // Save contact notes
+  const saveContactNotes = useCallback(async () => {
+    if (!selectedContact) return
+    
+    try {
+      const response = await fetch(`${API_URL}/contacts/${selectedContact.id}/notes`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({ notes: contactNotes }),
+      })
+      
+      if (response.ok) {
+        console.log("✅ Contact notes saved")
+      } else {
+        console.error("Failed to save notes:", response.status)
+      }
+    } catch (error) {
+      console.error("Error saving notes:", error)
+    }
+  }, [selectedContact, contactNotes, API_URL])
 
   // Mark conversation as read
   const markAsRead = useCallback(async (conversationId: string) => {
@@ -324,14 +348,22 @@ export default function ChatPage() {
       if (result.success) {
         console.log('✅ Media sent successfully:', result)
         
-        // Add media message to chat
-        const mediaType = file.type.startsWith('image/') ? 'image' :
-                         file.type.startsWith('video/') ? 'video' : 'document'
+        // Add media message to chat - Detect file type properly
+        let mediaType = 'document'
+        if (file.type.startsWith('image/')) {
+          mediaType = 'image'
+        } else if (file.type.startsWith('video/')) {
+          mediaType = 'video'
+        } else if (file.type.startsWith('audio/')) {
+          mediaType = 'audio'
+        }
         
         const newMediaMessage: Message = {
           _id: result.data.messageId,
           content: {
             url: result.data.mediaUrl,
+            filename: file.name,
+            fileSize: file.size,
             caption: ''
           },
           direction: 'outbound',
@@ -345,6 +377,7 @@ export default function ChatPage() {
         // Update conversation timestamp with media indicator
         const mediaLabel = mediaType === 'image' ? '🖼️ Photo' :
                           mediaType === 'video' ? '🎥 Video' :
+                          mediaType === 'audio' ? '🎵 Audio' :
                           '📄 ' + file.name
         
         setConversations((prevContacts: Contact[]) => {
@@ -877,8 +910,8 @@ export default function ChatPage() {
 
   return (
     <div className="h-[calc(100vh-4rem)] flex bg-[#f0f2f5]">
-      {/* Conversations List */}
-      <div className="w-[400px] bg-white border-r border-gray-200 flex flex-col">
+      {/* LEFT PANEL - Conversations List (WATI Style) */}
+      <div className="w-[360px] bg-white border-r border-gray-200 flex flex-col">
         {/* Search */}
         <div className="p-3 bg-white border-b border-gray-200">
           <div className="relative">
@@ -992,49 +1025,48 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
+      {/* MIDDLE PANEL - Chat Window */}
+      <div className="flex-1 flex flex-col min-w-0">
         {selectedContact ? (
           <>
-            {/* Chat Header */}
-            <div className="bg-[#f0f2f5] border-b border-gray-200 px-4 py-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 bg-[#dfe5e7] rounded-full flex items-center justify-center">
+            {/* Chat Header - WATI Style */}
+            <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="h-12 w-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
                   {selectedContact.profilePic ? (
                     <img
                       src={selectedContact.profilePic}
                       alt={selectedContact.name}
-                      className="h-10 w-10 rounded-full object-cover"
+                      className="h-12 w-12 rounded-full object-cover"
                     />
                   ) : (
-                    <span className="text-[#54656f] font-medium">
+                    <span className="text-white font-bold text-lg">
                       {selectedContact.name?.[0]?.toUpperCase() ||
                         selectedContact.phone[0]}
                     </span>
                   )}
                 </div>
-                <div>
-                  <h2 className="font-medium text-[#111b21] text-[17px]">
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-semibold text-gray-900">
                     {selectedContact.name || selectedContact.phone}
                   </h2>
                   <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
                     {isTyping ? (
-                      <p className="text-xs text-[#25d366]">typing...</p>
+                      <p className="text-xs text-green-600 font-medium">Typing...</p>
                     ) : (
-                      <p className="text-xs text-[#667781]">
-                        {selectedContact.phone !== selectedContact.name ? selectedContact.phone : 'Click here for contact info'}
-                      </p>
+                      <p className="text-xs text-gray-500">Active now</p>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-[#e9edef] rounded-full transition">
-                  <Search className="h-5 w-5 text-[#54656f]" />
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button className="p-2 hover:bg-gray-100 rounded-full transition">
+                  <Search className="h-5 w-5 text-gray-600" />
                 </button>
-                <button className="p-2 hover:bg-[#e9edef] rounded-full transition">
-                  <MoreVertical className="h-5 w-5 text-[#54656f]" />
+                <button className="p-2 hover:bg-gray-100 rounded-full transition">
+                  <MoreVertical className="h-5 w-5 text-gray-600" />
                 </button>
               </div>
             </div>
@@ -1108,11 +1140,11 @@ export default function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input */}
-            <div className="bg-[#f0f2f5] border-t border-gray-200 px-4 py-2">
-              <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-[#e9edef] rounded-full transition flex-shrink-0">
-                  <Smile className="h-6 w-6 text-[#54656f]" />
+            {/* Message Input - WATI Style */}
+            <div className="bg-white border-t border-gray-200 px-4 py-3">
+              <div className="flex items-end gap-3">
+                <button className="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
+                  <Smile className="h-6 w-6 text-gray-600" />
                 </button>
                 
                 <input
@@ -1124,13 +1156,13 @@ export default function ChatPage() {
                 />
                 <button 
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2 hover:bg-[#e9edef] rounded-full transition flex-shrink-0"
+                  className="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0"
                   title="Attach file (images, videos, documents, audio)"
                 >
-                  <Paperclip className="h-6 w-6 text-[#54656f]" />
+                  <Paperclip className="h-6 w-6 text-gray-600" />
                 </button>
 
-                <div className="flex-1 min-w-0 bg-white rounded-lg">
+                <div className="flex-1 min-w-0 bg-gray-100 rounded-2xl px-4 py-2">
                   <textarea
                     ref={textareaRef}
                     value={newMessage}
@@ -1138,7 +1170,7 @@ export default function ChatPage() {
                     onKeyPress={handleKeyPress}
                     placeholder="Type a message"
                     rows={1}
-                    className="w-full px-3 py-2.5 bg-white rounded-lg focus:outline-none resize-none text-[15px] text-[#111b21] placeholder:text-[#667781]"
+                    className="w-full bg-gray-100 focus:outline-none resize-none text-[15px] text-gray-900 placeholder:text-gray-500"
                     style={{ maxHeight: '100px', overflow: 'auto' }}
                   />
                 </div>
@@ -1148,7 +1180,7 @@ export default function ChatPage() {
                   disabled={!newMessage.trim() || isSending}
                   className={`p-2 rounded-full transition flex-shrink-0 ${
                     newMessage.trim() && !isSending
-                      ? 'bg-[#25d366] hover:bg-[#20bf5a]'
+                      ? 'bg-green-600 hover:bg-green-700'
                       : 'bg-gray-300 cursor-not-allowed'
                   }`}
                 >
@@ -1200,6 +1232,202 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      {/* RIGHT PANEL - Customer Context (CRM) - WATI Style */}
+      {selectedContact && showContactPanel && (
+        <div className="w-[380px] bg-white border-l border-gray-200 overflow-y-auto flex flex-col">
+          {/* Header with Close Button */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 p-4 z-10 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-1">Contact Details</h3>
+              <p className="text-xs text-gray-500">Customer information & history</p>
+            </div>
+            <button
+              onClick={() => setShowContactPanel(false)}
+              className="p-2 hover:bg-gray-100 rounded-full transition text-gray-600"
+              title="Close contact panel"
+            >
+              <MoreVertical className="h-5 w-5 rotate-90" />
+            </button>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto">
+          {/* Customer Info Section */}
+          <div className="p-4 border-b border-gray-100">
+            {/* Avatar & Name */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-16 w-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                {selectedContact.profilePic ? (
+                  <img
+                    src={selectedContact.profilePic}
+                    alt={selectedContact.name}
+                    className="h-16 w-16 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white font-bold text-xl">
+                    {selectedContact.name?.[0]?.toUpperCase() || selectedContact.phone[0]}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-semibold text-gray-900 text-lg truncate">
+                  {selectedContact.name || 'Unknown'}
+                </h2>
+                <p className="text-sm text-gray-500 truncate">{selectedContact.phone}</p>
+                <div className="flex items-center gap-1 mt-1">
+                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                  <span className="text-xs text-gray-500">Active now</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 gap-2">
+              <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-xs font-medium text-gray-700 transition">
+                📞 Call
+              </button>
+              <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-xs font-medium text-gray-700 transition">
+                ⭐ Favorite
+              </button>
+            </div>
+          </div>
+
+          {/* Labels/Tags Section - DYNAMIC */}
+          <div className="p-4 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-900 mb-3 uppercase tracking-wide">Labels</p>
+            <div className="flex flex-wrap gap-2">
+              {contactLabels.map((label, idx) => (
+                <button 
+                  key={idx}
+                  onClick={() => setContactLabels(contactLabels.filter((_, i) => i !== idx))}
+                  className="px-3 py-1.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full hover:bg-blue-100 transition border border-blue-200 cursor-pointer"
+                  title="Click to remove label"
+                >
+                  {label} ✕
+                </button>
+              ))}
+              <button className="px-3 py-1.5 text-gray-600 text-xs font-medium rounded-full hover:bg-gray-100 transition border border-dashed border-gray-300 cursor-pointer">
+                + Add Label
+              </button>
+            </div>
+          </div>
+
+          {/* Custom Fields Section */}
+          <div className="p-4 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-900 mb-3 uppercase tracking-wide">Custom Fields</p>
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Course Interest</p>
+                <p className="text-sm font-medium text-gray-900">Python Development</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Budget</p>
+                <p className="text-sm font-medium text-gray-900">$500-$1000</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Location</p>
+                <p className="text-sm font-medium text-gray-900">Mumbai, India</p>
+              </div>
+              <button className="w-full text-center py-2 border border-dashed border-gray-300 rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition">
+                + Add Custom Field
+              </button>
+            </div>
+          </div>
+
+          {/* Conversation Status */}
+          <div className="p-4 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-900 mb-3 uppercase tracking-wide">Status</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50">
+                <div className="h-2 w-2 bg-yellow-500 rounded-full flex-shrink-0"></div>
+                <span className="text-sm text-gray-700">Reply Window Active (24h)</span>
+              </div>
+              <p className="text-xs text-gray-500">Last message 2 hours ago</p>
+            </div>
+          </div>
+
+          {/* Agent Assignment */}
+          <div className="p-4 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-900 mb-3 uppercase tracking-wide">Assigned Agent</p>
+            <div className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg">
+              <div className="h-8 w-8 bg-green-200 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-sm font-semibold text-green-700">JD</span>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">John Doe</p>
+                <p className="text-xs text-gray-500">Online</p>
+              </div>
+              <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                Change
+              </button>
+            </div>
+          </div>
+
+          {/* Internal Notes Section - DYNAMIC */}
+          <div className="p-4 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-900 mb-3 uppercase tracking-wide">Internal Notes</p>
+            <textarea
+              value={contactNotes}
+              onChange={(e) => setContactNotes(e.target.value)}
+              placeholder="Add private notes (invisible to customer)..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+              rows={4}
+            />
+            <button 
+              onClick={saveContactNotes}
+              className="mt-2 w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition disabled:bg-gray-300"
+              disabled={!contactNotes.trim()}
+            >
+              Save Note
+            </button>
+          </div>
+
+          {/* Conversation History Timeline */}
+          <div className="p-4 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-900 mb-3 uppercase tracking-wide">History</p>
+            <div className="space-y-3 text-sm">
+              <div className="flex gap-2">
+                <div className="text-xs text-gray-500 font-medium mt-0.5">Today</div>
+                <div>
+                  <p className="text-xs text-gray-600">Sent {messages.filter(m => m.direction === 'outbound').length} messages</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <div className="text-xs text-gray-500 font-medium mt-0.5">Received</div>
+                <div>
+                  <p className="text-xs text-gray-600">{messages.filter(m => m.direction === 'inbound').length} messages</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="p-4 space-y-2">
+            <button className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+              🔗 Share Contact
+            </button>
+            <button className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+              📋 View Full History
+            </button>
+            <button className="w-full px-3 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition">
+              🚫 Block Contact
+            </button>
+          </div>
+          </div>
+        </div>
+      )}
+
+      {/* Show Toggle Button when Panel is Closed */}
+      {selectedContact && !showContactPanel && (
+        <button
+          onClick={() => setShowContactPanel(true)}
+          className="fixed right-4 bottom-4 p-3 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg transition"
+          title="Show contact details"
+        >
+          <MoreVertical className="h-5 w-5 -rotate-90" />
+        </button>
+      )}
     </div>
   )
 }

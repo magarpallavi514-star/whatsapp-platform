@@ -463,6 +463,7 @@ export const handleWebhook = async (req, res) => {
                   const inboxMessage = {
                     accountId,
                     phoneNumberId,
+                    conversationId: conversationDoc._id, // Use MongoDB _id, not formatted string
                     waMessageId: message.id,
                     recipientPhone: message.from, // Sender is recipient in our records
                     recipientName: senderProfile?.profile?.name || null,
@@ -479,7 +480,8 @@ export const handleWebhook = async (req, res) => {
                   
                   // Broadcast new message via Socket.io for real-time updates
                   if (io) {
-                    const conversationId = `${accountId}_${phoneNumberId}_${message.from}`;
+                    // Use MongoDB _id for broadcasting (must match frontend expectations)
+                    const broadcastConversationId = conversationDoc._id.toString();
                     const messageObject = savedMessage.toObject();
                     
                     // Ensure createdAt is in ISO format for consistency
@@ -487,9 +489,17 @@ export const handleWebhook = async (req, res) => {
                       messageObject.createdAt = new Date().toISOString();
                     }
                     
-                    broadcastNewMessage(io, conversationId, messageObject);
-                    console.log('📡 Broadcasted new message via Socket.io:', conversationId);
-                    console.log('   Message timestamp:', messageObject.createdAt);
+                    // Add conversationId to message for frontend matching
+                    messageObject.conversationId = broadcastConversationId;
+                    
+                    broadcastNewMessage(io, broadcastConversationId, messageObject);
+                    console.log('📡 Broadcasted new message via Socket.io:', broadcastConversationId);
+                    console.log('   Broadcast Details:', {
+                      conversationId: broadcastConversationId,
+                      messageId: messageObject._id,
+                      from: message.from,
+                      timestamp: messageObject.createdAt
+                    });
                   }
                   
                   // Check for keyword auto-reply or workflow response
