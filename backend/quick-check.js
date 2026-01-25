@@ -1,28 +1,20 @@
-import db from './src/config/database.js'
-import Account from './src/models/Account.js'
-import PhoneNumber from './src/models/PhoneNumber.js'
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 
-async function check() {
+dotenv.config();
+
+(async () => {
   try {
-    const enromatics = await Account.findOne({ email: { $regex: 'enromatics', $options: 'i' } })
-    if (enromatics) {
-      console.log('✅ Enromatics Account found:', enromatics.email, enromatics._id)
-      const phones = await PhoneNumber.find({ accountId: enromatics._id })
-      console.log('Phones:', phones.length, 'records')
-      phones.forEach(p => console.log(`  - ${p.phoneNumberId}: ${p.displayPhoneNumber} (active: ${p.isActive})`))
-    } else {
-      console.log('❌ Enromatics not found')
+    await mongoose.connect(process.env.MONGODB_URI);
+    const db = mongoose.connection.db;
+    const collection = db.collection('keywordrules');
+    const bots = await collection.find({ accountId: 'eno_2600003' }).toArray();
+    console.log('🤖 Chatbots for Enromatics (eno_2600003):', bots.length);
+    if (bots.length > 0) {
+      bots.forEach(bot => console.log(`   ✅ ${bot.name} (Keywords: ${bot.keywords.join(', ')})`));
     }
-    process.exit(0)
+    await mongoose.disconnect();
   } catch (e) {
-    console.error('Error:', e.message)
-    process.exit(1)
+    console.error('❌ Error:', e.message);
   }
-}
-
-setTimeout(() => {
-  console.log('⏱️ Timeout')
-  process.exit(1)
-}, 5000)
-
-check()
+})();

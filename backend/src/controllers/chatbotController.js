@@ -19,8 +19,8 @@ export const getChatbots = async (req, res) => {
       });
     }
     
-    // Get all rules for this account
-    const rules = await KeywordRule.find({ accountId: req.account._id })
+    // Get all rules for this account using string accountId
+    const rules = await KeywordRule.find({ accountId })
       .sort({ createdAt: -1 });
     
     // Map rules to frontend format with stats
@@ -55,7 +55,7 @@ export const getChatbots = async (req, res) => {
       : 0;
     
     const totalMessages = await Message.countDocuments({ 
-      accountId: req.account._id, 
+      accountId,
       direction: 'inbound' 
     });
     const automationRate = totalMessages > 0 
@@ -313,7 +313,7 @@ export const deleteChatbot = async (req, res) => {
     
     const rule = await KeywordRule.findOneAndDelete({ 
       _id: id, 
-      accountId: req.account._id 
+      accountId
     });
     
     if (!rule) {
@@ -359,7 +359,7 @@ export const getChatbotInteractions = async (req, res) => {
     // Find messages that triggered this rule
     // You can track this by adding a metadata field to messages
     const interactions = await Message.find({
-      accountId: req.account._id,
+      accountId,
       direction: 'inbound',
       'metadata.triggeredRule': id
     })
