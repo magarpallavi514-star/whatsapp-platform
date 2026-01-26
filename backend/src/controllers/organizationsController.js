@@ -787,8 +787,7 @@ export const generatePaymentLink = async (req, res) => {
     const invoiceNumber = await generateInvoiceNumber();
 
     const amount = plan.monthlyPrice;
-    const setupFee = plan.setupFee || 0;
-    const subtotal = amount + setupFee;
+    const subtotal = amount;
 
     const invoice = new Invoice({
       invoiceId,
@@ -807,13 +806,7 @@ export const generatePaymentLink = async (req, res) => {
           quantity: 1,
           unitPrice: amount,
           amount: amount
-        },
-        ...(setupFee > 0 ? [{
-          description: 'Setup Fee',
-          quantity: 1,
-          unitPrice: setupFee,
-          amount: setupFee
-        }] : [])
+        }
       ],
       subtotal: subtotal,
       taxRate: 0,

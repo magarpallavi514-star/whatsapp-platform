@@ -435,13 +435,13 @@ export const createOrder = async (req, res) => {
     let billingPeriod;
     
     if (cycle === 'annual') {
-      amount = (pricingPlan.monthlyPrice * 12 * 0.8) + (pricingPlan.setupFee || 0); // 20% discount
+      amount = pricingPlan.monthlyPrice * 12 * 0.8; // 20% discount
       billingPeriod = 'annual';
     } else if (cycle === 'quarterly') {
-      amount = (pricingPlan.monthlyPrice * 3 * 0.95) + (pricingPlan.setupFee || 0); // 5% discount
+      amount = pricingPlan.monthlyPrice * 3 * 0.95; // 5% discount
       billingPeriod = 'quarterly';
     } else {
-      amount = pricingPlan.monthlyPrice + (pricingPlan.setupFee || 0); // No discount for monthly
+      amount = pricingPlan.monthlyPrice; // No discount for monthly
       billingPeriod = 'monthly';
     }
     

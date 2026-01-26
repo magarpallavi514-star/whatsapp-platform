@@ -800,12 +800,6 @@ export const emailService = {
                     <span><strong>Monthly Price</strong></span>
                     <span>₹${pricingSnapshot?.monthlyPrice?.toLocaleString('en-IN') || 'N/A'}</span>
                   </div>
-                  ${pricingSnapshot?.setupFee ? `
-                  <div class="detail-row">
-                    <span><strong>Setup Fee</strong></span>
-                    <span>₹${pricingSnapshot.setupFee.toLocaleString('en-IN')}</span>
-                  </div>
-                  ` : ''}
                   ${pricingSnapshot?.discountApplied ? `
                   <div class="detail-row">
                     <span><strong>Discount Applied</strong></span>

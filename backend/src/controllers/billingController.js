@@ -49,9 +49,8 @@ export const createSubscription = async (req, res) => {
 
     // Get pricing
     const monthlyPrice = plan.monthlyPrice;
-    const setupFee = plan.setupFee || 0;
     const amount = billingCycle === 'monthly' ? monthlyPrice : monthlyPrice * 12;
-    const totalAmount = amount + setupFee;
+    const totalAmount = amount;
 
     // Create subscription
     const subscription = new Subscription({
