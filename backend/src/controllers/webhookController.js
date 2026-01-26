@@ -452,7 +452,7 @@ export const handleWebhook = async (req, res) => {
                   }
                   
                   // ✅ Update conversation with message preview and unread count
-                  await Conversation.findByIdAndUpdate(
+                  const updatedConversation = await Conversation.findByIdAndUpdate(
                     conversationDoc._id,
                     {
                       $set: {
@@ -462,10 +462,18 @@ export const handleWebhook = async (req, res) => {
                         status: 'open'
                       },
                       $inc: { unreadCount: 1 }
-                    }
+                    },
+                    { new: true }
                   );
                   
                   console.log('✅ Conversation updated with message preview');
+                  
+                  // ✅ CRITICAL FIX: Broadcast conversation update to ALL users in account
+                  // This ensures conversation list updates in real-time for everyone
+                  if (io && updatedConversation) {
+                    broadcastConversationUpdate(io, targetAccountId, updatedConversation);
+                    console.log('📡 Broadcasted conversation update to account:', targetAccountId);
+                  }
                   
                   // Save incoming message to Message collection
                   const inboxMessage = {
