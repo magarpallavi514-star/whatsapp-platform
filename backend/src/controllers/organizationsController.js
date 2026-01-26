@@ -184,11 +184,11 @@ export const createOrganization = async (req, res) => {
     // Generate new account ID (7-digit: YYXXXXX format)
     const accountId = await generateAccountId(Counter);
 
-    // 🔐 Generate random password automatically
+    // 🔐 Generate random password automatically (6 character)
     const generatePassword = () => {
-      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%"
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
       let password = ""
-      for (let i = 0; i < 12; i++) {
+      for (let i = 0; i < 6; i++) {
         password += chars.charAt(Math.floor(Math.random() * chars.length))
       }
       return password
@@ -283,103 +283,11 @@ export const createOrganization = async (req, res) => {
       // Don't fail the request if invoice creation fails
     }
 
-    // 📧 Send email with Account ID and Temporary Password
-    let emailSent = false;
-    try {
-      console.log(`\n📧 [ORGANIZATION] Sending credentials email to: ${newUser.email}`);
-      
-      const emailHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
-            .header h1 { margin: 0; font-size: 28px; }
-            .header p { margin: 10px 0 0 0; opacity: 0.9; }
-            .content { padding: 30px; }
-            .credentials-box { background: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 4px; font-family: 'Courier New', monospace; }
-            .label { font-size: 12px; color: #666; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; }
-            .value { font-size: 16px; color: #333; word-break: break-all; padding: 8px; background: white; border-radius: 3px; }
-            .button { background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 20px 0; }
-            .button:hover { background: #764ba2; }
-            .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
-            .footer { background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0; font-size: 12px; color: #666; }
-            .plan-badge { display: inline-block; background: #667eea; color: white; padding: 4px 8px; border-radius: 3px; font-size: 12px; text-transform: uppercase; font-weight: bold; margin-top: 10px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🎉 Welcome to Replysys!</h1>
-              <p>Your account is ready to use</p>
-            </div>
-            
-            <div class="content">
-              <p>Hello <strong>${newUser.name}</strong>,</p>
-              
-              <p>Your Replysys organization account has been successfully created by your administrator. Below are your login credentials:</p>
-              
-              <div class="credentials-box">
-                <div class="label">Account ID</div>
-                <div class="value">${newUser.accountId}</div>
-                
-                <div class="label" style="margin-top: 15px;">Email</div>
-                <div class="value">${newUser.email}</div>
-                
-                <div class="label" style="margin-top: 15px;">Temporary Password</div>
-                <div class="value">${temporaryPassword}</div>
-                
-                <div class="plan-badge">Plan: ${newUser.plan.toUpperCase()}</div>
-              </div>
-              
-              <div class="warning">
-                <strong>⚠️  Important:</strong> Please change your password after your first login for security. This temporary password will work immediately.
-              </div>
-              
-              <p>
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" class="button">Login to Dashboard</a>
-              </p>
-              
-              <p><strong>Next Steps:</strong></p>
-              <ol>
-                <li>Login with your credentials above</li>
-                <li>Complete your profile setup</li>
-                <li>Connect your WhatsApp Business Account</li>
-                <li>Start sending messages!</li>
-              </ol>
-              
-              <p>If you need any assistance, contact our support team.</p>
-              
-              <p>Best regards,<br><strong>Replysys Team</strong></p>
-            </div>
-            
-            <div class="footer">
-              <p>© ${new Date().getFullYear()} Replysys. All rights reserved.</p>
-              <p>This is an automated email. Please do not reply directly.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-      
-      const emailResult = await emailService.sendEmail(newUser.email, '🎉 Your Replysys Account is Ready - Login Credentials', emailHtml);
-      emailSent = emailResult.success;
-      
-      if (emailSent) {
-        console.log(`✅ [ORGANIZATION] Credentials email sent to ${newUser.email}`);
-      } else {
-        console.warn(`⚠️  [ORGANIZATION] Credentials email failed: ${emailResult.error}`);
-      }
-    } catch (emailError) {
-      console.warn('⚠️  Credentials email error:', emailError.message);
-      // Don't fail the request if email fails - account is created
-    }
+    // 📧 Email sending skipped
 
     res.status(201).json({
       success: true,
-      message: `Organization created successfully${emailSent ? ' - Welcome email sent ✅' : ' - Email failed but account created'}${accountCreated ? ' - Account ready for login ✅' : ''}`,
+      message: `Organization created successfully${accountCreated ? ' - Account ready for login ✅' : ''}`,
       data: {
         _id: newUser._id,
         accountId: newUser.accountId,
@@ -393,7 +301,7 @@ export const createOrganization = async (req, res) => {
         nextBillingDate: newUser.nextBillingDate,
         totalPayments: newUser.totalPayments,
         createdAt: newUser.createdAt,
-        emailSent: emailSent,
+        temporaryPassword: temporaryPassword,
         invoiceCreated: invoiceCreated,
         accountCreated: accountCreated
       },
