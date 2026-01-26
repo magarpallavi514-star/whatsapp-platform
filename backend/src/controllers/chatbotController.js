@@ -12,7 +12,7 @@ import Contact from '../models/Contact.js';
  */
 export const getChatbots = async (req, res) => {
   try {
-    const { accountId } = req;
+    const accountId = req.account.accountId;
     
     if (!accountId) {
       return res.status(401).json({
@@ -90,7 +90,7 @@ export const getChatbots = async (req, res) => {
  */
 export const getChatbot = async (req, res) => {
   try {
-    const { accountId } = req;
+    const accountId = req.account.accountId;
     const { id } = req.params;
     
     const rule = await KeywordRule.findOne({ 
@@ -119,7 +119,7 @@ export const getChatbot = async (req, res) => {
  */
 export const createChatbot = async (req, res) => {
   try {
-    const { accountId } = req;
+    const accountId = req.account.accountId;
     const { 
       name, 
       description, 
@@ -196,7 +196,7 @@ export const createChatbot = async (req, res) => {
  */
 export const updateChatbot = async (req, res) => {
   try {
-    const { accountId } = req;
+    const accountId = req.account.accountId;
     const { id } = req.params;
     const { 
       name, 
@@ -273,7 +273,7 @@ export const updateChatbot = async (req, res) => {
  */
 export const toggleChatbot = async (req, res) => {
   try {
-    const { accountId } = req;
+    const accountId = req.account.accountId;
     const { id } = req.params;
     
     const rule = await KeywordRule.findOne({ 
@@ -310,7 +310,7 @@ export const toggleChatbot = async (req, res) => {
  */
 export const deleteChatbot = async (req, res) => {
   try {
-    const { accountId } = req;
+    const accountId = req.account.accountId;
     const { id } = req.params;
     
     const rule = await KeywordRule.findOneAndDelete({ 
@@ -343,7 +343,7 @@ export const deleteChatbot = async (req, res) => {
  */
 export const getChatbotInteractions = async (req, res) => {
   try {
-    const { accountId } = req;
+    const accountId = req.account.accountId;
     const { id } = req.params;
     const { limit = 50 } = req.query;
     
@@ -391,7 +391,7 @@ export const getChatbotInteractions = async (req, res) => {
  */
 export const getChatbotLeads = async (req, res) => {
   try {
-    const { accountId } = req;
+    const accountId = req.account.accountId;
     const { chatbotId } = req.params;
     
     if (!accountId || !chatbotId) {
@@ -421,7 +421,7 @@ export const getChatbotLeads = async (req, res) => {
  */
 export const updateLead = async (req, res) => {
   try {
-    const { accountId } = req;
+    const accountId = req.account.accountId;
     const { leadId } = req.params;
     const { status, notes } = req.body;
     
@@ -450,7 +450,7 @@ export const updateLead = async (req, res) => {
  */
 export const convertLeadToClient = async (req, res) => {
   try {
-    const { accountId } = req;
+    const accountId = req.account.accountId;
     const { leadId } = req.params;
     
     // Get the lead
@@ -506,7 +506,7 @@ export const convertLeadToClient = async (req, res) => {
  */
 export const deleteLead = async (req, res) => {
   try {
-    const { accountId } = req;
+    const accountId = req.account.accountId;
     const { leadId } = req.params;
     
     const result = await ChatbotLead.findOneAndDelete({ _id: leadId, accountId });
