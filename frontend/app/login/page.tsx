@@ -202,10 +202,10 @@ export default function LoginPage() {
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="flex items-center gap-2">
               <div className="h-10 w-10 bg-green-600 rounded-lg flex items-center justify-center">
-                <MessageSquare className="h-6 w-6 text-white" />
+                <span className="text-white font-bold text-lg">R</span>
               </div>
               <span className="text-xl font-bold text-gray-900">
-                Pixels<span className="text-green-600">WhatsApp</span>
+                Reply<span className="text-green-600">sys</span>
               </span>
             </Link>
             <Link href="/">
