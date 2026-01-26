@@ -232,6 +232,10 @@ class WhatsAppService {
               lastMessagePreview: messageText.substring(0, 200),
               lastMessageType: 'text',
               status: 'open'
+            },
+            $setOnInsert: {
+              conversationId: conversationIdFormatted,
+              userName: contactName || 'Unknown'
             }
           },
           { upsert: true, new: true }
