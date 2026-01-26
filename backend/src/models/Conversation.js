@@ -8,19 +8,17 @@ import mongoose from 'mongoose';
  * Messages are stored separately in Message model
  */
 const conversationSchema = new mongoose.Schema({
-  // Multi-tenant isolation - Use ObjectId (MongoDB standard)
+  // Multi-tenant isolation - Use String accountId (matches all other models)
   accountId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Account',
+    type: String,
     required: true,
     index: true
   },
   
-  // Workspace isolation (for multi-workspace accounts)
+  // Workspace isolation (for multi-workspace accounts) - Can be null or String
   workspaceId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Workspace',
-    required: true,
+    type: String,
+    default: null,
     index: true
   },
   

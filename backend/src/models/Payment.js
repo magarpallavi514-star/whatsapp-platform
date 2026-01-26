@@ -10,8 +10,7 @@ const paymentSchema = new mongoose.Schema({
   
   // Account & Subscription Reference
   accountId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Account',
+    type: String,
     required: true,
     index: true
   },

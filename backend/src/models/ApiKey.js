@@ -3,8 +3,7 @@ import crypto from 'crypto';
 
 const apiKeySchema = new mongoose.Schema({
   accountId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Account',
+    type: String,
     required: true,
     index: true
   },

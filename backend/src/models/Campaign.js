@@ -3,8 +3,7 @@ import mongoose from 'mongoose';
 const campaignSchema = new mongoose.Schema(
   {
     accountId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Account',
+      type: String,
       required: true,
       index: true
     },

@@ -1,10 +1,9 @@
 import mongoose from 'mongoose';
 
 const contactSchema = new mongoose.Schema({
-  // Multi-tenant isolation
+  // Multi-tenant isolation - Use String accountId
   accountId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Account',
+    type: String,
     required: true,
     index: true
   },

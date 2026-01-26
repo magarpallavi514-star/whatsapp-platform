@@ -18,8 +18,7 @@ const invoiceSchema = new mongoose.Schema({
   
   // Account Reference (7-digit universal identifier: YYXXXXX)
   accountId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Account',
+    type: String,
     required: true,
     index: true
   },

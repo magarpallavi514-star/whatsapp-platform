@@ -64,8 +64,7 @@ const promotionalOfferSchema = new mongoose.Schema({
   // Usage tracking
   usedBy: [{
     accountId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Account'
+      type: String
     },
     usedAt: {
       type: Date,
