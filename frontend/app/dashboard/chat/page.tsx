@@ -675,6 +675,14 @@ export default function ChatPage() {
     if (selectedContact) {
       selectedContactIdRef.current = selectedContact.id
       
+      // Clear old messages and reset states for new contact
+      setMessages([])
+      setContactNotes("")
+      setContactLabels([])
+      setContactIsActive(false)
+      setIsTyping(false)
+      setEditingContact(false)
+      
       // Load full contact details from contacts list
       const loadFullContactDetails = async () => {
         try {
@@ -726,6 +734,7 @@ export default function ChatPage() {
       }
       
       selectedContactIdRef.current = null
+      setMessages([])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContact?.id])
