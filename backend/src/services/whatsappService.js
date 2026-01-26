@@ -19,16 +19,16 @@ class WhatsAppService {
   
   /**
    * Get phone number config with decrypted token
-   * accountId is MongoDB ObjectId from req.account._id
-   * @param {ObjectId} accountId 
+   * accountId is String from req.account.accountId (e.g., "2600003")
+   * @param {string} accountId 
    * @param {string} phoneNumberId 
    */
   async getPhoneConfig(accountId, phoneNumberId) {
-    // accountId is ObjectId from JWT: req.account._id
-    // PhoneNumber.accountId is stored as ObjectId (MongoDB standard)
+    // accountId is String from JWT: req.account.accountId (e.g., "2600003")
+    // PhoneNumber.accountId is stored as String for multi-tenant isolation
     
     const config = await PhoneNumber.findOne({
-      accountId,  // Already ObjectId, no conversion needed
+      accountId,  // String, matches database format
       phoneNumberId,
       isActive: true 
     }).select('+accessToken'); // CRITICAL: explicitly select encrypted field
@@ -84,7 +84,7 @@ class WhatsAppService {
    */
   async getOrCreateConversation(accountId, phoneNumberId, recipientPhone, workspaceId = null) {
     try {
-      const conversationId = `${accountId.toString()}_${phoneNumberId}_${recipientPhone}`;
+      const conversationId = `${accountId}_${phoneNumberId}_${recipientPhone}`;
       
       // ✅ ATOMIC UPSERT: Prevents duplicate key errors in concurrent broadcast loops
       const conversation = await Conversation.findOneAndUpdate(
@@ -218,7 +218,7 @@ class WhatsAppService {
 
       // ✅ FIX 1: Create/update conversation with proper fields
       // Conversation already created in the fix above, just update last message
-      const conversationIdFormatted = `${accountId.toString()}_${phoneNumberId}_${cleanPhone}`;
+      const conversationIdFormatted = `${accountId}_${phoneNumberId}_${cleanPhone}`;
       try {
         await Conversation.findOneAndUpdate(
           {
@@ -440,7 +440,7 @@ class WhatsAppService {
 
       // ✅ FIX 1: Create/update conversation with proper fields
       // Conversation model requires: accountId, phoneNumberId, userPhone, conversationId, lastMessageAt
-      const conversationIdTemplate = `${accountId.toString()}_${phoneNumberId}_${cleanPhone}`;
+      const conversationIdTemplate = `${accountId}_${phoneNumberId}_${cleanPhone}`;
       try {
         await Conversation.findOneAndUpdate(
           {
@@ -940,7 +940,7 @@ class WhatsAppService {
 
       // ✅ FIX 1: Create/update conversation with proper fields
       // Conversation model requires: accountId, phoneNumberId, userPhone, conversationId, lastMessageAt
-      const conversationIdMedia = `${accountId.toString()}_${phoneNumberId}_${cleanPhone}`;
+      const conversationIdMedia = `${accountId}_${phoneNumberId}_${cleanPhone}`;
       const mediaLabel = mediaType === 'image' ? '🖼️ Photo' : 
                          mediaType === 'video' ? '🎥 Video' :
                          mediaType === 'audio' ? '🎵 Audio Message' :
