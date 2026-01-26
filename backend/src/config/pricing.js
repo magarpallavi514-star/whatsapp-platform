@@ -7,7 +7,7 @@ export const PRICING_PLANS = {
     name: 'Starter',
     tagline: 'Best for small businesses & first-time WhatsApp automation',
     monthlyPrice: 2499,
-    setupFee: 3000,
+    setupFee: 0,
     currency: '₹',
     billingCycle: 'month',
     
@@ -41,7 +41,7 @@ export const PRICING_PLANS = {
     name: 'Pro',
     tagline: 'For growing businesses & serious WhatsApp usage',
     monthlyPrice: 4999,
-    setupFee: 3000,
+    setupFee: 0,
     currency: '₹',
     billingCycle: 'month',
     
