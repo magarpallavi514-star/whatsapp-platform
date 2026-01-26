@@ -26,6 +26,7 @@ export default function PendingPaymentsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sendingEmailFor, setSendingEmailFor] = useState<string | null>(null)
+  const [activatingUser, setActivatingUser] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   // Check if user is superadmin
@@ -93,6 +94,44 @@ export default function PendingPaymentsPage() {
       setError(err instanceof Error ? err.message : 'Failed to send reminder email')
     } finally {
       setSendingEmailFor(null)
+    }
+  }
+
+  const handleActivateUser = async (email: string, plan: string) => {
+    try {
+      setActivatingUser(email)
+      setError(null)
+      const token = localStorage.getItem('token')
+
+      const response = await fetch(`${API_URL}/admin/change-user-status`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          status: 'active',
+          planName: plan
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to activate user')
+      }
+
+      setSuccessMessage(`User ${email} activated successfully! Dashboard is now unlocked.`)
+      
+      // Remove user from pending list
+      setPendingUsers(pendingUsers.filter(u => u.email !== email))
+      
+      setTimeout(() => setSuccessMessage(null), 5000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to activate user')
+    } finally {
+      setActivatingUser(null)
     }
   }
 
@@ -246,23 +285,42 @@ export default function PendingPaymentsPage() {
                         {formatDate(user.createdAt)}
                       </td>
                       <td className="px-6 py-4">
-                        <Button
-                          onClick={() => handleSendReminder(user.accountId, user.email)}
-                          disabled={sendingEmailFor === user.accountId}
-                          className="flex items-center gap-2 bg-black hover:bg-gray-900 text-white text-sm"
-                        >
-                          {sendingEmailFor === user.accountId ? (
-                            <>
-                              <Loader className="h-4 w-4 animate-spin" />
-                              Sending...
-                            </>
-                          ) : (
-                            <>
-                              <Send className="h-4 w-4" />
-                              Send Reminder
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleSendReminder(user.accountId, user.email)}
+                            disabled={sendingEmailFor === user.accountId || activatingUser === user.email}
+                            className="flex items-center gap-2 bg-black hover:bg-gray-900 text-white text-sm"
+                          >
+                            {sendingEmailFor === user.accountId ? (
+                              <>
+                                <Loader className="h-4 w-4 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <Send className="h-4 w-4" />
+                                Remind
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            onClick={() => handleActivateUser(user.email, user.plan)}
+                            disabled={activatingUser === user.email || sendingEmailFor === user.accountId}
+                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm"
+                          >
+                            {activatingUser === user.email ? (
+                              <>
+                                <Loader className="h-4 w-4 animate-spin" />
+                                Activating...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4" />
+                                Activate
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
