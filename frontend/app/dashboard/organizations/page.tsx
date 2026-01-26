@@ -128,7 +128,7 @@ export default function OrganizationsPage() {
       // Refresh organizations list
       const data = await response.json()
       setOrganizations([...organizations, data.data])
-      setFormData({ name: "", email: "", countryCode: "+91", phoneNumber: "", plan: "free", status: "active", billingCycle: "monthly" })
+      setFormData({ name: "", email: "", password: "", countryCode: "+91", phoneNumber: "", plan: "free", status: "active", billingCycle: "monthly" })
       setIsDrawerOpen(false)
     } catch (err) {
       console.error("Error creating organization:", err)
