@@ -93,7 +93,9 @@ export default function SettingsPage() {
     email: '',
     company: '',
     phone: '',
-    timezone: ''
+    timezone: '',
+    accountId: '',
+    userId: ''
   })
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api"
@@ -364,6 +366,8 @@ export default function SettingsPage() {
   const fetchProfile = async () => {
     try {
       const token = authService.getToken()
+      const user = authService.getCurrentUser()
+      
       const response = await fetch(`${API_URL}/settings/profile`, {
         method: 'GET',
         headers: {
@@ -382,10 +386,24 @@ export default function SettingsPage() {
           email: data.profile?.email || '',
           company: data.profile?.company || '',
           phone: data.profile?.phone || '',
-          timezone: data.profile?.timezone || 'Asia/Kolkata'
+          timezone: data.profile?.timezone || 'Asia/Kolkata',
+          accountId: data.profile?.accountId || user?.accountId || '',
+          userId: data.profile?._id || user?.id || ''
         })
       } else {
         console.error('Failed to fetch profile:', response.status)
+        // Use user data from local storage as fallback
+        if (user) {
+          setProfileData({
+            name: user.name || '',
+            email: user.email || '',
+            company: '',
+            phone: '',
+            timezone: 'Asia/Kolkata',
+            accountId: user.accountId || '',
+            userId: user.id || ''
+          })
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
@@ -917,6 +935,65 @@ export default function SettingsPage() {
                       <option value="Asia/Tokyo">Tokyo (JST)</option>
                       <option value="Australia/Sydney">Sydney (AEDT)</option>
                     </select>
+                  </div>
+                  
+                  {/* Account ID and User ID (Read-only) */}
+                  <div className="md:col-span-2 border-t pt-6 mt-2">
+                    <p className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
+                      <span className="inline-block w-2 h-2 bg-green-600 rounded-full"></span>
+                      Account & User Identifiers
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Account ID
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={profileData.accountId}
+                            readOnly
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 font-mono text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(profileData.accountId)
+                              alert('Account ID copied to clipboard!')
+                            }}
+                            className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-600"
+                            title="Copy to clipboard"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          User ID
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={profileData.userId}
+                            readOnly
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 font-mono text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(profileData.userId)
+                              alert('User ID copied to clipboard!')
+                            }}
+                            className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-600"
+                            title="Copy to clipboard"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-end">

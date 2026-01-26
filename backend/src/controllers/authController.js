@@ -227,9 +227,9 @@ export const login = async (req, res) => {
       });
     }
     
-    // Check for registered user in database
+    // Check for registered account in Account collection
     console.log('🔍 Checking Account collection for:', email);
-    const account = await Account.findOne({ email });
+    const account = await Account.findOne({ email }).select('+password');
     
     if (!account) {
       console.log('❌ Account not found:', email);
@@ -239,27 +239,21 @@ export const login = async (req, res) => {
       });
     }
 
-    // Get User document for password verification (passwords stored in User, not Account)
-    const user = await User.findOne({ email, accountId: account.accountId });
+    // Check password - account.password contains the hashed password (new accounts)
+    // OR check user password if account was created via User model (legacy)
+    let isPasswordValid = false;
     
-    if (!user) {
-      console.log('❌ User not found:', email);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
+    if (account.password) {
+      // New account created via Account collection
+      isPasswordValid = await bcrypt.compare(password, account.password);
+    } else {
+      // Legacy account - check User collection
+      const user = await User.findOne({ email, accountId: account.accountId }).select('+password');
+      if (user && user.password) {
+        isPasswordValid = await bcrypt.compare(password, user.password);
+      }
     }
 
-    // Check password - user.password contains the hashed password
-    if (!user.password) {
-      console.log('❌ User has no password set:', email);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-    
-    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       console.log('❌ Invalid password for account:', email);
       return res.status(401).json({
@@ -275,7 +269,7 @@ export const login = async (req, res) => {
       email: account.email,
       accountId: account.accountId,
       name: account.name,
-      role: 'user',
+      role: account.role || 'user',
       status: account.status, // ✅ Include status so frontend knows if pending
       plan: account.plan, // ✅ Include plan details
       billingCycle: account.billingCycle, // ✅ Include billing cycle

@@ -17,23 +17,18 @@ import bcryptjs from 'bcryptjs';
 /**
  * Get all registered users/organizations
  * @route GET /api/admin/organizations
- * IMPORTANT: Query BOTH User and Account models (new accounts use Account model)
- * INCLUDES: Basic info + Payment Details + Subscription Status
+ * ✅ NOW SHOWS ACCOUNT COLLECTION ONLY (new unified approach)
+ * Legacy User entries are excluded since we've moved to Account-only creation
  */
 export const getAllOrganizations = async (req, res) => {
   try {
-    // Get from old User model
-    const users = await User.find({})
-      .select('_id accountId email name phone phoneNumber countryCode status role plan billingCycle nextBillingDate totalPayments createdAt')
-      .sort({ createdAt: -1 });
-
-    // Get from new Account model (signup flow)
-    const accounts = await Account.find({})
+    // Get from Account model ONLY (all new organizations created here)
+    const accounts = await Account.find({ type: { $ne: 'internal' } })
       .select('-apiKeyHash -password') // Exclude sensitive fields
       .sort({ createdAt: -1 });
 
     // Fetch related data for all accounts
-    const accountIds = accounts.filter(acc => acc.type !== 'internal').map(acc => acc._id);
+    const accountIds = accounts.map(acc => acc._id);
     
     // Get subscriptions for these accounts
     const subscriptions = await Subscription.find({ accountId: { $in: accountIds } })
@@ -60,75 +55,51 @@ export const getAllOrganizations = async (req, res) => {
       }
     });
 
-    // Combine and format both sources
-    const allOrganizations = [
-      // From User model
-      ...users.map(user => ({
-        _id: user._id,
-        accountId: user.accountId,
-        email: user.email,
-        name: user.name || user.email,
-        phoneNumber: user.phoneNumber || user.phone || '',
-        plan: user.plan || 'free',
-        status: user.status || 'active',
-        role: user.role,
-        billingCycle: user.billingCycle || 'monthly',
-        nextBillingDate: user.nextBillingDate,
-        totalPayments: user.totalPayments || 0,
-        createdAt: user.createdAt,
-        source: 'legacy', // Mark as legacy User model
-        // Payment/Subscription data
-        subscription: null,
-        invoice: null,
-        paymentStatus: 'N/A'
-      })),
-      // From Account model
-      ...accounts.filter(acc => acc.type !== 'internal').map(account => {
-        const accountIdStr = account._id.toString();
-        const subscription = subscriptionMap[accountIdStr];
-        const invoice = invoiceMap[accountIdStr];
-        
-        return {
-          _id: account._id,
-          accountId: account.accountId,
-          email: account.email,
-          name: account.name,
-          phoneNumber: account.phone || '',
-          company: account.company || '',
-          mobileNumber: account.mobileNumber || '',
-          website: account.website || '',
-          plan: account.plan || 'free',
-          status: account.status,
-          role: 'user',
-          billingCycle: account.billingCycle || 'monthly',
-          nextBillingDate: subscription?.nextRenewalDate || null,
-          totalPayments: subscription?.paymentAmount || 0,
-          subdomain: account.subdomain || null,
-          createdAt: account.createdAt,
-          source: 'new_signup', // Mark as new signup flow
-          // ✅ Payment/Subscription data
-          subscription: subscription ? {
-            _id: subscription._id,
-            orderId: subscription.orderId,
-            paymentAmount: subscription.paymentAmount,
-            paymentStatus: subscription.paymentStatus,
-            paymentMethod: subscription.paymentMethod,
-            nextRenewalDate: subscription.nextRenewalDate,
-            createdAt: subscription.createdAt
-          } : null,
-          invoice: invoice ? {
-            _id: invoice._id,
-            invoiceNumber: invoice.invoiceNumber,
-            amount: invoice.amount,
-            status: invoice.status,
-            dueDate: invoice.dueDate,
-            paidDate: invoice.paidDate,
-            createdAt: invoice.createdAt
-          } : null,
-          paymentStatus: subscription?.paymentStatus || account.status === 'active' ? 'paid' : 'pending'
-        }
-      })
-    ];
+    // Format Account collection entries ONLY
+    const allOrganizations = accounts.map(account => {
+      const accountIdStr = account._id.toString();
+      const subscription = subscriptionMap[accountIdStr];
+      const invoice = invoiceMap[accountIdStr];
+      
+      return {
+        _id: account._id,
+        accountId: account.accountId,
+        email: account.email,
+        name: account.name,
+        phoneNumber: account.phone || '',
+        company: account.company || '',
+        mobileNumber: account.mobileNumber || '',
+        website: account.website || '',
+        plan: account.plan || 'free',
+        status: account.status,
+        role: account.role || 'user',
+        billingCycle: account.billingCycle || 'monthly',
+        nextBillingDate: subscription?.nextRenewalDate || null,
+        totalPayments: subscription?.paymentAmount || 0,
+        subdomain: account.subdomain || null,
+        createdAt: account.createdAt,
+        // ✅ Payment/Subscription data
+        subscription: subscription ? {
+          _id: subscription._id,
+          orderId: subscription.orderId,
+          paymentAmount: subscription.paymentAmount,
+          paymentStatus: subscription.paymentStatus,
+          paymentMethod: subscription.paymentMethod,
+          nextRenewalDate: subscription.nextRenewalDate,
+          createdAt: subscription.createdAt
+        } : null,
+        invoice: invoice ? {
+          _id: invoice._id,
+          invoiceNumber: invoice.invoiceNumber,
+          amount: invoice.amount,
+          status: invoice.status,
+          dueDate: invoice.dueDate,
+          paidDate: invoice.paidDate,
+          createdAt: invoice.createdAt
+        } : null,
+        paymentStatus: subscription?.paymentStatus || (account.status === 'active' ? 'paid' : 'pending')
+      }
+    }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     // Sort by creation date (newest first)
     allOrganizations.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -138,8 +109,6 @@ export const getAllOrganizations = async (req, res) => {
       data: allOrganizations,
       summary: {
         total: allOrganizations.length,
-        legacy: users.length,
-        new_signups: accounts.filter(acc => acc.type !== 'internal').length,
         activeSubscriptions: subscriptions.length,
         pendingInvoices: invoices.filter(inv => inv.status === 'pending').length
       }
@@ -180,12 +149,12 @@ export const createOrganization = async (req, res) => {
       });
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
+    // Check if account already exists
+    const existingAccount = await Account.findOne({ email: email.toLowerCase() });
+    if (existingAccount) {
       return res.status(400).json({
         success: false,
-        message: 'User with this email already exists'
+        message: 'Account with this email already exists'
       });
     }
 
@@ -194,80 +163,53 @@ export const createOrganization = async (req, res) => {
 
     const hashedPassword = await bcryptjs.hash(password, 10);
 
-    // Create new user
-    // ✅ ENFORCE: All new organizations start as 'active'
-    // Payment webhook will handle payment verification
-    const planLower = (plan || 'free').toLowerCase();
-    const finalStatus = status && ['active', 'inactive', 'suspended'].includes(status) ? status : 'active';
-    
     // Normalize billingCycle: 'annually' → 'annual'
     let normalizedBillingCycle = billingCycle || 'monthly';
     if (normalizedBillingCycle === 'annually') {
       normalizedBillingCycle = 'annual';
     }
     
-    const newUser = new User({
-      name,
+    // ✅ CREATE ACCOUNT ENTRY ONLY (single collection approach)
+    const newAccount = new Account({
+      accountId: accountId,
       email: email.toLowerCase(),
+      name: name,
       phone: phoneNumber ? `${countryCode}${phoneNumber}` : '',
       phoneNumber: phoneNumber,
       countryCode: countryCode || '+91',
       plan: plan || 'free',
-      status: finalStatus, // ✅ Enforce payment requirement for non-free plans
+      status: status || 'active',
       billingCycle: normalizedBillingCycle,
       nextBillingDate: nextBillingDate ? new Date(nextBillingDate) : null,
+      password: hashedPassword, // Store hashed password
       role: 'user',
-      totalPayments: 0,
-      accountId: accountId, // Use the new 7-digit account ID
-      password: hashedPassword // Store hashed password
+      type: 'client',
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
-    
-    console.log(`📝 Creating org: plan="${plan}" → status="${finalStatus}"`);
-    console.log(`🔐 Using password for: ${email}`);
+
+    console.log(`📝 Creating organization: email="${email}" accountId="${accountId}" plan="${plan}"`);
+    console.log(`🔐 Password: ${password.substring(0, 3)}***`);
 
     try {
-      await newUser.save();
-      console.log(`✅ [USER] Created User entry for: ${newUser.email} (accountId: ${newUser.accountId})`);
-    } catch (userError) {
-      console.error('❌ [USER] User creation failed:', userError.message);
+      await newAccount.save();
+      console.log(`✅ Created Account: ${newAccount.email} (accountId: ${newAccount.accountId})`);
+    } catch (accountError) {
+      console.error('❌ Account creation failed:', accountError.message);
       return res.status(400).json({
         success: false,
-        message: 'Failed to create user',
-        error: userError.message
+        message: 'Failed to create account',
+        error: accountError.message
       });
     }
-
-    // ✅ CREATE ACCOUNT ENTRY FOR NEW ORGANIZATION
-    // This allows the user to login and access the platform immediately
-    let accountCreated = false;
-    try {
-      const newAccount = new Account({
-        email: newUser.email.toLowerCase(),
-        name: newUser.name,
-        accountId: newUser.accountId,
-        plan: newUser.plan,
-        status: finalStatus,
-        billingCycle: newUser.billingCycle,
-        nextBillingDate: newUser.nextBillingDate,
-        type: 'client',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-
-      await newAccount.save();
-      accountCreated = true;
-      console.log(`✅ [ACCOUNT] Created Account entry for: ${newUser.email} (accountId: ${newUser.accountId})`);
-    } catch (accountError) {
-      console.warn('⚠️  Account entry creation error:', accountError.message);
-      // Don't fail the request if account creation fails
-    }
-    // � Create invoice record for free clients (even if $0)
+    
+    // ✅ Create invoice record for clients (even if $0)
     // This ensures proper multi-tenant billing tracking
     let invoiceCreated = false;
     try {
       const newInvoice = new Invoice({
         accountId: accountId,
-        customerId: newUser._id,
+        customerId: newAccount._id, // Use Account._id, not User._id
         invoiceNumber: `INV-${accountId}-${Date.now()}`,
         amount: 0, // Free client
         currency: 'INR',
@@ -278,7 +220,7 @@ export const createOrganization = async (req, res) => {
         issueDate: new Date(),
         dueDate: new Date(),
         paidDate: new Date(), // Auto-marked as paid
-        notes: 'Automatically created for free client registration',
+        notes: 'Automatically created for account registration',
         items: [
           {
             description: `${plan || 'free'} plan subscription`,
@@ -291,7 +233,7 @@ export const createOrganization = async (req, res) => {
 
       await newInvoice.save();
       invoiceCreated = true;
-      console.log(`✅ [INVOICE] Created $0 invoice for free client: ${accountId}`);
+      console.log(`✅ [INVOICE] Created $0 invoice for account: ${accountId}`);
     } catch (invoiceError) {
       console.warn('⚠️  Invoice creation error (non-critical):', invoiceError.message);
       // Don't fail the request if invoice creation fails
@@ -301,28 +243,21 @@ export const createOrganization = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: `Organization created successfully${accountCreated ? ' - Account ready for login ✅' : ''}`,
+      message: 'Organization created successfully ✅',
       data: {
-        _id: newUser._id,
-        accountId: newUser.accountId,
-        email: newUser.email,
-        name: newUser.name,
-        phoneNumber: newUser.phoneNumber,
-        plan: newUser.plan,
-        status: newUser.status,
-        role: newUser.role,
-        billingCycle: newUser.billingCycle,
-        nextBillingDate: newUser.nextBillingDate,
-        totalPayments: newUser.totalPayments,
-        createdAt: newUser.createdAt,
-        invoiceCreated: invoiceCreated,
-        accountCreated: accountCreated
-      },
-      note: accountCreated && invoiceCreated 
-        ? '✅ Organization ready! User can login immediately. Account + Invoice created.'
-        : accountCreated
-        ? '✅ Organization created with Account. User can login immediately.'
-        : '💡 Organization created (Account creation pending). Click "Generate Payment Link" to create invoice.'
+        _id: newAccount._id,
+        accountId: newAccount.accountId,
+        email: newAccount.email,
+        name: newAccount.name,
+        phoneNumber: newAccount.phoneNumber,
+        plan: newAccount.plan,
+        status: newAccount.status,
+        role: newAccount.role,
+        billingCycle: newAccount.billingCycle,
+        nextBillingDate: newAccount.nextBillingDate,
+        createdAt: newAccount.createdAt,
+        note: '✅ Account created. User can login immediately with email and password.'
+      }
     });
   } catch (error) {
     console.error('Error creating organization:', error);
