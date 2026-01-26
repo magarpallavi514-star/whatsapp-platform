@@ -769,11 +769,11 @@ export default function ChatPage() {
             // Only add truly new messages that weren't there before
             const existingIds = new Set(prev.map(m => m._id))
             const incomingNewMessages = newMessages.filter((m: Message) => {
-              return !existingIds.has(m._id) && m.direction === "inbound"
+              return !existingIds.has(m._id)
             })
             
             if (incomingNewMessages.length > 0) {
-              console.log(`📬 Found ${incomingNewMessages.length} new inbound messages`)
+              console.log(`📬 Found ${incomingNewMessages.length} new messages`)
               shouldScrollRef.current = true
               return [...prev, ...incomingNewMessages]
             }
