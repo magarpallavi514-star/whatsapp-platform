@@ -61,7 +61,6 @@ interface Message {
 }
 
 export default function ChatPage() {
-  const searchParams = useSearchParams()
   const [conversations, setConversations] = useState<Contact[]>([])
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
