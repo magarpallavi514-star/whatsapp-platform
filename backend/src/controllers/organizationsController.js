@@ -162,13 +162,21 @@ export const getAllOrganizations = async (req, res) => {
  */
 export const createOrganization = async (req, res) => {
   try {
-    const { name, email, countryCode, phoneNumber, plan, status, billingCycle, nextBillingDate } = req.body;
+    const { name, email, password, countryCode, phoneNumber, plan, status, billingCycle, nextBillingDate } = req.body;
 
     // Validate required fields
     if (!email || !name) {
       return res.status(400).json({
         success: false,
         message: 'Email and name are required'
+      });
+    }
+
+    // Check if password is provided
+    if (!password || password.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password is required'
       });
     }
 
@@ -183,14 +191,6 @@ export const createOrganization = async (req, res) => {
 
     // Generate new account ID (7-digit: YYXXXXX format)
     const accountId = await generateAccountId(Counter);
-
-    // 🔐 Use password from request body
-    if (!password || password.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Password is required'
-      });
-    }
 
     const hashedPassword = await bcryptjs.hash(password, 10);
 
@@ -217,7 +217,7 @@ export const createOrganization = async (req, res) => {
     });
     
     console.log(`📝 Creating org: plan="${plan}" → status="${finalStatus}"`);
-    console.log(`🔐 Generated temporary password for: ${email}`);
+    console.log(`🔐 Using password for: ${email}`);
 
     try {
       await newUser.save();
