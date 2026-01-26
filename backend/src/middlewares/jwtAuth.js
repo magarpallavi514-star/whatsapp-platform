@@ -50,16 +50,23 @@ export const requireJWT = async (req, res, next) => {
     // Look up account in database
     // Try findById first if accountId looks like ObjectId, otherwise use findOne
     let account;
+    let accountIdToLookup = decoded.accountId;
+    
+    // ✅ FALLBACK: Handle old tokens with 'pixels_internal' -> map to 2600001
+    if (accountIdToLookup === 'pixels_internal') {
+      console.log('⚠️  Old token with accountId: pixels_internal - redirecting to 2600001');
+      accountIdToLookup = '2600001';
+    }
     
     // Check if accountId is a valid MongoDB ObjectId format
-    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(decoded.accountId);
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(accountIdToLookup);
     
     if (isValidObjectId) {
       // accountId is a valid ObjectId - use findById
-      account = await Account.findById(decoded.accountId);
+      account = await Account.findById(accountIdToLookup);
     } else {
-      // accountId is a custom string (like "pixels_internal") - use findOne with accountId field
-      account = await Account.findOne({ accountId: decoded.accountId });
+      // accountId is a custom string (like "2600001") - use findOne with accountId field
+      account = await Account.findOne({ accountId: accountIdToLookup });
     }
     
     if (!account) {
