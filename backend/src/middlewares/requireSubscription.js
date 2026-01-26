@@ -36,7 +36,7 @@ export const requireSubscription = async (req, res, next) => {
 
     // Check if account has active subscription
     const subscription = await Subscription.findOne({
-      accountId: account._id.toString(),  // Query by ObjectId (as stored in DB)
+      accountId: account.accountId,  // Use Account.accountId (string)
       status: 'active'
     });
 
