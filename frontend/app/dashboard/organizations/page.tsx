@@ -229,6 +229,35 @@ export default function OrganizationsPage() {
     }
   }
 
+  const handleDeleteOrganization = async () => {
+    if (!confirm(`Are you sure you want to delete "${selectedOrg.email}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+      
+      const response = await fetch(`${API_URL}/admin/organizations/${selectedOrg._id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete organization")
+      }
+
+      setOrganizations(organizations.filter(org => org._id !== selectedOrg._id))
+      setIsDetailDrawerOpen(false)
+      alert("Organization deleted successfully")
+    } catch (err) {
+      console.error("Error deleting organization:", err)
+      alert("Failed to delete organization")
+    }
+  }
+
   // 💳 Generate Payment Link for Client
   const handleGeneratePaymentLink = async () => {
     if (!selectedPlanForPayment) {
@@ -521,6 +550,16 @@ export default function OrganizationsPage() {
                           title="Send Email"
                         >
                           <Mail size={18} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedOrg(org)
+                            handleDeleteOrganization()
+                          }}
+                          className="text-red-600 hover:text-red-800 font-medium text-sm"
+                          title="Delete Organization"
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>

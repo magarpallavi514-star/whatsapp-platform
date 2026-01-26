@@ -57,10 +57,23 @@ export const sendTextMessage = async (req, res) => {
       });
     }
     
+    // Validate phone number format (should be digits only, no + or spaces)
+    const phoneRegex = /^\d{10,15}$/;
+    if (!phoneRegex.test(recipientPhone)) {
+      console.error('❌ Invalid phone format:', recipientPhone);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone format. Should be digits only (e.g., 918087131777)',
+        error: 'INVALID_PHONE_FORMAT',
+        received: recipientPhone
+      });
+    }
+    
     console.log(`📤 Sending text message [${req.phoneNumberMode}]:`, {
       accountId: accountId ? accountId.toString() : 'UNDEFINED',
       phoneNumberId,
       recipientPhone,
+      recipientPhoneLength: recipientPhone.length,
       message: message.substring(0, 50) + '...'
     });
     

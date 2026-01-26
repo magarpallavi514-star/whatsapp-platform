@@ -286,16 +286,32 @@ export default function ChatPage() {
   const sendMessage = useCallback(async () => {
     if (!newMessage.trim() || !selectedContact || isSending) return
 
+    // Validate required data
+    if (!selectedContact.phoneNumberId) {
+      alert('⚠️ Phone number ID not found. Try refreshing the conversation list.');
+      return
+    }
+    
+    if (!selectedContact.phone) {
+      alert('⚠️ Recipient phone number not found.');
+      return
+    }
+
     setIsSending(true)
+    
+    const payload = {
+      phoneNumberId: selectedContact.phoneNumberId,
+      recipientPhone: selectedContact.phone,
+      message: newMessage.trim(),
+    }
+    
+    console.log('📤 Sending message with payload:', payload)
+    
     try {
       const response = await fetch(`${API_URL}/messages/send`, {
         method: "POST",
         headers: getHeaders(),
-        body: JSON.stringify({
-          phoneNumberId: selectedContact.phoneNumberId,
-          recipientPhone: selectedContact.phone,
-          message: newMessage.trim(),
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (response.ok) {
@@ -989,10 +1005,17 @@ export default function ChatPage() {
   }
 
   // Filter conversations by search
-  const filteredConversations = conversations.filter((conv) =>
-    conv.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conv.phone?.includes(searchQuery)
-  )
+  const filteredConversations = conversations
+    .filter((conv) =>
+      conv.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      conv.phone?.includes(searchQuery)
+    )
+    .sort((a, b) => {
+      // Sort by most recent message first
+      const timeA = new Date(a.lastMessageTime || 0).getTime()
+      const timeB = new Date(b.lastMessageTime || 0).getTime()
+      return timeB - timeA  // Most recent first (descending)
+    })
 
   // Show blocking message if WABA not connected
   if (checkingWABA) {
