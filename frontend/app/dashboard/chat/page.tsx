@@ -1162,11 +1162,25 @@ export default function ChatPage() {
                     {selectedContact.name || selectedContact.phone}
                   </h2>
                   <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                    {isTyping ? (
-                      <p className="text-xs text-green-600 font-medium">Typing...</p>
+                    {contactIsActive ? (
+                      <>
+                        <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                        {isTyping ? (
+                          <p className="text-xs text-green-600 font-medium">Typing...</p>
+                        ) : (
+                          <p className="text-xs text-green-600 font-medium">Active now</p>
+                        )}
+                      </>
                     ) : (
-                      <p className="text-xs text-gray-500">Active now</p>
+                      <>
+                        <div className="h-2 w-2 bg-gray-400 rounded-full"></div>
+                        <p className="text-xs text-gray-500">
+                          {selectedContact.lastMessageTime 
+                            ? `Last active ${formatTime(selectedContact.lastMessageTime)}`
+                            : 'Offline'
+                          }
+                        </p>
+                      </>
                     )}
                   </div>
                 </div>
