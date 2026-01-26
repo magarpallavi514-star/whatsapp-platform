@@ -157,8 +157,8 @@ export default function ContactsPage() {
 
   // Open chat for a contact
   const openContactChat = (contact: Contact) => {
-    // Navigate to chat page - the phone number will be used to find the conversation
-    router.push(`/dashboard/chat?contact=${encodeURIComponent(contact.whatsappNumber)}`)
+    // Simply navigate to chat page - contact will be passed via state
+    router.push(`/dashboard/chat`)
   }
 
   // Open modal for add/edit

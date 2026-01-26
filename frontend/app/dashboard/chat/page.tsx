@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import {
   MessageSquare,
@@ -539,64 +538,6 @@ export default function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPhoneId])
 
-  // Auto-select contact from URL query parameter
-  useEffect(() => {
-    // Try to get contact param from searchParams (Next.js)
-    let contactParam = searchParams.get('contact')
-    
-    // Fallback: get from window location if not available
-    if (!contactParam && typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search)
-      contactParam = urlParams.get('contact')
-      console.log('📍 Fallback from window.location:', { contactParam })
-    }
-    
-    console.log('🔍 Auto-select effect triggered:', { contactParam, conversationCount: conversations.length })
-    
-    if (contactParam && conversations.length > 0) {
-      // Decode the contact parameter (it's URL-encoded)
-      const decodedContact = decodeURIComponent(contactParam)
-      
-      // Normalize: extract only digits from the URL parameter
-      const paramDigits = decodedContact.replace(/\D/g, '')
-      
-      console.log('📊 Searching for:', { decodedContact, paramDigits })
-      console.log('📋 Available conversations:', conversations.map(c => ({ 
-        name: c.name, 
-        phone: c.phone,
-        phoneDigits: c.phone.replace(/\D/g, ''),
-        id: c.id
-      })))
-      
-      // Find the conversation with matching phone number (compare only digits)
-      const matchingContact = conversations.find(c => {
-        const phoneDigits = c.phone.replace(/\D/g, '')
-        const isMatch = phoneDigits === paramDigits
-        console.log('🔎 Comparing:', { name: c.name, phoneDigits, paramDigits, isMatch })
-        return isMatch
-      })
-      
-      if (matchingContact) {
-        console.log('✅ Found match! Auto-selecting:', { name: matchingContact.name, phone: matchingContact.phone })
-        setSelectedContact(matchingContact)
-      } else {
-        console.log('❌ Contact not found for param:', decodedContact)
-      }
-    } else {
-      console.log('⏳ Waiting for:', { contactParam: contactParam ? 'exists' : 'missing', conversationCount: conversations.length })
-    }
-  }, [searchParams, conversations])
-
-  useEffect(() => {
-    // Only fetch if we don't need to check WABA (already checked)
-    if (checkingWABA || hasWABA === null) return
-    
-    if (hasWABA) {
-      // Already called in checkWABAConnection if WABA exists
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasWABA])
-
   // OLD: useEffect(() => {
   //   fetchConversations()
   //   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -758,13 +699,8 @@ export default function ChatPage() {
           if (contactsResponse.ok) {
             const contactsData = await contactsResponse.json()
             if (contactsData.contacts && contactsData.contacts.length > 0) {
-              // Found matching contact - merge saved contact data with conversation data
+              // Found matching contact - use saved contact data
               const savedContact = contactsData.contacts[0]
-              setSelectedContact(prev => prev ? {
-                ...prev,
-                name: savedContact.name || prev.name, // Use saved name if available
-                // Preserve conversation-specific fields
-              } : null)
               
               // Load saved contact notes if available
               if (savedContact.notes) {
