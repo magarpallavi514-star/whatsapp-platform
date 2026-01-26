@@ -270,6 +270,46 @@ export default function OrganizationsPage() {
     }
   }
 
+  const handleActivateUser = async (email: string, plan: string) => {
+    if (!confirm(`Activate user ${email}? This will unlock their dashboard access.`)) {
+      return
+    }
+
+    try {
+      const token = localStorage.getItem("token")
+      
+      const response = await fetch(`${API_URL}/admin/change-user-status`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email,
+          status: "active",
+          planName: plan
+        })
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.message || "Failed to activate user")
+      }
+
+      // Update the organization in the list
+      setOrganizations(organizations.map(org => 
+        org.email === email 
+          ? { ...org, status: "active" }
+          : org
+      ))
+      
+      alert("User activated successfully! Dashboard is now unlocked.")
+    } catch (err) {
+      console.error("Error activating user:", err)
+      alert(err instanceof Error ? err.message : "Failed to activate user")
+    }
+  }
+
   // Generate random password and send via email
   const handleGenerateAndSendPassword = async () => {
     try {
@@ -597,6 +637,15 @@ export default function OrganizationsPage() {
                         >
                           Edit
                         </button>
+                        {org.status === "pending" && (
+                          <button
+                            onClick={() => handleActivateUser(org.email, org.plan || "starter")}
+                            className="text-emerald-600 hover:text-emerald-800 font-medium text-sm"
+                            title="Activate User & Unlock Dashboard"
+                          >
+                            Activate
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setSelectedOrgForEmail(org)
