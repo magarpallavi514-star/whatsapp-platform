@@ -9,7 +9,7 @@ import { generateId } from '../utils/idGenerator.js';
 // Get subscription for current account
 export const getMySubscription = async (req, res) => {
   try {
-    const subscription = await Subscription.findOne({ accountId: req.account._id })
+    const subscription = await Subscription.findOne({ accountId: req.account.accountId })
       .populate('planId')
       .lean();
 
@@ -115,7 +115,7 @@ export const createSubscription = async (req, res) => {
 
     const subscription = new Subscription({
       subscriptionId,
-      accountId: req.account._id,
+      accountId: req.account.accountId,
       planId: plan._id,
       status: 'active',
       billingCycle,
@@ -163,7 +163,7 @@ export const cancelSubscription = async (req, res) => {
   try {
     const { reason } = req.body;
 
-    const subscription = await Subscription.findOne({ accountId: req.account._id });
+    const subscription = await Subscription.findOne({ accountId: req.account.accountId });
 
     if (!subscription) {
       return res.status(404).json({
@@ -209,7 +209,7 @@ export const changePlan = async (req, res) => {
       });
     }
 
-    const currentSubscription = await Subscription.findOne({ accountId: req.account._id });
+    const currentSubscription = await Subscription.findOne({ accountId: req.account.accountId });
     if (!currentSubscription) {
       return res.status(404).json({
         success: false,
@@ -251,7 +251,7 @@ export const changePlan = async (req, res) => {
 
     const newSubscription = new Subscription({
       subscriptionId: newSubscriptionId,
-      accountId: req.account._id,
+      accountId: req.account.accountId,
       planId: newPlan._id,
       status: 'active',
       billingCycle: effectiveBillingCycle,
@@ -296,7 +296,7 @@ export const changePlan = async (req, res) => {
 // Pause subscription
 export const pauseSubscription = async (req, res) => {
   try {
-    const subscription = await Subscription.findOne({ accountId: req.account._id });
+    const subscription = await Subscription.findOne({ accountId: req.account.accountId });
 
     if (!subscription) {
       return res.status(404).json({
@@ -325,7 +325,7 @@ export const pauseSubscription = async (req, res) => {
 // Resume subscription
 export const resumeSubscription = async (req, res) => {
   try {
-    const subscription = await Subscription.findOne({ accountId: req.account._id });
+    const subscription = await Subscription.findOne({ accountId: req.account.accountId });
 
     if (!subscription) {
       return res.status(404).json({
@@ -602,7 +602,7 @@ export const verifyPayment = async (req, res) => {
     }
 
     // Find the payment record
-    const payment = await Payment.findOne({ orderId, accountId: req.account._id });
+    const payment = await Payment.findOne({ orderId, accountId: req.account.accountId });
 
     if (!payment) {
       return res.status(404).json({
