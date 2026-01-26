@@ -14,7 +14,8 @@ export const getConversations = async (req, res) => {
   try {
     // ✅ CRITICAL FIX: Use String accountId (Conversation.accountId is String type)
     const accountId = req.account.accountId;
-    const workspaceId = req.workspace?._id || req.account.accountId;  // Default to accountId if no workspace
+    // ✅ CRITICAL FIX: Ensure workspaceId is STRING (not ObjectId) - must match webhook storage
+    const workspaceId = (req.workspace?._id?.toString()) || req.account.accountId;  // Always string
     
     // ✅ CRITICAL FIX: Resolve phoneNumberId from multiple sources (REQUIRED)
     let phoneNumberId = req.query.phoneNumberId || req.headers['x-phone-number-id'];
@@ -27,10 +28,10 @@ export const getConversations = async (req, res) => {
     const { status, limit = 50 } = req.query;
     
     console.log('🔍 DEBUG - Get Conversations:');
-    console.log('  accountId:', accountId.toString(), '(type: ObjectId)');
-    console.log('  workspaceId:', workspaceId.toString(), '(type: ObjectId)');
+    console.log('  accountId:', accountId, '(type: string)');
+    console.log('  workspaceId:', workspaceId, '(type: string)');
     console.log('  phoneNumberId:', phoneNumberId, '(type: string)');
-    console.log('  Query:', { accountId: accountId.toString(), workspaceId: workspaceId.toString(), phoneNumberId, status });
+    console.log('  Query:', { accountId, workspaceId, phoneNumberId, status });
     
     // ✅ CRITICAL: Always scope by phoneNumberId (WATI requirement)
     if (!phoneNumberId) {

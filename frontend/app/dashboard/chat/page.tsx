@@ -600,12 +600,32 @@ export default function ChatPage() {
       console.log('📭 Conversation updated:', conversation);
       
       setConversations(prev => {
-        const updated = prev.map(c => c.id === conversation.conversationId ? {
+        // Check if conversation exists in list
+        const exists = prev.some(c => c.id === conversation.conversationId);
+        
+        let updated = prev.map(c => c.id === conversation.conversationId ? {
           ...c,
           lastMessage: conversation.lastMessagePreview,
           lastMessageTime: conversation.lastMessageAt,
           unreadCount: conversation.unreadCount || 0
         } : c);
+        
+        // If conversation doesn't exist, add it (new conversation from incoming message)
+        if (!exists) {
+          console.log('✨ Adding new conversation to list');
+          updated = [{
+            id: conversation.conversationId,
+            phone: conversation.userPhone,
+            phoneNumberId: conversation.phoneNumberId,
+            name: conversation.userName || 'Unknown',
+            lastMessage: conversation.lastMessagePreview,
+            lastMessageTime: conversation.lastMessageAt,
+            unreadCount: conversation.unreadCount || 1,
+            profilePic: conversation.userProfilePic
+          }, ...updated];
+        }
+        
+        // Always sort by most recent first
         return updated.sort((a, b) => 
           new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime()
         );
