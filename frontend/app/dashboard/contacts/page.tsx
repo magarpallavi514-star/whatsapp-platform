@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Users, Plus, Upload, Download, Search, MoreVertical, Edit, Trash2, X, Tag, Mail, Phone as PhoneIcon, User } from "lucide-react"
+import { Users, Plus, Upload, Download, Search, MoreVertical, Edit, Trash2, X, Tag, Mail, Phone as PhoneIcon, User, Building2, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ErrorToast } from "@/components/ErrorToast"
 import { authService } from "@/lib/auth"
@@ -13,6 +13,8 @@ interface Contact {
   phone: string
   whatsappNumber: string
   email?: string
+  businessName?: string
+  city?: string
   type: 'customer' | 'lead' | 'other'
   tags: string[]
   lastMessageAt?: string
@@ -32,6 +34,10 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [stats, setStats] = useState<Stats>({ total: 0, active: 0, newThisMonth: 0, optedIn: 0 })
   const [searchQuery, setSearchQuery] = useState("")
+  const [filterCity, setFilterCity] = useState("")
+  const [filterBusinessName, setFilterBusinessName] = useState("")
+  const [filterMobile, setFilterMobile] = useState("")
+  const [showFilters, setShowFilters] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
@@ -44,6 +50,8 @@ export default function ContactsPage() {
     whatsappNumber: '',
     phone: '',
     email: '',
+    businessName: '',
+    city: '',
     type: 'customer' as 'customer' | 'lead' | 'other',
     tags: [] as string[],
   })
@@ -379,12 +387,18 @@ export default function ContactsPage() {
   }, [])
 
   // Filter contacts
-  const filteredContacts = contacts.filter((contact) =>
-    contact.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    contact.phone?.includes(searchQuery) ||
-    contact.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    contact.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-  )
+  const filteredContacts = contacts.filter((contact) => {
+    const matchesSearch = contact.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      contact.phone?.includes(searchQuery) ||
+      contact.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      contact.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+    
+    const matchesCity = !filterCity || contact.city?.toLowerCase().includes(filterCity.toLowerCase())
+    const matchesBusiness = !filterBusinessName || contact.businessName?.toLowerCase().includes(filterBusinessName.toLowerCase())
+    const matchesMobile = !filterMobile || contact.phone?.includes(filterMobile) || contact.whatsappNumber?.includes(filterMobile)
+    
+    return matchesSearch && matchesCity && matchesBusiness && matchesMobile
+  })
 
   // Format date
   const formatDate = (dateString?: string) => {
@@ -454,17 +468,75 @@ export default function ContactsPage() {
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">All Contacts ({filteredContacts.length})</h2>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search contacts..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent w-64"
-              />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700 transition"
+              >
+                🔍 {showFilters ? 'Hide' : 'Show'} Filters
+              </button>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search contacts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent w-64"
+                />
+              </div>
             </div>
           </div>
+
+          {/* Filter Panel */}
+          {showFilters && (
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Filter by City</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Mumbai, Delhi..."
+                    value={filterCity}
+                    onChange={(e) => setFilterCity(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Business Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., ABC Corp..."
+                    value={filterBusinessName}
+                    onChange={(e) => setFilterBusinessName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Mobile</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 9876543210..."
+                    value={filterMobile}
+                    onChange={(e) => setFilterMobile(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    setFilterCity('')
+                    setFilterBusinessName('')
+                    setFilterMobile('')
+                  }}
+                  className="px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-white transition"
+                >
+                  Clear All Filters
+                </button>
+              </div>
+            </div>
+          )}
           
           {isLoading ? (
             <div className="text-center py-12">
@@ -486,6 +558,8 @@ export default function ContactsPage() {
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Name</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">WhatsApp</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Business</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">City</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Email</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Type</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Tags</th>
@@ -507,6 +581,8 @@ export default function ContactsPage() {
                         </div>
                       </td>
                       <td className="py-4 px-4 text-sm text-gray-600">{contact.whatsappNumber}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{contact.businessName || '-'}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{contact.city || '-'}</td>
                       <td className="py-4 px-4 text-sm text-gray-600">{contact.email || '-'}</td>
                       <td className="py-4 px-4">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
@@ -618,6 +694,36 @@ export default function ContactsPage() {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
                   placeholder="john@example.com"
+                />
+              </div>
+
+              {/* Business Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Building2 className="h-4 w-4 inline mr-1" />
+                  Business Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.businessName}
+                  onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+                  placeholder="e.g., ABC Corporation"
+                />
+              </div>
+
+              {/* City */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <MapPin className="h-4 w-4 inline mr-1" />
+                  City
+                </label>
+                <input
+                  type="text"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+                  placeholder="e.g., Mumbai"
                 />
               </div>
 
