@@ -272,15 +272,16 @@ export const createOrganization = async (req, res) => {
 /**
  * Get single organization by ID
  * @route GET /api/admin/organizations/:id
+ * Now uses Account collection (UNIFIED APPROACH)
  */
 export const getOrganizationById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const user = await User.findById(id)
-      .select('_id email name phone phoneNumber countryCode status role plan nextBillingDate totalPayments createdAt updatedAt');
+    const account = await Account.findById(id)
+      .select('-password -apiKeyHash'); // Exclude sensitive fields
 
-    if (!user) {
+    if (!account) {
       return res.status(404).json({
         success: false,
         message: 'Organization not found'
@@ -290,17 +291,19 @@ export const getOrganizationById = async (req, res) => {
     res.json({
       success: true,
       data: {
-        _id: user._id,
-        email: user.email,
-        name: user.name,
-        phoneNumber: user.phoneNumber || user.phone,
-        plan: user.plan,
-        status: user.status,
-        role: user.role,
-        nextBillingDate: user.nextBillingDate,
-        totalPayments: user.totalPayments || 0,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
+        _id: account._id,
+        accountId: account.accountId,
+        email: account.email,
+        name: account.name,
+        phoneNumber: account.phone,
+        company: account.company,
+        plan: account.plan,
+        status: account.status,
+        role: account.role,
+        billingCycle: account.billingCycle,
+        nextBillingDate: account.nextBillingDate,
+        createdAt: account.createdAt,
+        updatedAt: account.updatedAt
       }
     });
   } catch (error) {
@@ -316,6 +319,7 @@ export const getOrganizationById = async (req, res) => {
 /**
  * Update organization
  * @route PUT /api/admin/organizations/:id
+ * Now uses Account collection (UNIFIED APPROACH)
  */
 export const updateOrganization = async (req, res) => {
   try {
@@ -324,8 +328,8 @@ export const updateOrganization = async (req, res) => {
 
     console.log('📝 Updating organization:', { id, email, plan, status });
 
-    const user = await User.findById(id);
-    if (!user) {
+    const account = await Account.findById(id);
+    if (!account) {
       console.error('❌ Organization not found:', id);
       return res.status(404).json({
         success: false,
@@ -334,42 +338,41 @@ export const updateOrganization = async (req, res) => {
     }
 
     // Update fields if provided
-    if (name) user.name = name;
+    if (name) account.name = name;
     if (email) {
       // Check if new email already exists
-      const existingUser = await User.findOne({ email: email.toLowerCase(), _id: { $ne: id } });
-      if (existingUser) {
+      const existingAccount = await Account.findOne({ email: email.toLowerCase(), _id: { $ne: id } });
+      if (existingAccount) {
         return res.status(400).json({
           success: false,
           message: 'Email already in use'
         });
       }
-      user.email = email.toLowerCase();
+      account.email = email.toLowerCase();
     }
     if (phoneNumber) {
-      user.phoneNumber = phoneNumber;
-      user.phone = phoneNumber ? `${countryCode || '+91'}${phoneNumber}` : '';
+      account.phone = phoneNumber ? `${countryCode || '+91'}${phoneNumber}` : '';
     }
-    if (countryCode) user.countryCode = countryCode;
-    if (plan) user.plan = plan;
-    if (status) user.status = status;
-    if (billingCycle) user.billingCycle = billingCycle;
-    if (nextBillingDate) user.nextBillingDate = new Date(nextBillingDate);
+    if (countryCode) account.countryCode = countryCode;
+    if (plan) account.plan = plan;
+    if (status) account.status = status;
+    if (billingCycle) account.billingCycle = billingCycle;
+    if (nextBillingDate) account.nextBillingDate = new Date(nextBillingDate);
     
     // Hash password if provided
     if (password && password.trim()) {
-      user.password = await bcryptjs.hash(password, 10);
-      console.log(`✅ Password updated for organization: ${user.email}`);
+      account.password = await bcryptjs.hash(password, 10);
+      console.log(`✅ Password updated for organization: ${account.email}`);
     }
 
-    await user.save();
+    await account.save();
 
     // Send email if password was updated and sendEmail is true
     if (password && password.trim() && sendEmail) {
       const emailTemplate = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">Your New Password</h2>
-          <p>Hello ${user.name || user.email},</p>
+          <h2 style="color: #333;">Your Password Updated</h2>
+          <p>Hello ${account.name || account.email},</p>
           <p>Your password has been updated. Use the new password below to login:</p>
           <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
             <p style="font-size: 18px; font-weight: bold; color: #333; font-family: monospace; word-break: break-all;">
@@ -385,11 +388,11 @@ export const updateOrganization = async (req, res) => {
       `;
 
       try {
-        const emailResult = await emailService.sendEmail(user.email, '🔐 Your Password Updated - Replysys', emailTemplate);
+        const emailResult = await emailService.sendEmail(account.email, '🔐 Your Password Updated - Replysys', emailTemplate);
         if (emailResult.success) {
-          console.log(`✅ Password email sent to ${user.email}`);
+          console.log(`✅ Password email sent to ${account.email}`);
         } else {
-          console.warn(`⚠️  Password email failed for ${user.email}: ${emailResult.error}`);
+          console.warn(`⚠️  Password email failed for ${account.email}: ${emailResult.error}`);
         }
       } catch (emailErr) {
         console.error('⚠️  Error sending password email:', emailErr.message);
@@ -401,17 +404,17 @@ export const updateOrganization = async (req, res) => {
       success: true,
       message: 'Organization updated successfully',
       data: {
-        _id: user._id,
-        email: user.email,
-        name: user.name,
-        phoneNumber: user.phoneNumber,
-        plan: user.plan,
-        status: user.status,
-        role: user.role,
-        billingCycle: user.billingCycle,
-        nextBillingDate: user.nextBillingDate,
-        totalPayments: user.totalPayments,
-        createdAt: user.createdAt
+        _id: account._id,
+        accountId: account.accountId,
+        email: account.email,
+        name: account.name,
+        phoneNumber: account.phone,
+        plan: account.plan,
+        status: account.status,
+        role: account.role,
+        billingCycle: account.billingCycle,
+        nextBillingDate: account.nextBillingDate,
+        createdAt: account.createdAt
       }
     });
   } catch (error) {
@@ -427,6 +430,7 @@ export const updateOrganization = async (req, res) => {
 /**
  * Reset organization password and send via email
  * @route POST /api/admin/organizations/:id/reset-password
+ * Now uses Account collection (UNIFIED APPROACH)
  */
 export const resetOrganizationPassword = async (req, res) => {
   try {
@@ -440,8 +444,8 @@ export const resetOrganizationPassword = async (req, res) => {
       });
     }
 
-    const user = await User.findById(id);
-    if (!user) {
+    const account = await Account.findById(id);
+    if (!account) {
       return res.status(404).json({
         success: false,
         message: 'Organization not found'
@@ -449,15 +453,17 @@ export const resetOrganizationPassword = async (req, res) => {
     }
 
     // Hash and save password
-    user.password = await bcryptjs.hash(password, 10);
-    await user.save();
+    account.password = await bcryptjs.hash(password, 10);
+    await account.save();
+
+    console.log(`✅ Password reset for account: ${account.email}`);
 
     // Send email if requested
     if (sendEmail) {
       const emailTemplate = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #333;">Your Temporary Password</h2>
-          <p>Hello ${user.name || user.email},</p>
+          <p>Hello ${account.name || account.email},</p>
           <p>An administrator has reset your password. Use the temporary password below to login:</p>
           <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
             <p style="font-size: 18px; font-weight: bold; color: #333; font-family: monospace; word-break: break-all;">
@@ -473,16 +479,26 @@ export const resetOrganizationPassword = async (req, res) => {
         </div>
       `;
 
-      await emailService.sendEmail(user.email, '🔐 Your New Password - Replysys', emailTemplate);
+      try {
+        const emailResult = await emailService.sendEmail(account.email, '🔐 Your New Password - Replysys', emailTemplate);
+        if (emailResult.success) {
+          console.log(`✅ Password reset email sent to ${account.email}`);
+        } else {
+          console.warn(`⚠️  Email failed but password is updated: ${emailResult.error}`);
+        }
+      } catch (emailErr) {
+        console.error('⚠️  Error sending password email:', emailErr.message);
+      }
     }
 
     res.json({
       success: true,
       message: 'Password reset successfully' + (sendEmail ? ' and email sent' : ''),
       data: {
-        _id: user._id,
-        email: user.email,
-        name: user.name
+        _id: account._id,
+        accountId: account.accountId,
+        email: account.email,
+        name: account.name
       }
     });
   } catch (error) {
