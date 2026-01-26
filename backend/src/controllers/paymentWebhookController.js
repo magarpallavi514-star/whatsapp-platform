@@ -12,6 +12,9 @@ import { emailService } from '../services/emailService.js';
  */
 export const handleCashfreeWebhook = async (req, res) => {
   try {
+    // Log the entire raw request body for debugging
+    console.log('🔍 Raw webhook body:', JSON.stringify(req.body, null, 2));
+    
     // Cashfree sends snake_case fields in webhook
     const { 
       order_id, orderId,

@@ -3,7 +3,8 @@ import { requireJWT } from '../middlewares/jwtAuth.js';
 import {
   getPendingUsers,
   sendPaymentReminder,
-  sendReminderAllPending
+  sendReminderAllPending,
+  changeUserStatus
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -28,5 +29,11 @@ router.post('/send-payment-reminder', sendPaymentReminder);
  * Send payment reminders to all pending users (superadmin only)
  */
 router.post('/send-reminder-all-pending', sendReminderAllPending);
+
+/**
+ * POST /api/admin/change-user-status
+ * Change user status from pending to active (superadmin only)
+ */
+router.post('/change-user-status', changeUserStatus);
 
 export default router;

@@ -1,4 +1,7 @@
 import Account from '../models/Account.js';
+import Subscription from '../models/Subscription.js';
+import PricingPlan from '../models/PricingPlan.js';
+import { generateId } from '../utils/idGenerator.js';
 import { emailService } from '../services/emailService.js';
 
 /**
@@ -260,6 +263,137 @@ export const sendReminderAllPending = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to send bulk reminders',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * POST /api/admin/change-user-status
+ * Change user status from pending to active (superadmin only)
+ * Also creates an active subscription to unlock platform access
+ */
+export const changeUserStatus = async (req, res) => {
+  try {
+    // Check if superadmin
+    if (req.account.type !== 'internal') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only superadmins can change user status'
+      });
+    }
+
+    const { email, status, planName = 'Starter' } = req.body;
+
+    if (!email || !status) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and status are required'
+      });
+    }
+
+    // Validate status
+    const validStatuses = ['pending', 'active', 'suspended', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+      });
+    }
+
+    // Find and update account
+    const account = await Account.findOneAndUpdate(
+      { email },
+      { 
+        status,
+        updatedAt: new Date()
+      },
+      { new: true }
+    );
+
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: `Account not found for email: ${email}`
+      });
+    }
+
+    let subscriptionCreated = false;
+    let subscriptionId = null;
+
+    // If changing to 'active', also create an active subscription to unlock platform
+    if (status === 'active') {
+      try {
+        // Get the pricing plan
+        const plan = await PricingPlan.findOne({ name: planName, isActive: true });
+        
+        if (plan) {
+          const startDate = new Date();
+          const endDate = new Date();
+          endDate.setFullYear(endDate.getFullYear() + 1); // 1 year subscription
+
+          const subscription = new Subscription({
+            subscriptionId: `sub_${generateId()}`,
+            accountId: account.accountId,
+            planId: plan._id,
+            status: 'active',
+            billingCycle: 'annual',
+            pricing: {
+              amount: plan.monthlyPrice * 12,
+              discount: 0,
+              discountReason: 'Admin activated',
+              finalAmount: plan.monthlyPrice * 12,
+              currency: 'INR'
+            },
+            startDate,
+            endDate,
+            renewalDate: endDate,
+            paymentGateway: 'admin_activated',
+            autoRenew: false,
+            nextRenewalDate: endDate
+          });
+
+          await subscription.save();
+          subscriptionCreated = true;
+          subscriptionId = subscription._id;
+
+          console.log(`✅ Subscription created for admin activation:`, {
+            email,
+            planName,
+            subscriptionId: subscription._id,
+            accountId: account.accountId
+          });
+        }
+      } catch (subError) {
+        console.warn(`⚠️ Subscription creation failed (but account activated):`, subError.message);
+      }
+    }
+
+    console.log(`✅ User status changed:`, {
+      email,
+      newStatus: status,
+      accountId: account.accountId,
+      subscriptionCreated,
+      timestamp: new Date().toISOString()
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `User status changed to ${status}${subscriptionCreated ? ' and subscription activated' : ''}`,
+      data: {
+        email: account.email,
+        accountId: account.accountId,
+        status: account.status,
+        subscriptionCreated,
+        subscriptionId,
+        updatedAt: account.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error changing user status:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to change user status',
       error: error.message
     });
   }
