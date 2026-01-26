@@ -108,7 +108,8 @@ export default function ChatPage() {
       const idToUse = phoneId || selectedPhoneId || (phoneNumbers.length > 0 ? phoneNumbers[0].phoneNumberId : null)
       
       if (!idToUse) {
-        console.warn("No phone number selected for conversation fetch")
+        // This is expected during initial page load before phone number is selected
+        console.debug("No phone number selected for conversation fetch (waiting for initialization)")
         return
       }
       
