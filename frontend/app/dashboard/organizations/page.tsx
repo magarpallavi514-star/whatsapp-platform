@@ -27,6 +27,9 @@ export default function OrganizationsPage() {
   const [emailType, setEmailType] = useState("payment_reminder")
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [emailMessage, setEmailMessage] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [showPasswordSection, setShowPasswordSection] = useState(false)
+  const [isGeneratingPassword, setIsGeneratingPassword] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -204,6 +207,11 @@ export default function OrganizationsPage() {
       
       dataToSend.nextBillingDate = nextBillingDate.toISOString()
       
+      // Add password if provided
+      if (newPassword) {
+        dataToSend.password = newPassword
+      }
+      
       const response = await fetch(`${API_URL}/admin/organizations/${selectedOrg._id}`, {
         method: "PUT",
         headers: {
@@ -221,6 +229,8 @@ export default function OrganizationsPage() {
       setOrganizations(organizations.map(org => org._id === selectedOrg._id ? data.data : org))
       setSelectedOrg(data.data)
       setEditData({ ...data.data })
+      setNewPassword("")
+      setShowPasswordSection(false)
       setIsEditMode(false)
       alert("Organization updated successfully")
     } catch (err) {
@@ -255,6 +265,51 @@ export default function OrganizationsPage() {
     } catch (err) {
       console.error("Error deleting organization:", err)
       alert("Failed to delete organization")
+    }
+  }
+
+  // Generate random password and send via email
+  const handleGenerateAndSendPassword = async () => {
+    try {
+      setIsGeneratingPassword(true)
+      const token = localStorage.getItem("token")
+
+      // Generate random password
+      const generatePassword = () => {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%"
+        let password = ""
+        for (let i = 0; i < 12; i++) {
+          password += chars.charAt(Math.floor(Math.random() * chars.length))
+        }
+        return password
+      }
+
+      const generatedPassword = generatePassword()
+      setNewPassword(generatedPassword)
+
+      // Update password in database and send email
+      const response = await fetch(`${API_URL}/admin/organizations/${selectedOrg._id}/reset-password`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          password: generatedPassword,
+          sendEmail: true
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to reset password")
+      }
+
+      alert(`✅ Password generated and sent to ${selectedOrg.email}!\n\nTemporary Password: ${generatedPassword}`)
+    } catch (err) {
+      console.error("Error generating password:", err)
+      alert("Failed to generate password")
+    } finally {
+      setIsGeneratingPassword(false)
     }
   }
 
@@ -832,6 +887,51 @@ export default function OrganizationsPage() {
                       <option value="quarterly">Quarterly</option>
                       <option value="annually">Annually</option>
                     </select>
+                  </div>
+
+                  {/* Password Section */}
+                  <div className="border-t pt-6">
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordSection(!showPasswordSection)}
+                      className="text-sm font-semibold text-blue-600 hover:text-blue-800 mb-4"
+                    >
+                      {showPasswordSection ? "Hide" : "Show"} Password Change Section
+                    </button>
+
+                    {showPasswordSection && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-900 mb-3">New Password</label>
+                          <input
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Enter new password for this account"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                          />
+                          <p className="text-xs text-gray-500 mt-2">Leave empty to keep existing password</p>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleGenerateAndSendPassword}
+                            disabled={isGeneratingPassword}
+                            className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition"
+                          >
+                            {isGeneratingPassword ? "Generating..." : "Generate & Send Password"}
+                          </button>
+                        </div>
+                        
+                        {newPassword && (
+                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-xs font-semibold text-blue-900">Generated Password:</p>
+                            <p className="text-sm font-mono text-blue-800 mt-1">{newPassword}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </form>
               ) : (

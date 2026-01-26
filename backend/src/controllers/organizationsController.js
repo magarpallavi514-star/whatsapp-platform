@@ -12,6 +12,7 @@ import PricingPlan from '../models/PricingPlan.js';
 import { generateAccountId, generateId } from '../utils/idGenerator.js';
 import { emailService } from '../services/emailService.js';
 import mongoose from 'mongoose';
+import bcryptjs from 'bcryptjs';
 
 /**
  * Get all registered users/organizations
@@ -344,7 +345,7 @@ export const getOrganizationById = async (req, res) => {
 export const updateOrganization = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, countryCode, phoneNumber, plan, status, billingCycle, nextBillingDate } = req.body;
+    const { name, email, countryCode, phoneNumber, plan, status, billingCycle, nextBillingDate, password } = req.body;
 
     const user = await User.findById(id);
     if (!user) {
@@ -376,6 +377,12 @@ export const updateOrganization = async (req, res) => {
     if (status) user.status = status;
     if (billingCycle) user.billingCycle = billingCycle;
     if (nextBillingDate) user.nextBillingDate = new Date(nextBillingDate);
+    
+    // Hash password if provided
+    if (password && password.trim()) {
+      user.password = await bcryptjs.hash(password, 10);
+      console.log(`✅ Password updated for organization: ${user.email}`);
+    }
 
     await user.save();
 
@@ -401,6 +408,77 @@ export const updateOrganization = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to update organization',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Reset organization password and send via email
+ * @route POST /api/admin/organizations/:id/reset-password
+ */
+export const resetOrganizationPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password, sendEmail } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password is required'
+      });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Organization not found'
+      });
+    }
+
+    // Hash and save password
+    user.password = await bcryptjs.hash(password, 10);
+    await user.save();
+
+    // Send email if requested
+    if (sendEmail) {
+      const emailTemplate = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Your Temporary Password</h2>
+          <p>Hello ${user.name || user.email},</p>
+          <p>An administrator has reset your password. Use the temporary password below to login:</p>
+          <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="font-size: 18px; font-weight: bold; color: #333; font-family: monospace; word-break: break-all;">
+              ${password}
+            </p>
+          </div>
+          <p><strong>Important:</strong> Please change this password after logging in for security.</p>
+          <p>Login at: <a href="https://replysys.com/login">https://replysys.com/login</a></p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+          <p style="font-size: 12px; color: #666;">
+            If you did not request this password reset, please contact support immediately.
+          </p>
+        </div>
+      `;
+
+      await emailService.sendEmail(user.email, '🔐 Your New Password - Replysys', emailTemplate);
+    }
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully' + (sendEmail ? ' and email sent' : ''),
+      data: {
+        _id: user._id,
+        email: user.email,
+        name: user.name
+      }
+    });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reset password',
       error: error.message
     });
   }

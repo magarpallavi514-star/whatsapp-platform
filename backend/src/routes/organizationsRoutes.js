@@ -12,7 +12,8 @@ import {
   deleteOrganization,
   migrateBillingDates,
   generatePaymentLink,
-  createInvoice
+  createInvoice,
+  resetOrganizationPassword
 } from '../controllers/organizationsController.js';
 
 const router = express.Router();
@@ -72,5 +73,12 @@ router.put('/:id', updateOrganization);
  * @access  Admin only (requires JWT auth)
  */
 router.delete('/:id', deleteOrganization);
+
+/**
+ * @route   POST /api/admin/organizations/:id/reset-password
+ * @desc    Reset organization password and send via email
+ * @access  Admin only (requires JWT auth)
+ */
+router.post('/:id/reset-password', resetOrganizationPassword);
 
 export default router;
