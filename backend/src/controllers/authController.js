@@ -21,12 +21,14 @@ const ADMIN_USER = {
   role: 'superadmin' // Full platform access
 };
 
-// Debug helper
-console.log('🔑 ADMIN_USER Configuration:');
-console.log('   Email:', ADMIN_USER.email);
-console.log('   Password:', ADMIN_USER.password);
-console.log('   AccountId:', ADMIN_USER.accountId);
-console.log('   Role:', ADMIN_USER.role);
+// Debug helper - only log in development
+if (process.env.NODE_ENV === 'development') {
+  console.log('🔑 ADMIN_USER Configuration:');
+  console.log('   Email:', ADMIN_USER.email);
+  console.log('   AccountId:', ADMIN_USER.accountId);
+  console.log('   Role:', ADMIN_USER.role);
+  // Never log passwords
+}
 
 /**
  * POST /api/auth/login

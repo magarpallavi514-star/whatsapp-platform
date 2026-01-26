@@ -87,13 +87,9 @@ const chatbotLeadSchema = new mongoose.Schema({
 });
 
 // Auto-update updatedAt
-chatbotLeadSchema.pre('save', async function(next) {
-  try {
-    this.updatedAt = new Date();
-    next();
-  } catch (error) {
-    next(error);
-  }
+chatbotLeadSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
 });
 
 // Note: chatbotId and accountId already have index: true in schema

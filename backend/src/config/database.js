@@ -1,12 +1,31 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables only in development
+// Production (Railway) uses environment variables set in dashboard
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    console.log('🔄 Attempting to connect to MongoDB...');
+    console.log(`📌 MongoDB URI: ${process.env.MONGODB_URI ? '✅ Configured' : '❌ NOT SET'}`);
+    
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI environment variable is not set');
+    }
+
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      connectTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 30000,
+      family: 4, // Use IPv4
+      retryWrites: true,
+      w: 'majority',
+      maxPoolSize: 10,
+      minPoolSize: 2
+    });
 
     console.log(`✅ MongoDB Connected Successfully!`);
     console.log(`📍 Host: ${conn.connection.host}`);
@@ -17,7 +36,28 @@ const connectDB = async () => {
   } catch (error) {
     console.error('❌ MongoDB Connection Error:', error.message);
     console.error('Full Error:', error);
-    process.exit(1);
+    console.error('⚠️  Retrying connection in 5 seconds...');
+    
+    // Don't exit immediately - retry after delay
+    return new Promise((resolve, reject) => {
+      setTimeout(async () => {
+        try {
+          const retryConn = await mongoose.connect(process.env.MONGODB_URI, {
+            connectTimeoutMS: 30000,
+            socketTimeoutMS: 45000,
+            serverSelectionTimeoutMS: 30000,
+            family: 4,
+            retryWrites: true,
+            w: 'majority'
+          });
+          console.log('✅ MongoDB Connected on retry!');
+          resolve(retryConn);
+        } catch (retryError) {
+          console.error('❌ MongoDB Connection still failing:', retryError.message);
+          process.exit(1);
+        }
+      }, 5000);
+    });
   }
 };
 
