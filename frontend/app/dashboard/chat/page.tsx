@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import {
   MessageSquare,
@@ -61,6 +62,7 @@ interface Message {
 }
 
 export default function ChatPage() {
+  const searchParams = useSearchParams()
   const [conversations, setConversations] = useState<Contact[]>([])
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -522,6 +524,31 @@ export default function ChatPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPhoneId])
+
+  // Auto-select contact from URL query parameter
+  useEffect(() => {
+    const contactParam = searchParams.get('contact')
+    if (contactParam && conversations.length > 0) {
+      // Decode the contact parameter (it's URL-encoded)
+      const decodedContact = decodeURIComponent(contactParam)
+      
+      // Find the conversation with matching phone number
+      const matchingContact = conversations.find(c => 
+        c.phone === decodedContact || 
+        c.phone === `+${decodedContact}` ||
+        c.phone === decodedContact.replace(/\D/g, '') ||
+        decodedContact.includes(c.phone)
+      )
+      
+      if (matchingContact) {
+        console.log('📱 Auto-selecting contact from URL param:', decodedContact, '→', matchingContact.phone)
+        setSelectedContact(matchingContact)
+      } else {
+        console.log('⚠️ Contact not found for param:', decodedContact)
+        console.log('Available contacts:', conversations.map(c => ({ name: c.name, phone: c.phone })))
+      }
+    }
+  }, [searchParams, conversations])
 
   useEffect(() => {
     // Only fetch if we don't need to check WABA (already checked)
