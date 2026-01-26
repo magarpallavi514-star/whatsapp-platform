@@ -151,7 +151,7 @@ export const handleWebhook = async (req, res) => {
               // Step 1: Find account by WABA ID (PRIMARY)
               const account = await Account.findOne({ wabaId });
               if (account) {
-                targetAccountId = account._id;
+                targetAccountId = account.accountId;  // Use String accountId, not ObjectId
                 targetAccount = account;
                 console.log('✅ Account found by WABA ID:', targetAccountId);
               } else {
