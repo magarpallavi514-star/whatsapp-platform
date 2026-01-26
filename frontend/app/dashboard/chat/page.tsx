@@ -254,13 +254,15 @@ export default function ChatPage() {
   // Mark conversation as read
   const markAsRead = useCallback(async (conversationId: string) => {
     try {
-      await fetch(
-        `${API_URL}/conversations/${encodeURIComponent(conversationId)}/read`,
-        {
-          method: "PATCH",
-          headers: getHeaders(),
-        }
-      )
+      // TODO: Implement PATCH endpoint on backend for marking conversations as read
+      // For now, just update local state
+      // await fetch(
+      //   `${API_URL}/conversations/${encodeURIComponent(conversationId)}/read`,
+      //   {
+      //     method: "PATCH",
+      //     headers: getHeaders(),
+      //   }
+      // )
       // Update local state to clear unread count
       setConversations(prev => prev.map(conv => 
         conv.id === conversationId ? { ...conv, unreadCount: 0 } : conv
