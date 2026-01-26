@@ -133,7 +133,7 @@ export const getInvoice = async (req, res) => {
     }
 
     // Check authorization
-    if (invoice.accountId._id.toString() !== req.account._id.toString() && req.account.type !== 'internal') {
+    if (invoice.accountId !== req.account.accountId && req.account.type !== 'internal') {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized'
@@ -157,7 +157,7 @@ export const getInvoice = async (req, res) => {
 export const getMyInvoices = async (req, res) => {
   try {
     const { status, limit = 20, skip = 0 } = req.query;
-    const filter = { accountId: req.account._id };
+    const filter = { accountId: req.account.accountId };
 
     if (status) filter.status = status;
 
@@ -246,7 +246,7 @@ export const sendInvoiceEmail = async (req, res) => {
     }
 
     // Check authorization
-    if (invoice.accountId.toString() !== req.account._id.toString() && req.account.type !== 'internal') {
+    if (invoice.accountId !== req.account.accountId && req.account.type !== 'internal') {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized'
@@ -295,7 +295,7 @@ export const recordPaymentForInvoice = async (req, res) => {
     }
 
     // Check authorization
-    if (invoice.accountId.toString() !== req.account._id.toString() && req.account.type !== 'internal') {
+    if (invoice.accountId !== req.account.accountId && req.account.type !== 'internal') {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized'

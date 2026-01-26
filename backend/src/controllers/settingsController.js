@@ -14,15 +14,15 @@ import { broadcastPhoneStatusChange } from '../services/socketService.js';
  */
 export const getPhoneNumbers = async (req, res) => {
   try {
-    // PhoneNumber collection stores accountId as ObjectId (_id from Account)
-    const accountId = req.account.id || req.account._id; // Use ObjectId from account
+    // PhoneNumber collection stores accountId as String (Account.accountId e.g., "eno_2600003")
+    const accountId = req.account.accountId; // Use String accountId
     
     console.log('📱 [GET PHONE NUMBERS] Fetching status for account:');
-    console.log('  req.account.id:', req.account.id);
+    console.log('  req.account.accountId:', req.account.accountId);
     console.log('  req.account._id:', req.account._id);
     console.log('  accountId used for query:', accountId);
     console.log('  accountId type:', typeof accountId);
-    console.log('  accountId toString():', String(accountId));
+    console.log('  accountId value:', String(accountId));
     
     if (!accountId) {
       console.error('❌ NO ACCOUNT ID IN REQUEST!');
@@ -83,7 +83,7 @@ export const getPhoneNumbers = async (req, res) => {
  */
 export const addPhoneNumber = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account?.accountId; // Use String accountId
     const { phoneNumberId, wabaId, accessToken, displayName, displayPhone } = req.body;
     
     if (!phoneNumberId || !wabaId || !accessToken) {
@@ -93,9 +93,9 @@ export const addPhoneNumber = async (req, res) => {
       });
     }
     
-    // ✅ FIXED: Use req.account._id directly - jwtAuth already looked up the account
-    const mongoAccountId = req.account._id;
-    if (!mongoAccountId) {
+    // ✅ FIXED: Use req.account.accountId (String) - matches PhoneNumber schema
+    const stringAccountId = req.account.accountId;
+    if (!stringAccountId) {
       return res.status(404).json({
         success: false,
         message: 'Account not found - authentication failed'
@@ -104,7 +104,7 @@ export const addPhoneNumber = async (req, res) => {
     
     // Check if phone number already exists FOR THIS ACCOUNT
     const existing = await PhoneNumber.findOne({ 
-      accountId: mongoAccountId,
+      accountId: stringAccountId,
       phoneNumberId
     });
     
@@ -120,7 +120,7 @@ export const addPhoneNumber = async (req, res) => {
     // But if it does, allow it - each account can have its own instance
     const existingInOtherAccount = await PhoneNumber.findOne({ 
       phoneNumberId,
-      accountId: { $ne: mongoAccountId }
+      accountId: { $ne: stringAccountId }
     });
     
     if (existingInOtherAccount) {
@@ -129,13 +129,13 @@ export const addPhoneNumber = async (req, res) => {
     
     // Check if this is the first phone number for this account
     const count = await PhoneNumber.countDocuments({ 
-      accountId: mongoAccountId
+      accountId: stringAccountId
     });
     const isFirst = count === 0;
     
     try {
       const phoneNumber = await PhoneNumber.create({
-        accountId: mongoAccountId,  // Store MongoDB ObjectId, NOT string
+        accountId: stringAccountId,  // Store String accountId (e.g. 'eno_2600003')
         phoneNumberId,
         wabaId,
         accessToken,
@@ -146,8 +146,8 @@ export const addPhoneNumber = async (req, res) => {
       });
       
       // ✅ NEW: Save wabaId to Account for webhook routing
-      await Account.findByIdAndUpdate(
-        mongoAccountId,
+      await Account.findOneAndUpdate(
+        { accountId: stringAccountId },
         { $set: { wabaId } },
         { new: true }
       );
@@ -219,7 +219,7 @@ export const addPhoneNumber = async (req, res) => {
  */
 export const updatePhoneNumber = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account?.accountId; // Use String accountId
     const { id } = req.params;
     const { displayName, displayPhone, accessToken, isActive } = req.body;
     
@@ -281,7 +281,7 @@ export const updatePhoneNumber = async (req, res) => {
  */
 export const deletePhoneNumber = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account?.accountId; // Use String accountId
     const { id } = req.params;
     
     const phoneNumber = await PhoneNumber.findOne({ _id: id, accountId });
@@ -328,7 +328,7 @@ export const deletePhoneNumber = async (req, res) => {
 export const testPhoneNumber = async (req, res) => {
   let phoneNumber;
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account?.accountId; // Use String accountId
     const { id } = req.params;
     
     console.log('🧪 Testing phone number:', { id, accountId });
@@ -613,7 +613,7 @@ export const updateProfile = async (req, res) => {
  */
 export const getApiKeys = async (req, res) => {
   try {
-    const accountId = req.account._id;
+    const accountId = req.account.accountId;
     
     const apiKeys = await ApiKey.find({ accountId })
       .select('name keyPrefix lastUsedAt createdAt expiresAt')
@@ -686,7 +686,7 @@ export const generateApiKey = async (req, res) => {
  */
 export const deleteApiKey = async (req, res) => {
   try {
-    const accountId = req.account._id;
+    const accountId = req.account.accountId;
     const { id } = req.params;
     
     const apiKey = await ApiKey.findOne({ _id: id, accountId });

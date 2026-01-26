@@ -87,7 +87,7 @@ const googleAuthController = {
         });
         await user.save();
 
-        console.log('✅ New Google user created:', { userId: user._id, email, accountId: account._id });
+        console.log('✅ New Google user created:', { userId: user._id, email, accountId: account.accountId });
       } else {
         // Update existing user with Google info if missing
         if (!user.googleId) {

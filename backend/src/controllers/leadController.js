@@ -10,7 +10,7 @@ import leadService from '../services/leadService.js';
  */
 export const getLeads = async (req, res) => {
   try {
-    const accountId = req.account._id; // ObjectId for database query
+    const accountId = req.account.accountId; // String: "eno_2600003"
     
     // Get filters from query params
     const filters = {
@@ -49,7 +49,7 @@ export const getLeads = async (req, res) => {
  */
 export const getLead = async (req, res) => {
   try {
-    const accountId = req.account._id; // ObjectId for database query
+    const accountId = req.account.accountId; // String: "eno_2600003"
     const { id } = req.params;
 
     const lead = await Lead.findOne({
@@ -86,7 +86,7 @@ export const getLead = async (req, res) => {
  */
 export const createLead = async (req, res) => {
   try {
-    const accountId = req.account._id; // ObjectId for database query
+    const accountId = req.account.accountId; // String: "eno_2600003"
     const { conversationId, contactId, phoneNumberId, intent, name, email, phone, company } = req.body;
 
     if (!conversationId || !contactId || !phoneNumberId) {
@@ -153,7 +153,7 @@ export const createLead = async (req, res) => {
  */
 export const updateLead = async (req, res) => {
   try {
-    const accountId = req.account._id; // ObjectId for database query
+    const accountId = req.account.accountId; // String: "eno_2600003"
     const { id } = req.params;
     const { status, notes, tags, assignedTo, nextFollowUp } = req.body;
 
@@ -215,7 +215,7 @@ export const updateLead = async (req, res) => {
  */
 export const deleteLead = async (req, res) => {
   try {
-    const accountId = req.account._id; // ObjectId for database query
+    const accountId = req.account.accountId; // String: "eno_2600003"
     const { id } = req.params;
 
     const result = await Lead.deleteOne({
@@ -249,7 +249,7 @@ export const deleteLead = async (req, res) => {
  */
 export const autoCaptureLead = async (req, res) => {
   try {
-    const accountId = req.account._id; // ObjectId for database query
+    const accountId = req.account.accountId; // String: "eno_2600003"
     const { conversationId } = req.params;
 
     const lead = await leadService.captureLeadFromConversation(accountId, conversationId);
@@ -282,7 +282,7 @@ export const autoCaptureLead = async (req, res) => {
  */
 export const getLeadStats = async (req, res) => {
   try {
-    const accountId = req.account._id; // ObjectId for database query
+    const accountId = req.account.accountId; // String: "eno_2600003"
 
     const stats = await leadService.getLeadStats(accountId);
 
@@ -305,7 +305,7 @@ export const getLeadStats = async (req, res) => {
  */
 export const markStaleLeads = async (req, res) => {
   try {
-    const accountId = req.account._id; // ObjectId for database query
+    const accountId = req.account.accountId; // String: "eno_2600003"
 
     const count = await leadService.markStaleLeads(accountId);
 
@@ -329,7 +329,7 @@ export const markStaleLeads = async (req, res) => {
  */
 export const exportLeads = async (req, res) => {
   try {
-    const accountId = req.account._id; // ObjectId for database query
+    const accountId = req.account.accountId; // String: "eno_2600003"
     const { status, intent } = req.query;
 
     const query = { accountId };

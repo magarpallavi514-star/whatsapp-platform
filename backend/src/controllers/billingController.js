@@ -56,7 +56,7 @@ export const createSubscription = async (req, res) => {
     // Create subscription
     const subscription = new Subscription({
       subscriptionId,
-      accountId: req.account._id,
+      accountId: req.account.accountId,
       planId: plan._id,
       status: 'active',
       billingCycle,
@@ -88,7 +88,7 @@ export const createSubscription = async (req, res) => {
       billingCycle
     };
 
-    const invoice = await createInvoiceRecord(req.account._id, subscription._id, invoiceData);
+    const invoice = await createInvoiceRecord(req.account.accountId, subscription._id, invoiceData);
 
     console.log('✅ Subscription created:', subscriptionId);
 
@@ -160,7 +160,7 @@ async function createInvoiceRecord(accountId, subscriptionId, data) {
 export const getMySubscriptions = async (req, res) => {
   try {
     const subscriptions = await Subscription.find({
-      accountId: req.account._id
+      accountId: req.account.accountId
     })
       .populate('planId', 'name monthlyPrice setupFee features')
       .sort({ createdAt: -1 });
@@ -233,14 +233,14 @@ export const getBillingHistory = async (req, res) => {
     const { limit = 20, skip = 0 } = req.query;
 
     const invoices = await Invoice.find({
-      accountId: req.account._id
+      accountId: req.account.accountId
     })
       .sort({ invoiceDate: -1 })
       .limit(parseInt(limit))
       .skip(parseInt(skip));
 
     const total = await Invoice.countDocuments({
-      accountId: req.account._id
+      accountId: req.account.accountId
     });
 
     const formatted = invoices.map(inv => ({
@@ -308,7 +308,7 @@ export const getBillingHistory = async (req, res) => {
 export const getAllInvoices = async (req, res) => {
   try {
     // Check if user is superadmin (type === 'internal')
-    const account = await Account.findById(req.account._id);
+    const account = await Account.findOne({ accountId: req.account.accountId });
     
     if (!account || account.type !== 'internal') {
       return res.status(403).json({
@@ -337,7 +337,7 @@ export const getAllInvoices = async (req, res) => {
     const formatted = invoices.map(inv => ({
       _id: inv._id,
       invoiceNumber: inv.invoiceNumber,
-      accountId: inv.accountId?._id,
+      accountId: inv.accountId,
       accountName: inv.accountId?.name,
       accountEmail: inv.accountId?.email,
       accountCompany: inv.accountId?.company,
@@ -394,7 +394,7 @@ export const changePlan = async (req, res) => {
     }
 
     // Check authorization
-    if (subscription.accountId.toString() !== req.account._id.toString()) {
+    if (subscription.accountId !== req.account.accountId) {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized'
@@ -482,7 +482,7 @@ export const cancelSubscription = async (req, res) => {
     }
 
     // Check authorization
-    if (subscription.accountId.toString() !== req.account._id.toString()) {
+    if (subscription.accountId !== req.account.accountId) {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized'
@@ -530,7 +530,7 @@ export const getInvoice = async (req, res) => {
     }
 
     // Check authorization
-    if (invoice.accountId.toString() !== req.account._id.toString()) {
+    if (invoice.accountId !== req.account.accountId) {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized'
@@ -556,17 +556,17 @@ export const getInvoice = async (req, res) => {
 export const getBillingStats = async (req, res) => {
   try {
     const activeSubscriptions = await Subscription.countDocuments({
-      accountId: req.account._id,
+      accountId: req.account.accountId,
       status: 'active'
     });
 
     const totalSpent = await Invoice.aggregate([
-      { $match: { accountId: req.account._id } },
+      { $match: { accountId: req.account.accountId } },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } }
     ]);
 
     const nextRenewal = await Subscription.findOne({
-      accountId: req.account._id,
+      accountId: req.account.accountId,
       status: 'active'
     }).sort({ renewalDate: 1 });
 
@@ -609,7 +609,7 @@ export const downloadInvoice = async (req, res) => {
     }
 
     // Check authorization
-    if (invoice.accountId.toString() !== req.account._id.toString()) {
+    if (invoice.accountId !== req.account.accountId) {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized'

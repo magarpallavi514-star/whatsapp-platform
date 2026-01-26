@@ -5,7 +5,7 @@ import campaignService from '../services/campaignService.js';
  */
 export const getAvailableSegments = async (req, res) => {
   try {
-    const accountId = req.account._id; // Use ObjectId for database queries
+    const accountId = req.account.accountId; // Use String for database queries
 
     const segments = await campaignService.getAvailableSegments(accountId);
 
@@ -26,7 +26,7 @@ export const getAvailableSegments = async (req, res) => {
  */
 export const createCampaign = async (req, res) => {
   try {
-    const accountId = req.account._id; // Use ObjectId for database queries
+    const accountId = req.account.accountId; // Use String for database queries
     const phoneNumberId = req.params.phoneNumberId || req.body.phoneNumberId; // Only phoneNumberId from params
     const data = req.body;
 
@@ -50,7 +50,7 @@ export const createCampaign = async (req, res) => {
  */
 export const getCampaigns = async (req, res) => {
   try {
-    const accountId = req.account._id; // Use ObjectId for database queries
+    const accountId = req.account.accountId; // Use String for database queries
     const phoneNumberId = req.params.phoneNumberId;
     const filters = {
       status: req.query.status,

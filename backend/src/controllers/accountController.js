@@ -157,8 +157,8 @@ export const getAccount = async (req, res) => {
       });
     }
     
-    // Get associated phone numbers - use ObjectId (_id) not String accountId
-    const phoneNumbers = await PhoneNumber.find({ accountId: account._id });
+    // Get associated phone numbers - use String accountId for consistency
+    const phoneNumbers = await PhoneNumber.find({ accountId: account.accountId });
     
     return res.json({
       success: true,

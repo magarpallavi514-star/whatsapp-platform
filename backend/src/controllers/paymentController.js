@@ -30,7 +30,7 @@ export const initiatePayment = async (req, res) => {
     // Create payment record
     const payment = new Payment({
       paymentId,
-      accountId: req.account._id,
+      accountId: req.account.accountId,
       amount: 0, // Will be set when we have pricing
       currency: 'USD',
       paymentGateway,
@@ -72,7 +72,7 @@ export const getPaymentDetails = async (req, res) => {
     }
 
     // Check authorization
-    if (payment.accountId.toString() !== req.account._id.toString() && req.account.type !== 'internal') {
+    if (payment.accountId !== req.account.accountId && req.account.type !== 'internal') {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized'
@@ -96,7 +96,7 @@ export const getPaymentDetails = async (req, res) => {
 export const getMyPayments = async (req, res) => {
   try {
     const { status, limit = 20, skip = 0 } = req.query;
-    const filter = { accountId: req.account._id };
+    const filter = { accountId: req.account.accountId };
 
     if (status) filter.status = status;
 

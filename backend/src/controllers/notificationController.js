@@ -89,7 +89,7 @@ export const markAllAsRead = async (req, res) => {
 
 export const deleteNotification = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account.accountId; // Use ObjectId for DB queries
     const { notificationId } = req.params;
 
     const notification = await Notification.findOneAndDelete({

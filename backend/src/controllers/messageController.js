@@ -26,10 +26,10 @@ export const setSocketIO = (socketIOInstance) => {
  */
 export const sendTextMessage = async (req, res) => {
   try {
-    // Use ObjectId for database queries - all models use ObjectId
-    // req.account._id is the ObjectId (from jwtAuth middleware)
-    // Message model stores accountId as ObjectId
-    const accountId = req.account._id;
+    // Use String for database queries - all models use String accountId
+    // req.account.accountId is the String (from jwtAuth middleware)
+    // Message model stores accountId as String
+    const accountId = req.account.accountId;
     const phoneNumberId = req.phoneNumberId; // From phoneNumberHelper (auto-detected or validated)
     const { recipientPhone, message, campaign } = req.body;
     
@@ -102,7 +102,7 @@ export const sendTextMessage = async (req, res) => {
  */
 export const sendTemplateMessage = async (req, res) => {
   try {
-    const accountId = req.account._id; // Use ObjectId for database queries
+    const accountId = req.account.accountId; // Use String for database queries
     const phoneNumberId = req.phoneNumberId; // From phoneNumberHelper middleware
     const { recipientPhone, templateName, params, campaign } = req.body;
     
@@ -150,7 +150,7 @@ export const sendTemplateMessage = async (req, res) => {
  */
 export const getMessages = async (req, res) => {
   try {
-    const accountId = req.account._id; // Use ObjectId for database queries
+    const accountId = req.account.accountId; // Use String for database queries
     const { phoneNumberId, status, limit = 50, skip = 0 } = req.query;
     
     const query = { accountId };
@@ -220,7 +220,7 @@ export const getMessage = async (req, res) => {
  */
 export const sendMediaMessage = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account.accountId; // Use String accountId
     const phoneNumberId = req.phoneNumberId; // From phoneNumberHelper middleware
     const { recipientPhone, caption, campaign } = req.body;
     

@@ -12,8 +12,8 @@ import PhoneNumber from '../models/PhoneNumber.js';
 
 export const resolvePhoneNumber = async (req, res, next) => {
   try {
-    // Get ObjectId accountId for PhoneNumber queries
-    const accountId = req.account._id;
+    // Get String accountId for PhoneNumber queries
+    const accountId = req.account.accountId;
     let phoneNumberId = req.body.phoneNumberId || req.query.phoneNumberId;
     
     if (!accountId) {
@@ -98,8 +98,8 @@ export const resolvePhoneNumber = async (req, res, next) => {
  */
 export const optionalPhoneNumber = async (req, res, next) => {
   try {
-    // Get accountId as ObjectId (req.account._id) not STRING (req.accountId)
-    const accountId = req.account?._id || req.accountId;
+    // Get String accountId for PhoneNumber queries
+    const accountId = req.account.accountId;
     const phoneNumberId = req.query.phoneNumberId;
     
     // If phoneNumberId provided, validate it

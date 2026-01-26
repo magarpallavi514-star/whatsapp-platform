@@ -308,9 +308,9 @@ export const getPaymentStatus = async (req, res) => {
 export const retryPayment = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const accountId = req.account._id;
+    const accountId = req.account.accountId;
 
-    const payment = await Payment.findOne({ orderId, accountId: req.account._id });
+    const payment = await Payment.findOne({ orderId, accountId: req.account.accountId });
     if (!payment) {
       return res.status(404).json({
         success: false,

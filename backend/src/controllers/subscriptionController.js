@@ -545,7 +545,7 @@ export const createOrder = async (req, res) => {
     
     const payment = new Payment({
       paymentId: paymentId,
-      accountId: account._id,
+      accountId: account.accountId,
       orderId,
       amount: amount,
       currency: 'INR',
@@ -592,7 +592,7 @@ export const createOrder = async (req, res) => {
 export const verifyPayment = async (req, res) => {
   try {
     const { orderId, paymentId, paymentSignature } = req.body;
-    const accountId = req.account._id;
+    const accountId = req.account.accountId;
 
     if (!orderId || !paymentId) {
       return res.status(400).json({
@@ -730,7 +730,7 @@ export const verifyPayment = async (req, res) => {
  */
 export const getPendingTransactions = async (req, res) => {
   try {
-    const accountId = req.account._id;
+    const accountId = req.account.accountId;
 
     // Fetch all pending payments for this account
     const pendingPayments = await Payment.find({

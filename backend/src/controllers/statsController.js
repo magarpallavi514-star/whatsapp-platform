@@ -14,7 +14,7 @@ import PhoneNumber from '../models/PhoneNumber.js';
  */
 export const getStats = async (req, res) => {
   try {
-    const accountId = req.account._id; // Use ObjectId for database queries
+    const accountId = req.account.accountId; // Use String for database queries
     const { phoneNumberId } = req.query;
     
     // Get messaging stats from service
@@ -38,7 +38,7 @@ export const getStats = async (req, res) => {
         { $match: query },
         { $group: { _id: null, total: { $sum: '$unreadCount' } } }
       ]),
-      PhoneNumber.find({ accountId: req.account._id, isActive: true })
+      PhoneNumber.find({ accountId: req.account.accountId, isActive: true })
         .select('phoneNumberId displayName displayPhone messageCount qualityRating')
         .lean()
     ]);
@@ -77,7 +77,7 @@ export const getStats = async (req, res) => {
  */
 export const getDailyStats = async (req, res) => {
   try {
-    const accountId = req.account._id; // Use ObjectId for database queries
+    const accountId = req.account.accountId; // Use String for database queries
     const { phoneNumberId, days = 7 } = req.query;
     
     const query = { accountId };

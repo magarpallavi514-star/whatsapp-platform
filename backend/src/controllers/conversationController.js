@@ -12,9 +12,9 @@ import whatsappService from '../services/whatsappService.js';
  */
 export const getConversations = async (req, res) => {
   try {
-    // ✅ CRITICAL FIX: Use MongoDB ObjectId (Conversation.accountId is ObjectId type)
-    const accountId = req.account._id;
-    const workspaceId = req.workspace?._id || req.account._id;  // Default to accountId if no workspace
+    // ✅ CRITICAL FIX: Use String accountId (Conversation.accountId is String type)
+    const accountId = req.account.accountId;
+    const workspaceId = req.workspace?._id || req.account.accountId;  // Default to accountId if no workspace
     
     // ✅ CRITICAL FIX: Resolve phoneNumberId from multiple sources (REQUIRED)
     let phoneNumberId = req.query.phoneNumberId || req.headers['x-phone-number-id'];
@@ -79,8 +79,8 @@ export const getConversationMessages = async (req, res) => {
   try {
     const { conversationId } = req.params;
     const { limit = 500, hours } = req.query;
-    const accountId = req.account._id;  // From JWT middleware
-    const workspaceId = req.workspace?._id || req.account._id;  // Default to accountId if no workspace
+    const accountId = req.account.accountId;  // From JWT middleware
+    const workspaceId = req.workspace?._id || req.account.accountId;  // Default to accountId if no workspace
     
     // ✅ CRITICAL FIX: Resolve phoneNumberId (required for scoping)
     let phoneNumberId = req.query.phoneNumberId || req.headers['x-phone-number-id'] || req.phoneNumberId;
@@ -171,8 +171,8 @@ export const replyToConversation = async (req, res) => {
   try {
     const { conversationId } = req.params;
     const { messageType, message, templateName, templateParams } = req.body;
-    const accountId = req.account._id;  // From JWT middleware
-    const workspaceId = req.workspace?._id || req.account._id;  // Default to accountId if no workspace
+    const accountId = req.account.accountId;  // From JWT middleware
+    const workspaceId = req.workspace?._id || req.account.accountId;  // Default to accountId if no workspace
     
     // ✅ CRITICAL FIX: Resolve phoneNumberId
     let phoneNumberId = req.query.phoneNumberId || req.headers['x-phone-number-id'] || req.phoneNumberId;

@@ -17,8 +17,8 @@ import Contact from '../models/Contact.js';
  */
 export const getDashboardStats = async (req, res) => {
   try {
-    const accountId = req.account._id;
-    const account = await Account.findById(accountId);
+    const accountId = req.account.accountId;
+    const account = await Account.findOne({ accountId });
 
     if (!account) {
       return res.status(404).json({
@@ -125,8 +125,8 @@ export const getDashboardStats = async (req, res) => {
  */
 export const getDashboardActivity = async (req, res) => {
   try {
-    const accountId = req.account._id;
-    const account = await Account.findById(accountId);
+    const accountId = req.account.accountId;
+    const account = await Account.findOne({ accountId });
 
     if (!account) {
       return res.status(404).json({

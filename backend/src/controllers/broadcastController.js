@@ -4,8 +4,8 @@ import PhoneNumber from '../models/PhoneNumber.js';
 
 export const createBroadcast = async (req, res) => {
   try {
-    // Get accountId from JWT middleware (use ObjectId for database operations)
-    const accountObjectId = req.account._id;
+    // Get accountId from JWT middleware (String format: YYXXXXX)
+    const accountObjectId = req.account.accountId;
     let phoneNumberId = req.params.phoneNumberId || req.body.phoneNumberId;
     const data = req.body;
 
@@ -48,8 +48,8 @@ export const createBroadcast = async (req, res) => {
 
 export const getBroadcasts = async (req, res) => {
   try {
-    // Get accountId from JWT middleware - use ObjectId for database queries
-    const accountId = req.account._id;
+    // Get accountId from JWT middleware - use String for database queries
+    const accountId = req.account.accountId;
     const phoneNumberId = req.params.phoneNumberId || 'any';
     const { status, limit, skip } = req.query;
 
@@ -74,8 +74,8 @@ export const getBroadcasts = async (req, res) => {
 
 export const getBroadcastById = async (req, res) => {
   try {
-    // Get accountId from JWT middleware - use ObjectId for database queries
-    const accountId = req.account._id;
+    // Get accountId from JWT middleware - use String for database queries
+    const accountId = req.account.accountId;
     
     // Get broadcastId from params - could be from different route formats:
     // 1. GET /api/broadcasts/:broadcastId
@@ -144,7 +144,7 @@ export const updateBroadcast = async (req, res) => {
 
 export const startBroadcast = async (req, res) => {
   try {
-    const accountId = req.account._id; // Use ObjectId for database queries
+    const accountId = req.account.accountId; // Use String for database queries
     const broadcastId = req.params.broadcastId;
 
     // First get the broadcast to extract phoneNumberId
@@ -232,8 +232,8 @@ export const getBroadcastStats = async (req, res) => {
 
 export const deleteBroadcast = async (req, res) => {
   try {
-    // Get accountId from JWT middleware - use ObjectId for database queries
-    const accountId = req.account._id;
+    // Get accountId from JWT middleware - use String for database queries
+    const accountId = req.account.accountId;
     
     // Get broadcastId from params
     const broadcastId = req.params.broadcastId || req.params.accountId;

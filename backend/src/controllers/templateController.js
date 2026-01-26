@@ -14,7 +14,7 @@ const GRAPH_API_URL = 'https://graph.facebook.com/v21.0';
  */
 export const getTemplates = async (req, res) => {
   try {
-    const accountId = req.account._id; // Use ObjectId for database queries
+    const accountId = req.account.accountId; // Use String for database queries
     const { status, category } = req.query;
     
     const query = { accountId, deleted: false };
@@ -54,7 +54,7 @@ export const getTemplates = async (req, res) => {
  */
 export const getTemplate = async (req, res) => {
   try {
-    const accountId = req.account._id; // Use ObjectId for database queries
+    const accountId = req.account.accountId; // Use String for database queries
     const { id } = req.params;
     
     const template = await Template.findOne({ 
@@ -89,7 +89,7 @@ export const getTemplate = async (req, res) => {
  */
 export const createTemplate = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account.accountId; // Use String for DB queries
     const { name, language, category, content, variables, components, hasMedia, mediaType, mediaUrl, headerText, footerText } = req.body;
     
     // Handle file upload
@@ -224,7 +224,7 @@ export const createTemplate = async (req, res) => {
  */
 export const updateTemplate = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account.accountId; // Use String accountId for DB queries
     const { id } = req.params;
     const { name, language, category, content, variables, components } = req.body;
     
@@ -278,7 +278,7 @@ export const updateTemplate = async (req, res) => {
  */
 export const deleteTemplate = async (req, res) => {
   try {
-    const accountId = req.account?._id || req.accountId; // Use ObjectId for DB queries
+    const accountId = req.account.accountId; // Use String accountId for DB queries
     const { id } = req.params;
     
     const template = await Template.findOne({ 
@@ -319,7 +319,7 @@ export const deleteTemplate = async (req, res) => {
  */
 export const submitTemplateToMeta = async (req, res) => {
   try {
-    const accountId = req.account._id; // Use ObjectId for database queries
+    const accountId = req.account.accountId; // Use String accountId for database queries
     const { id } = req.params;
 
     // Get template
@@ -371,7 +371,7 @@ export const submitTemplateToMeta = async (req, res) => {
     // Get phone number config to get WABA ID and access token
     // ✅ FIX: Use ObjectId for PhoneNumber query
     const phoneConfig = await PhoneNumber.findOne({ 
-      accountId: req.account._id,  // Use ObjectId - PhoneNumber stores as ObjectId
+      accountId: req.account.accountId,  // Account reference using String format
       isActive: true 
     }).select('+accessToken');
 
@@ -492,7 +492,7 @@ export const submitTemplateToMeta = async (req, res) => {
 export const syncTemplates = async (req, res) => {
   try {
     // Use STRING accountId from JWT - PhoneNumber stores accountId as String
-    const accountId = req.account._id;  // Use ObjectId
+    const accountId = req.account.accountId;  // Use String
     
     // Get phone number config to get WABA ID and access token
     const phoneConfig = await PhoneNumber.findOne({ 
