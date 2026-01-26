@@ -198,12 +198,10 @@ export const createOrganization = async (req, res) => {
     const hashedPassword = await bcryptjs.hash(temporaryPassword, 10);
 
     // Create new user
-    // ✅ ENFORCE: Only admin can set custom status, default to 'pending' (requires payment for pro/enterprise)
-    // Free plans can be 'active', paid plans must go through payment webhook
+    // ✅ ENFORCE: All new organizations start as 'active'
+    // Payment webhook will handle payment verification
     const planLower = (plan || 'free').toLowerCase();
-    const shouldBeFree = planLower === 'free';
-    const defaultStatus = shouldBeFree ? 'active' : 'pending'; // Only 'free' is auto-active
-    const finalStatus = status && status !== 'active' ? status : defaultStatus;
+    const finalStatus = status && ['active', 'inactive', 'suspended'].includes(status) ? status : 'active';
     
     const newUser = new User({
       name,
@@ -221,7 +219,7 @@ export const createOrganization = async (req, res) => {
       password: hashedPassword // Store hashed password
     });
     
-    console.log(`📝 Creating org: plan="${plan}" → status="${finalStatus}" (free=${shouldBeFree})`);
+    console.log(`📝 Creating org: plan="${plan}" → status="${finalStatus}"`);
     console.log(`🔐 Generated temporary password for: ${email}`);
 
     await newUser.save();
