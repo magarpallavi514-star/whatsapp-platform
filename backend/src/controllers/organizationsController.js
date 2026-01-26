@@ -345,7 +345,7 @@ export const getOrganizationById = async (req, res) => {
 export const updateOrganization = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, countryCode, phoneNumber, plan, status, billingCycle, nextBillingDate, password } = req.body;
+    const { name, email, countryCode, phoneNumber, plan, status, billingCycle, nextBillingDate, password, sendEmail } = req.body;
 
     const user = await User.findById(id);
     if (!user) {
@@ -385,6 +385,34 @@ export const updateOrganization = async (req, res) => {
     }
 
     await user.save();
+
+    // Send email if password was updated and sendEmail is true
+    if (password && password.trim() && sendEmail) {
+      const emailTemplate = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Your New Password</h2>
+          <p>Hello ${user.name || user.email},</p>
+          <p>Your password has been updated. Use the new password below to login:</p>
+          <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="font-size: 18px; font-weight: bold; color: #333; font-family: monospace; word-break: break-all;">
+              ${password}
+            </p>
+          </div>
+          <p>Login at: <a href="https://replysys.com/login">https://replysys.com/login</a></p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+          <p style="font-size: 12px; color: #666;">
+            If you did not request this password update, please contact support immediately.
+          </p>
+        </div>
+      `;
+
+      try {
+        await emailService.sendEmail(user.email, '🔐 Your Password Updated - Replysys', emailTemplate);
+      } catch (emailErr) {
+        console.error('Error sending password email:', emailErr);
+        // Don't fail the request if email fails
+      }
+    }
 
     res.json({
       success: true,
