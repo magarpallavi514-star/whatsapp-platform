@@ -144,10 +144,21 @@ export default function ChatPage() {
           }
         })
         
+        // Remove duplicates: Keep only the first occurrence of each phone number
+        const seen = new Set<string>()
+        const deduplicated = transformed.filter((conv: any) => {
+          if (seen.has(conv.phone)) {
+            console.warn('🚨 Duplicate conversation found and removed:', { phone: conv.phone, name: conv.name })
+            return false
+          }
+          seen.add(conv.phone)
+          return true
+        })
+        
         // Smart update: merge backend data with local state
         setConversations(prev => {
           // Always sort by latest message time
-          const merged = transformed.sort((a: Contact, b: Contact) => {
+          const merged = deduplicated.sort((a: Contact, b: Contact) => {
             return new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime()
           })
           
