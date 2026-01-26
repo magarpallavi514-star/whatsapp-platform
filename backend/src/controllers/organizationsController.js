@@ -222,7 +222,18 @@ export const createOrganization = async (req, res) => {
     console.log(`📝 Creating org: plan="${plan}" → status="${finalStatus}"`);
     console.log(`🔐 Generated temporary password for: ${email}`);
 
-    await newUser.save();
+    try {
+      await newUser.save();
+      console.log(`✅ [USER] Created User entry for: ${newUser.email} (accountId: ${newUser.accountId})`);
+    } catch (userError) {
+      console.error('❌ [USER] User creation failed:', userError.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to create user',
+        error: userError.message
+      });
+    }
+
     // ✅ CREATE ACCOUNT ENTRY FOR NEW ORGANIZATION
     // This allows the user to login and access the platform immediately
     let accountCreated = false;
