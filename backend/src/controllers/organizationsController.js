@@ -200,6 +200,12 @@ export const createOrganization = async (req, res) => {
     const planLower = (plan || 'free').toLowerCase();
     const finalStatus = status && ['active', 'inactive', 'suspended'].includes(status) ? status : 'active';
     
+    // Normalize billingCycle: 'annually' → 'annual'
+    let normalizedBillingCycle = billingCycle || 'monthly';
+    if (normalizedBillingCycle === 'annually') {
+      normalizedBillingCycle = 'annual';
+    }
+    
     const newUser = new User({
       name,
       email: email.toLowerCase(),
@@ -208,7 +214,7 @@ export const createOrganization = async (req, res) => {
       countryCode: countryCode || '+91',
       plan: plan || 'free',
       status: finalStatus, // ✅ Enforce payment requirement for non-free plans
-      billingCycle: billingCycle || 'monthly',
+      billingCycle: normalizedBillingCycle,
       nextBillingDate: nextBillingDate ? new Date(nextBillingDate) : null,
       role: 'user',
       totalPayments: 0,
@@ -268,7 +274,7 @@ export const createOrganization = async (req, res) => {
         status: 'completed', // Auto-completed for free clients
         description: 'Free account - No payment required',
         planName: plan || 'free',
-        billingCycle: billingCycle || 'monthly',
+        billingCycle: normalizedBillingCycle,
         issueDate: new Date(),
         dueDate: new Date(),
         paidDate: new Date(), // Auto-marked as paid
