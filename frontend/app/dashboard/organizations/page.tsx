@@ -33,6 +33,7 @@ export default function OrganizationsPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    password: "",
     countryCode: "+91",
     phoneNumber: "",
     plan: "free",
