@@ -184,18 +184,15 @@ export const createOrganization = async (req, res) => {
     // Generate new account ID (7-digit: YYXXXXX format)
     const accountId = await generateAccountId(Counter);
 
-    // 🔐 Generate random password automatically (6 character)
-    const generatePassword = () => {
-      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-      let password = ""
-      for (let i = 0; i < 6; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length))
-      }
-      return password
+    // 🔐 Use password from request body
+    if (!password || password.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password is required'
+      });
     }
 
-    const temporaryPassword = generatePassword();
-    const hashedPassword = await bcryptjs.hash(temporaryPassword, 10);
+    const hashedPassword = await bcryptjs.hash(password, 10);
 
     // Create new user
     // ✅ ENFORCE: All new organizations start as 'active'
@@ -312,7 +309,6 @@ export const createOrganization = async (req, res) => {
         nextBillingDate: newUser.nextBillingDate,
         totalPayments: newUser.totalPayments,
         createdAt: newUser.createdAt,
-        temporaryPassword: temporaryPassword,
         invoiceCreated: invoiceCreated,
         accountCreated: accountCreated
       },
