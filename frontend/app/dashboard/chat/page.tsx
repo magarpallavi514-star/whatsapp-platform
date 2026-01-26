@@ -20,6 +20,7 @@ import {
   Play,
   Music,
   Download,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ErrorToast } from "@/components/ErrorToast"
@@ -71,7 +72,7 @@ export default function ChatPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [hasWABA, setHasWABA] = useState<boolean | null>(null)
   const [checkingWABA, setCheckingWABA] = useState(true)
-  const [showContactPanel, setShowContactPanel] = useState(true) // Control right panel visibility
+  const [showContactPanel, setShowContactPanel] = useState(false) // Control right panel visibility - closed by default
   const [contactNotes, setContactNotes] = useState("") // Store contact notes
   const [contactLabels, setContactLabels] = useState<string[]>(["Hot Lead", "Interested"]) // Store contact labels
   const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]) // Store available phone numbers
@@ -1166,7 +1167,11 @@ export default function ChatPage() {
                 <button className="p-2 hover:bg-gray-100 rounded-full transition">
                   <Search className="h-5 w-5 text-gray-600" />
                 </button>
-                <button className="p-2 hover:bg-gray-100 rounded-full transition">
+                <button 
+                  onClick={() => setShowContactPanel(!showContactPanel)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition"
+                  title="View contact details"
+                >
                   <MoreVertical className="h-5 w-5 text-gray-600" />
                 </button>
               </div>
@@ -1343,7 +1348,7 @@ export default function ChatPage() {
               <h3 className="text-sm font-semibold text-gray-900 mb-1">Contact Details</h3>
               <p className="text-xs text-gray-500">Customer information & history</p>
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-2 items-center">
               <button
                 onClick={() => setEditingContact(!editingContact)}
                 className="p-2 hover:bg-gray-100 rounded-full transition text-gray-600 text-lg"
@@ -1356,7 +1361,7 @@ export default function ChatPage() {
                 className="p-2 hover:bg-gray-100 rounded-full transition text-gray-600"
                 title="Close contact panel"
               >
-                <MoreVertical className="h-5 w-5 rotate-90" />
+                <X className="h-5 w-5" />
               </button>
             </div>
           </div>
