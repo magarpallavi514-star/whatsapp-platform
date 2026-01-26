@@ -532,13 +532,14 @@ export default function ChatPage() {
       // Decode the contact parameter (it's URL-encoded)
       const decodedContact = decodeURIComponent(contactParam)
       
-      // Find the conversation with matching phone number
-      const matchingContact = conversations.find(c => 
-        c.phone === decodedContact || 
-        c.phone === `+${decodedContact}` ||
-        c.phone === decodedContact.replace(/\D/g, '') ||
-        decodedContact.includes(c.phone)
-      )
+      // Normalize: extract only digits from the URL parameter
+      const paramDigits = decodedContact.replace(/\D/g, '')
+      
+      // Find the conversation with matching phone number (compare only digits)
+      const matchingContact = conversations.find(c => {
+        const phoneDigits = c.phone.replace(/\D/g, '')
+        return phoneDigits === paramDigits
+      })
       
       if (matchingContact) {
         console.log('📱 Auto-selecting contact from URL param:', decodedContact, '→', matchingContact.phone)
