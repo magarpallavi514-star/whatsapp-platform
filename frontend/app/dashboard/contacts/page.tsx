@@ -161,6 +161,8 @@ export default function ContactsPage() {
       whatsappNumber: '',
       phone: '',
       email: '',
+      businessName: '',
+      city: '',
       type: 'customer',
       tags: [],
     })
@@ -174,6 +176,8 @@ export default function ContactsPage() {
       whatsappNumber: contact.whatsappNumber,
       phone: contact.phone,
       email: contact.email || '',
+      businessName: contact.businessName || '',
+      city: contact.city || '',
       type: contact.type,
       tags: contact.tags || [],
     })
