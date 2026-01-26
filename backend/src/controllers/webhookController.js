@@ -195,7 +195,7 @@ export const handleWebhook = async (req, res) => {
               
               const accountId = phoneConfig.accountId;
               console.log('✅ Found account:', accountId);
-              console.log('✅ Account ObjectId type:', typeof accountId, '(should be object)');
+              console.log('✅ Account type:', typeof accountId, '(should be string)');
               console.log('✅ Account verified with WABA ID:', wabaId);
               console.log('✅ Phone Number ID:', phoneNumberId, '(should be string)');
               
@@ -386,14 +386,14 @@ export const handleWebhook = async (req, res) => {
                   const conversationDocId = `${accountId}_${phoneNumberId}_${message.from}`;
                   const conversationDoc = await Conversation.findOneAndUpdate(
                     {
-                      accountId,
+                      accountId: targetAccountId,
                       workspaceId,
                       phoneNumberId,
                       userPhone: message.from
                     },
                     {
                       $setOnInsert: {
-                        accountId,
+                        accountId: targetAccountId,
                         workspaceId,
                         phoneNumberId,
                         userPhone: message.from,

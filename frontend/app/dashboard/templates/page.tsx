@@ -499,7 +499,8 @@ export default function TemplatesPage() {
                 <h3 className="font-semibold text-blue-900 mb-2">📋 Template Guidelines</h3>
                 <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
                   <li>Templates must be approved by Meta before use</li>
-                  <li>Use variables with {`{{1}}, {{2}}`}, etc. for dynamic content</li>
+                  <li>Use variables with {`{{1}}, {{2}}`}, etc. for dynamic content (names, URLs, emails, etc.)</li>
+                  <li>Website URLs can be sent as variables - just map to "Website URL" field</li>
                   <li>Category: UTILITY for OTPs/updates, MARKETING for promotions</li>
                   <li>Keep messages clear and concise</li>
                 </ul>
@@ -758,6 +759,7 @@ export default function TemplatesPage() {
                               <option value="name">👤 Name</option>
                               <option value="email">📧 Email</option>
                               <option value="phone">📱 Phone</option>
+                              <option value="website_url">🌐 Website URL</option>
                               <option value="whatsappNumber">💬 WhatsApp Number</option>
                               <option value="type">🏷️ Contact Type</option>
                               <option value="custom">⚙️ Custom Field</option>
@@ -770,9 +772,12 @@ export default function TemplatesPage() {
                   
                   {/* Example */}
                   <div className="mt-4 bg-indigo-100 border-l-4 border-indigo-600 p-3 rounded">
-                    <p className="text-xs font-semibold text-indigo-900 mb-2">📌 Example:</p>
+                    <p className="text-xs font-semibold text-indigo-900 mb-2">📌 Examples:</p>
+                    <p className="text-xs text-indigo-800 mb-2">
+                      • Variable 1 = Name (from name field) and Variable 2 = Order ID (from custom field)
+                    </p>
                     <p className="text-xs text-indigo-800">
-                      If Variable 1 = Name (from name field) and Variable 2 = Order ID (from custom_order_id field), the message will auto-fill values for each contact
+                      • Variable 1 = Website URL (from website_url field) to send dynamic links to customers
                     </p>
                   </div>
                 </div>

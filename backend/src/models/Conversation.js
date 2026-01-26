@@ -94,13 +94,7 @@ const conversationSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for inbox queries
-conversationSchema.index({ accountId: 1, workspaceId: 1, phoneNumberId: 1, lastMessageAt: -1 });
-conversationSchema.index({ accountId: 1, workspaceId: 1, status: 1, lastMessageAt: -1 });
-conversationSchema.index({ workspaceId: 1, phoneNumberId: 1, lastMessageAt: -1 });
-conversationSchema.index({ accountId: 1, workspaceId: 1, unreadCount: 1 });
-conversationSchema.index({ conversationId: 1 });
-conversationSchema.index({ userPhone: 1 });
+// Note: conversationId already has index: true and unique: true in schema
 
 // Static method to get conversations with preview
 conversationSchema.statics.getInboxList = async function(accountId, workspaceId, phoneNumberId, limit = 50) {

@@ -191,14 +191,7 @@ const leadSchema = new mongoose.Schema({
   collection: 'leads'
 });
 
-// Indexes for queries
-leadSchema.index({ accountId: 1, createdAt: -1 });
-leadSchema.index({ accountId: 1, status: 1 });
-leadSchema.index({ accountId: 1, score: -1 });
-leadSchema.index({ accountId: 1, phone: 1 });
-leadSchema.index({ accountId: 1, email: 1 });
-leadSchema.index({ conversationId: 1 });
-leadSchema.index({ contactId: 1 });
+// Note: accountId, conversationId, and contactId already have index: true in schema
 
 const Lead = mongoose.model('Lead', leadSchema);
 export default Lead;

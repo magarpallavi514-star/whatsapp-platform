@@ -92,10 +92,7 @@ chatbotLeadSchema.pre('save', function(next) {
   next();
 });
 
-// Indexes for better query performance
-chatbotLeadSchema.index({ chatbotId: 1, createdAt: -1 });
-chatbotLeadSchema.index({ chatbotId: 1, status: 1 });
-chatbotLeadSchema.index({ accountId: 1, createdAt: -1 });
+// Note: chatbotId and accountId already have index: true in schema
 
 const ChatbotLead = mongoose.model('ChatbotLead', chatbotLeadSchema);
 

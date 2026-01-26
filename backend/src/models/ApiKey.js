@@ -38,9 +38,7 @@ const apiKeySchema = new mongoose.Schema({
   timestamps: true 
 });
 
-// Index for lookups
-apiKeySchema.index({ accountId: 1, createdAt: -1 });
-apiKeySchema.index({ keyHash: 1 });
+// Note: accountId and keyHash already have index: true in schema
 
 // Hash function for API keys
 apiKeySchema.statics.hashApiKey = function(apiKey) {

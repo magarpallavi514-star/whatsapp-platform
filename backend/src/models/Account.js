@@ -129,11 +129,7 @@ const accountSchema = new mongoose.Schema({
   timestamps: true 
 });
 
-// Index for lookups
-accountSchema.index({ accountId: 1 });
-accountSchema.index({ type: 1, status: 1 });
-accountSchema.index({ apiKeyHash: 1 });
-accountSchema.index({ subdomain: 1 });  // For workspace lookup by subdomain
+// Note: accountId, apiKeyHash, and subdomain already have index: true in schema
 
 // Hash function for API keys
 accountSchema.statics.hashApiKey = function(apiKey) {

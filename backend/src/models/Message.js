@@ -102,11 +102,6 @@ const messageSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for performance
-messageSchema.index({ accountId: 1, createdAt: -1 });
-messageSchema.index({ accountId: 1, phoneNumberId: 1, createdAt: -1 });
-messageSchema.index({ accountId: 1, status: 1 });
-messageSchema.index({ accountId: 1, recipientPhone: 1 });
-messageSchema.index({ waMessageId: 1 });
+// Note: accountId, conversationId, and waMessageId already have index: true in schema
 
 export default mongoose.model('Message', messageSchema);
