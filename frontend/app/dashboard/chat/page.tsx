@@ -76,6 +76,9 @@ export default function ChatPage() {
   const [contactLabels, setContactLabels] = useState<string[]>(["Hot Lead", "Interested"]) // Store contact labels
   const [phoneNumbers, setPhoneNumbers] = useState<any[]>([]) // Store available phone numbers
   const [selectedPhoneId, setSelectedPhoneId] = useState<string | null>(null) // Track selected phone number
+  const [contactIsActive, setContactIsActive] = useState(false) // Track if contact is actively typing/online
+  const [editingContact, setEditingContact] = useState(false) // Toggle edit mode for contact panel
+  const [contactFormData, setContactFormData] = useState({ name: "", email: "", tags: "", notes: "" })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -588,19 +591,47 @@ export default function ChatPage() {
         );
       });
     };
+
+    // Handler for tracking when contact becomes active (typing, reading, etc)
+    const handleContactActive = (data: any) => {
+      const { conversationId, isActive, lastActivityTime } = data;
+      if (selectedContact?.id === conversationId) {
+        console.log('🟢 Contact activity:', { isActive, lastActivityTime });
+        setContactIsActive(isActive);
+        
+        // Auto-hide after 10 seconds of inactivity
+        if (isActive) {
+          setTimeout(() => setContactIsActive(false), 10000);
+        }
+      }
+    };
+
+    // Handler for typing indicator
+    const handleTypingIndicator = (data: any) => {
+      const { conversationId, isTyping: otherIsTyping } = data;
+      if (selectedContact?.id === conversationId) {
+        setIsTyping(otherIsTyping);
+      }
+    };
     
     // Remove old listeners to prevent duplicates
     socket.off('new_message', handleNewMessage);
     socket.off('conversation_update', handleConversationUpdate);
+    socket.off('contact_active', handleContactActive);
+    socket.off('typing_indicator', handleTypingIndicator);
     
     // Attach listeners
     socket.on('new_message', handleNewMessage);
     socket.on('conversation_update', handleConversationUpdate);
+    socket.on('contact_active', handleContactActive);
+    socket.on('typing_indicator', handleTypingIndicator);
     
     // Cleanup on unmount
     return () => {
       socket.off('new_message', handleNewMessage);
       socket.off('conversation_update', handleConversationUpdate);
+      socket.off('contact_active', handleContactActive);
+      socket.off('typing_indicator', handleTypingIndicator);
     };
   }, [selectedContact?.id]);
 
@@ -1256,19 +1287,28 @@ export default function ChatPage() {
       {/* RIGHT PANEL - Customer Context (CRM) - WATI Style */}
       {selectedContact && showContactPanel && (
         <div className="w-[380px] bg-white border-l border-gray-200 overflow-y-auto flex flex-col">
-          {/* Header with Close Button */}
+          {/* Header with Close Button and Edit Toggle */}
           <div className="sticky top-0 bg-white border-b border-gray-200 p-4 z-10 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-1">Contact Details</h3>
               <p className="text-xs text-gray-500">Customer information & history</p>
             </div>
-            <button
-              onClick={() => setShowContactPanel(false)}
-              className="p-2 hover:bg-gray-100 rounded-full transition text-gray-600"
-              title="Close contact panel"
-            >
-              <MoreVertical className="h-5 w-5 rotate-90" />
-            </button>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setEditingContact(!editingContact)}
+                className="p-2 hover:bg-gray-100 rounded-full transition text-gray-600 text-lg"
+                title={editingContact ? "Save changes" : "Edit contact"}
+              >
+                {editingContact ? '💾' : '✏️'}
+              </button>
+              <button
+                onClick={() => setShowContactPanel(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition text-gray-600"
+                title="Close contact panel"
+              >
+                <MoreVertical className="h-5 w-5 rotate-90" />
+              </button>
+            </div>
           </div>
 
           {/* Scrollable Content */}
@@ -1291,13 +1331,37 @@ export default function ChatPage() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="font-semibold text-gray-900 text-lg truncate">
-                  {selectedContact.name || 'Unknown'}
-                </h2>
+                {editingContact ? (
+                  <input
+                    type="text"
+                    value={selectedContact.name || ''}
+                    onChange={(e) => setSelectedContact({ ...selectedContact, name: e.target.value })}
+                    placeholder="Contact name"
+                    className="w-full text-lg font-semibold text-gray-900 border border-blue-300 rounded px-2 py-1 mb-2"
+                  />
+                ) : (
+                  <h2 className="font-semibold text-gray-900 text-lg truncate">
+                    {selectedContact.name || 'Unknown'}
+                  </h2>
+                )}
                 <p className="text-sm text-gray-500 truncate">{selectedContact.phone}</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                  <span className="text-xs text-gray-500">Active now</span>
+                  {contactIsActive ? (
+                    <>
+                      <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-green-600 font-semibold">Active now</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-2 w-2 bg-gray-400 rounded-full"></div>
+                      <span className="text-xs text-gray-500">
+                        {selectedContact.lastMessageTime 
+                          ? `Last active ${formatTime(selectedContact.lastMessageTime)}`
+                          : 'Offline'
+                        }
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -1313,46 +1377,98 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Labels/Tags Section - DYNAMIC */}
+          {/* Labels/Tags Section - INTERACTIVE */}
           <div className="p-4 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-900 mb-3 uppercase tracking-wide">Labels</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-gray-900 uppercase tracking-wide">Labels</p>
+              {editingContact && (
+                <input
+                  type="text"
+                  placeholder="Add label, press Enter"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                      const newLabel = (e.target as HTMLInputElement).value.trim();
+                      setContactLabels([...contactLabels, newLabel]);
+                      (e.target as HTMLInputElement).value = '';
+                    }
+                  }}
+                  className="text-xs border border-gray-300 rounded px-2 py-1 flex-1"
+                />
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               {contactLabels.map((label, idx) => (
                 <button 
                   key={idx}
-                  onClick={() => setContactLabels(contactLabels.filter((_, i) => i !== idx))}
-                  className="px-3 py-1.5 bg-blue-50 text-blue-700 text-xs font-medium rounded-full hover:bg-blue-100 transition border border-blue-200 cursor-pointer"
-                  title="Click to remove label"
+                  onClick={() => editingContact && setContactLabels(contactLabels.filter((_, i) => i !== idx))}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-full transition border ${
+                    editingContact
+                      ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 cursor-pointer'
+                      : 'bg-blue-50 text-blue-700 border-blue-200'
+                  }`}
+                  title={editingContact ? "Click to remove label" : ""}
                 >
-                  {label} ✕
+                  {label} {editingContact && '✕'}
                 </button>
               ))}
-              <button className="px-3 py-1.5 text-gray-600 text-xs font-medium rounded-full hover:bg-gray-100 transition border border-dashed border-gray-300 cursor-pointer">
-                + Add Label
-              </button>
             </div>
           </div>
 
-          {/* Custom Fields Section */}
+          {/* Custom Fields Section - EDITABLE */}
           <div className="p-4 border-b border-gray-100">
             <p className="text-xs font-semibold text-gray-900 mb-3 uppercase tracking-wide">Custom Fields</p>
             <div className="space-y-3">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Course Interest</p>
-                <p className="text-sm font-medium text-gray-900">Python Development</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Budget</p>
-                <p className="text-sm font-medium text-gray-900">$500-$1000</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Location</p>
-                <p className="text-sm font-medium text-gray-900">Mumbai, India</p>
-              </div>
-              <button className="w-full text-center py-2 border border-dashed border-gray-300 rounded-lg text-xs text-gray-600 hover:bg-gray-50 transition">
-                + Add Custom Field
-              </button>
+              {editingContact ? (
+                <>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Email</label>
+                    <input
+                      type="email"
+                      placeholder="user@example.com"
+                      defaultValue=""
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Tags</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., VIP, Prospect"
+                      defaultValue=""
+                      className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Email</p>
+                    <p className="text-sm font-medium text-gray-900">Not provided</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Tags</p>
+                    <p className="text-sm font-medium text-gray-900">-</p>
+                  </div>
+                </>
+              )}
             </div>
+          </div>
+
+          {/* Contact Notes Section - EDITABLE */}
+          <div className="p-4 border-b border-gray-100">
+            <p className="text-xs font-semibold text-gray-900 mb-3 uppercase tracking-wide">Notes</p>
+            {editingContact ? (
+              <textarea
+                value={contactNotes}
+                onChange={(e) => setContactNotes(e.target.value)}
+                placeholder="Add internal notes about this contact..."
+                className="w-full h-24 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            ) : (
+              <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                {contactNotes || 'No notes added'}
+              </p>
+            )}
           </div>
 
           {/* Conversation Status */}
