@@ -20,6 +20,13 @@ const accountSchema = new mongoose.Schema({
     default: 'client'
   },
   
+  // Role (for permission management)
+  role: {
+    type: String,
+    enum: ['superadmin', 'admin', 'manager', 'agent', 'user'],
+    default: 'user'
+  },
+
   // Account Info
   name: {
     type: String,
@@ -124,7 +131,9 @@ const accountSchema = new mongoose.Schema({
   
   // Metadata
   createdAt: { type: Date, default: Date.now },
-  lastActiveAt: Date
+  lastActiveAt: Date,
+  lastLogin: Date,
+  loginCount: { type: Number, default: 0 }
 }, { 
   timestamps: true 
 });

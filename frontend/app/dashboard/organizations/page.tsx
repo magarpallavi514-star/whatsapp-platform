@@ -224,7 +224,8 @@ export default function OrganizationsPage() {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to update organization")
+        const errorData = await response.json()
+        throw new Error(errorData.message || `HTTP ${response.status}: Failed to update organization`)
       }
 
       const data = await response.json()
@@ -237,7 +238,7 @@ export default function OrganizationsPage() {
       alert("Organization updated successfully" + (newPassword ? " and password email sent!" : ""))
     } catch (err) {
       console.error("Error updating organization:", err)
-      alert("Failed to update organization")
+      alert(err instanceof Error ? err.message : "Failed to update organization")
     }
   }
 

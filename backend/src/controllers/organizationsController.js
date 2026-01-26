@@ -387,11 +387,14 @@ export const updateOrganization = async (req, res) => {
     const { id } = req.params;
     const { name, email, countryCode, phoneNumber, plan, status, billingCycle, nextBillingDate, password, sendEmail } = req.body;
 
+    console.log('📝 Updating organization:', { id, email, plan, status });
+
     const user = await User.findById(id);
     if (!user) {
+      console.error('❌ Organization not found:', id);
       return res.status(404).json({
         success: false,
-        message: 'Organization not found'
+        message: `Organization not found with ID: ${id}`
       });
     }
 
