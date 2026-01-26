@@ -531,6 +531,8 @@ export default function ChatPage() {
   // Auto-select contact from URL query parameter
   useEffect(() => {
     const contactParam = searchParams.get('contact')
+    console.log('🔍 Auto-select effect triggered:', { contactParam, conversationCount: conversations.length })
+    
     if (contactParam && conversations.length > 0) {
       // Decode the contact parameter (it's URL-encoded)
       const decodedContact = decodeURIComponent(contactParam)
@@ -538,19 +540,30 @@ export default function ChatPage() {
       // Normalize: extract only digits from the URL parameter
       const paramDigits = decodedContact.replace(/\D/g, '')
       
+      console.log('📊 Searching for:', { decodedContact, paramDigits })
+      console.log('📋 Available conversations:', conversations.map(c => ({ 
+        name: c.name, 
+        phone: c.phone,
+        phoneDigits: c.phone.replace(/\D/g, ''),
+        id: c.id
+      })))
+      
       // Find the conversation with matching phone number (compare only digits)
       const matchingContact = conversations.find(c => {
         const phoneDigits = c.phone.replace(/\D/g, '')
-        return phoneDigits === paramDigits
+        const isMatch = phoneDigits === paramDigits
+        console.log('🔎 Comparing:', { name: c.name, phoneDigits, paramDigits, isMatch })
+        return isMatch
       })
       
       if (matchingContact) {
-        console.log('📱 Auto-selecting contact from URL param:', decodedContact, '→', matchingContact.phone)
+        console.log('✅ Found match! Auto-selecting:', { name: matchingContact.name, phone: matchingContact.phone })
         setSelectedContact(matchingContact)
       } else {
-        console.log('⚠️ Contact not found for param:', decodedContact)
-        console.log('Available contacts:', conversations.map(c => ({ name: c.name, phone: c.phone })))
+        console.log('❌ Contact not found for param:', decodedContact)
       }
+    } else {
+      console.log('⏳ Waiting for:', { contactParam: contactParam ? 'exists' : 'missing', conversationCount: conversations.length })
     }
   }, [searchParams, conversations])
 
