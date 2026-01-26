@@ -14,7 +14,7 @@ import { broadcastPhoneStatusChange } from '../services/socketService.js';
  */
 export const getPhoneNumbers = async (req, res) => {
   try {
-    // PhoneNumber collection stores accountId as String (Account.accountId e.g., "eno_2600003")
+    // PhoneNumber collection stores accountId as String (Account.accountId e.g., "2600003")
     const accountId = req.account.accountId; // Use String accountId
     
     console.log('📱 [GET PHONE NUMBERS] Fetching status for account:');

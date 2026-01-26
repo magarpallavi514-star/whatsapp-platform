@@ -16,7 +16,7 @@ import { emailService } from '../services/emailService.js';
 const ADMIN_USER = {
   email: 'mpiyush2727@gmail.com',
   password: 'Pm@22442232', // EXACT PASSWORD - For demo - use plaintext comparison
-  accountId: 'pixels_internal',
+  accountId: '2600001',
   name: 'Piyush Magar',
   role: 'superadmin' // Full platform access
 };
@@ -55,10 +55,10 @@ export const login = async (req, res) => {
       
       const user = {
         email: 'superadmin@test.com',
-        accountId: 'pixels_internal',
+        accountId: '2600001',
         name: 'SuperAdmin (Demo)',
         role: 'superadmin',
-        workspaceId: 'pixels_internal' // Add workspaceId for subdomain architecture
+        workspaceId: '2600001' // Add workspaceId for subdomain architecture
       };
       
       // Ensure demo account exists in database
