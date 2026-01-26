@@ -87,8 +87,9 @@ app.use(cors({
 }));
 
 // JSON and URL-encoded body parsing (JWT is stateless - no session needed)
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Increase limit to 100MB for media uploads
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Subdomain detection middleware (RUNS FIRST - extracts workspace context from URL)
 app.use(subdomainDetectionMiddleware);

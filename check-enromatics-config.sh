@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Script to check enromatics account configuration
+
+echo "🔍 CHECKING ENROMATICS ACCOUNT CONFIGURATION..."
+echo ""
+echo "The issue: Media sending fails for +918087131777 (enromatics)"
+echo "But works for super admin"
+echo ""
+echo "Likely causes:"
+echo "1. ❌ Phone number not configured for enromatics account"
+echo "2. ❌ Phone number marked as inactive (isActive: false)"
+echo "3. ❌ Wrong phoneNumberId in database"
+echo "4. ❌ Permission/subscription issue on that account"
+echo ""
+echo "✅ FIX: Run this database query to verify:"
+echo ""
+echo "use pixelswhatsapp"
+echo "db.phonenumbers.findOne({ displayPhone: { \$regex: '918087131777' } })"
+echo ""
+echo "Should show:"
+echo "  - _id: <ObjectId>"
+echo "  - phoneNumberId: <Meta Phone ID>"
+echo "  - displayPhone: 918087131777"
+echo "  - isActive: true"
+echo "  - accountId: <enromatics account ID>"
+echo ""
+echo "If missing or isActive=false, that's your problem!"
