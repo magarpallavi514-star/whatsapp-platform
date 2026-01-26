@@ -114,17 +114,31 @@ export default function ChatPage() {
       })
       if (response.ok) {
         const data = await response.json()
+        
+        // Fetch saved contacts to sync names
+        const contactsResponse = await fetch(`${API_URL}/contacts`, {
+          headers: getHeaders(),
+        })
+        const contactsData = contactsResponse.ok ? await contactsResponse.json() : { contacts: [] }
+        const contactsMap = new Map((contactsData.contacts || []).map((c: any) => [c.whatsappNumber || c.phone, c.name]))
+        
         // Transform API response to match frontend interface
-        const transformed = (data.conversations || []).map((conv: any) => ({
-          id: conv.conversationId || conv._id,
-          phone: conv.userPhone,
-          phoneNumberId: conv.phoneNumberId, // Add phoneNumberId for sending messages
-          name: conv.userName || conv.userProfileName,
-          lastMessage: conv.lastMessagePreview,
-          lastMessageTime: conv.lastMessageAt,
-          unreadCount: conv.unreadCount || 0,
-          profilePic: conv.userProfilePic
-        }))
+        const transformed = (data.conversations || []).map((conv: any) => {
+          // First try to get name from saved contacts by phone number
+          const savedContactName = contactsMap.get(conv.userPhone)
+          
+          return {
+            id: conv.conversationId || conv._id,
+            phone: conv.userPhone,
+            phoneNumberId: conv.phoneNumberId,
+            // PRIORITY: Saved contact name > Conversation name > Default
+            name: savedContactName || conv.userName || conv.userProfileName || 'Unknown',
+            lastMessage: conv.lastMessagePreview,
+            lastMessageTime: conv.lastMessageAt,
+            unreadCount: conv.unreadCount || 0,
+            profilePic: conv.userProfilePic
+          }
+        })
         
         // Smart update: merge backend data with local state
         setConversations(prev => {
@@ -136,6 +150,7 @@ export default function ChatPage() {
           // Quick equality check to avoid unnecessary re-renders
           if (merged.length === prev.length && merged.every((c: Contact, i: number) => 
             c.id === prev[i].id &&
+            c.name === prev[i].name &&
             c.lastMessage === prev[i].lastMessage &&
             new Date(c.lastMessageTime || 0).getTime() === new Date(prev[i].lastMessageTime || 0).getTime() &&
             (c.unreadCount || 0) === (prev[i].unreadCount || 0)
@@ -658,6 +673,41 @@ export default function ChatPage() {
   useEffect(() => {
     if (selectedContact) {
       selectedContactIdRef.current = selectedContact.id
+      
+      // Load full contact details from contacts list
+      const loadFullContactDetails = async () => {
+        try {
+          // Try to fetch full contact data by phone number
+          const contactsResponse = await fetch(`${API_URL}/contacts?search=${encodeURIComponent(selectedContact.phone)}`, {
+            headers: getHeaders(),
+          })
+          
+          if (contactsResponse.ok) {
+            const contactsData = await contactsResponse.json()
+            if (contactsData.contacts && contactsData.contacts.length > 0) {
+              // Found matching contact - merge saved contact data with conversation data
+              const savedContact = contactsData.contacts[0]
+              setSelectedContact(prev => prev ? {
+                ...prev,
+                name: savedContact.name || prev.name, // Use saved name if available
+                // Preserve conversation-specific fields
+              } : null)
+              
+              // Load saved contact notes if available
+              if (savedContact.notes) {
+                setContactNotes(savedContact.notes)
+              }
+              if (savedContact.tags) {
+                setContactLabels(Array.isArray(savedContact.tags) ? savedContact.tags : [])
+              }
+            }
+          }
+        } catch (error) {
+          console.log('Could not load full contact details, using conversation data')
+        }
+      }
+      
+      loadFullContactDetails()
       fetchMessages(selectedContact.id)
       
       // Join Socket.io room for this conversation
