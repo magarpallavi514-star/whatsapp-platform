@@ -530,7 +530,16 @@ export default function ChatPage() {
 
   // Auto-select contact from URL query parameter
   useEffect(() => {
-    const contactParam = searchParams.get('contact')
+    // Try to get contact param from searchParams (Next.js)
+    let contactParam = searchParams.get('contact')
+    
+    // Fallback: get from window location if not available
+    if (!contactParam && typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      contactParam = urlParams.get('contact')
+      console.log('📍 Fallback from window.location:', { contactParam })
+    }
+    
     console.log('🔍 Auto-select effect triggered:', { contactParam, conversationCount: conversations.length })
     
     if (contactParam && conversations.length > 0) {
