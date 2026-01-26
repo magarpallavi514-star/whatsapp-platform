@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Users, Plus, Upload, Download, Search, MoreVertical, Edit, Trash2, X, Tag, Mail, Phone as PhoneIcon, User, Building2, MapPin } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Users, Plus, Upload, Download, Search, MoreVertical, Edit, Trash2, X, Tag, Mail, Phone as PhoneIcon, User, Building2, MapPin, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ErrorToast } from "@/components/ErrorToast"
 import { authService } from "@/lib/auth"
@@ -45,6 +46,7 @@ export default function ContactsPage() {
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importPreview, setImportPreview] = useState<any[]>([])
   const [isImporting, setIsImporting] = useState(false)
+  const router = useRouter()
   const [formData, setFormData] = useState({
     name: '',
     whatsappNumber: '',
@@ -151,6 +153,12 @@ export default function ContactsPage() {
       console.error("Error deleting contact:", error)
       alert("Failed to delete contact")
     }
+  }
+
+  // Open chat for a contact
+  const openContactChat = (contact: Contact) => {
+    // Navigate to chat page - the phone number will be used to find the conversation
+    router.push(`/dashboard/chat?contact=${encodeURIComponent(contact.whatsappNumber)}`)
   }
 
   // Open modal for add/edit
@@ -614,6 +622,13 @@ export default function ContactsPage() {
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex gap-2">
+                          <button 
+                            onClick={() => openContactChat(contact)}
+                            className="text-green-600 hover:text-green-700"
+                            title="Send Message"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </button>
                           <button 
                             onClick={() => openEditModal(contact)}
                             className="text-blue-600 hover:text-blue-700"
