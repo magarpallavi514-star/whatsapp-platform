@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { MessageSquare, User, Lock, Shield, Plus, Trash2, CheckCircle, XCircle, RefreshCw, Phone, X, Copy, Eye, EyeOff, Key } from "lucide-react"
+import { MessageSquare, User, Lock, Shield, Plus, Trash2, CheckCircle, XCircle, RefreshCw, Phone, X, Copy, Eye, EyeOff, Key, CreditCard, Download, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ErrorToast } from "@/components/ErrorToast"
 import { authService } from "@/lib/auth"
@@ -97,6 +97,12 @@ export default function SettingsPage() {
     accountId: '',
     userId: ''
   })
+  
+  // Billing states
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [subscription, setSubscription] = useState<any>(null)
+  const [billingLoading, setBillingLoading] = useState(false)
+  const [billingError, setBillingError] = useState<string | null>(null)
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api"
 
@@ -645,6 +651,33 @@ export default function SettingsPage() {
   }
 
   // Initial load and authentication check
+  const fetchBillingData = async () => {
+    try {
+      setBillingLoading(true)
+      setBillingError(null)
+      
+      const response = await fetch(`${API_URL}/billing/invoices`, {
+        method: 'GET',
+        headers: getHeaders()
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setInvoices(data.invoices || [])
+      } else if (response.status === 404) {
+        setInvoices([])
+      } else {
+        setBillingError('Failed to load billing data')
+      }
+    } catch (error) {
+      console.error('Error fetching billing data:', error)
+      setBillingError('Failed to load billing data')
+    } finally {
+      setBillingLoading(false)
+    }
+  }
+
+  // Initial load and authentication check
   useEffect(() => {
     const initializePage = async () => {
       const token = authService.getToken()
@@ -680,6 +713,8 @@ export default function SettingsPage() {
       fetchApiKeys()
     } else if (activeTab === 'profile') {
       fetchProfile()
+    } else if (activeTab === 'billing') {
+      fetchBillingData()
     }
   }, [activeTab])
 
@@ -703,6 +738,7 @@ export default function SettingsPage() {
               {[
                 { name: "WhatsApp Setup", icon: MessageSquare, id: 'whatsapp' },
                 { name: "Profile", icon: User, id: 'profile' },
+                { name: "Billing", icon: CreditCard, id: 'billing' },
                 { name: "API Keys", icon: Key, id: 'api-keys' },
                 { name: "Security", icon: Lock, id: 'security' },
               ].map((item) => (
@@ -1003,6 +1039,89 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </form>
+            </div>
+          ) : activeTab === 'billing' ? (
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Billing & Invoices</h2>
+              <p className="text-sm text-gray-600 mb-6">View your invoices and payment history</p>
+
+              {billingError && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-700">{billingError}</p>
+                </div>
+              )}
+
+              {billingLoading ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-600">Loading billing data...</p>
+                </div>
+              ) : invoices.length === 0 ? (
+                <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600">No invoices yet</p>
+                  <p className="text-sm text-gray-500 mt-1">Your invoices will appear here once you have an active subscription</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Invoice</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Date</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Amount</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoices.map((invoice: any) => (
+                        <tr key={invoice._id} className="border-b border-gray-200 hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-gray-400" />
+                              <span className="font-medium">INV-{invoice.invoiceNumber || invoice._id.slice(-6)}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {new Date(invoice.createdAt || invoice.date).toLocaleDateString('en-IN', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                            {typeof invoice.amount === 'number' 
+                              ? `₹${invoice.amount.toFixed(2)}` 
+                              : invoice.amount}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              invoice.status === 'paid' || invoice.paymentStatus === 'paid'
+                                ? 'bg-green-100 text-green-700'
+                                : invoice.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {invoice.status === 'paid' || invoice.paymentStatus === 'paid' ? 'Paid' : invoice.status || 'Pending'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <a
+                              href={invoice.pdfUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-green-600 hover:text-green-700 transition"
+                            >
+                              <Download className="h-4 w-4" />
+                              Download
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           ) : activeTab === 'api-keys' ? (
             <div className="bg-white rounded-lg border border-gray-200 p-6">
