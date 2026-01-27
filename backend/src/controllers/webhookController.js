@@ -383,7 +383,8 @@ export const handleWebhook = async (req, res) => {
                   // This ID will be used for Socket.io broadcasting and must match API format
                   const workspaceId = targetAccount.defaultWorkspaceId || targetAccountId;  // Use default workspace or fallback to account
                   
-                  const conversationDocId = `${accountId}_${phoneNumberId}_${message.from}`;
+                  // ✅ USE targetAccountId (verified String from Account lookup) - NOT accountId from phoneConfig
+                  const conversationDocId = `${targetAccountId}_${phoneNumberId}_${message.from}`;
                   const conversationDoc = await Conversation.findOneAndUpdate(
                     {
                       accountId: targetAccountId,
@@ -414,7 +415,7 @@ export const handleWebhook = async (req, res) => {
                   
                   // Upsert or update contact
                   const contactData = {
-                    accountId,
+                    accountId: targetAccountId,  // ✅ Use verified targetAccountId
                     name: senderProfile?.profile?.name || message.from,
                     phone: `+${message.from}`,
                     whatsappNumber: message.from,
@@ -424,7 +425,7 @@ export const handleWebhook = async (req, res) => {
                   };
                   
                   await Contact.findOneAndUpdate(
-                    { accountId, whatsappNumber: message.from },
+                    { accountId: targetAccountId, whatsappNumber: message.from },
                     { 
                       $set: contactData,
                       $inc: { messageCount: 1 }
@@ -477,7 +478,7 @@ export const handleWebhook = async (req, res) => {
                   
                   // Save incoming message to Message collection
                   const inboxMessage = {
-                    accountId,
+                    accountId: targetAccountId,  // ✅ Use verified targetAccountId (CONSISTENT)
                     phoneNumberId,
                     conversationId: conversationDoc._id, // Use MongoDB _id, not formatted string
                     waMessageId: message.id,

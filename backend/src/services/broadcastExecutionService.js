@@ -217,6 +217,35 @@ export class BroadcastExecutionService {
         { upsert: true, new: true }
       );
 
+      // ✅ CRITICAL FIX: Normalize messageType to frontend-compatible types
+      // Frontend only accepts: text, image, video, audio, document, location
+      let normalizedMessageType = broadcast.messageType;
+      
+      if (broadcast.messageType === 'template') {
+        // Templates are text-based messages
+        normalizedMessageType = 'text';
+      } else if (broadcast.messageType === 'media') {
+        // Detect media type from content
+        if (broadcast.content?.mediaType === 'image') {
+          normalizedMessageType = 'image';
+        } else if (broadcast.content?.mediaType === 'video') {
+          normalizedMessageType = 'video';
+        } else if (broadcast.content?.mediaType === 'audio') {
+          normalizedMessageType = 'audio';
+        } else if (broadcast.content?.mediaType === 'document') {
+          normalizedMessageType = 'document';
+        } else {
+          // Fallback: treat as text if type unclear
+          normalizedMessageType = 'text';
+        }
+      }
+      
+      // Validate it's one of the 6 supported types
+      const supportedTypes = ['text', 'image', 'video', 'audio', 'document', 'location'];
+      if (!supportedTypes.includes(normalizedMessageType)) {
+        normalizedMessageType = 'text'; // Safe fallback
+      }
+
       // Log message to database WITH conversationId
       const message = new Message({
         accountId,
@@ -224,7 +253,7 @@ export class BroadcastExecutionService {
         conversationId: conversation._id,  // ✅ CRITICAL: Link to conversation
         waMessageId: messageId,
         recipientPhone,
-        messageType: broadcast.messageType,
+        messageType: normalizedMessageType,  // ✅ NOW GUARANTEED TO BE FRONTEND-COMPATIBLE
         status: 'sent',
         direction: 'outbound',
         campaign: broadcast._id.toString(),
