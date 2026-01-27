@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { MessageSquare, User, Lock, Shield, Plus, Trash2, CheckCircle, XCircle, RefreshCw, Phone, X, Copy, Eye, EyeOff, Key, CreditCard, Download, FileText } from "lucide-react"
+import { MessageSquare, User, Lock, Shield, Plus, Trash2, CheckCircle, XCircle, RefreshCw, Phone, X, Copy, Eye, EyeOff, Key, Download, FileText, CreditCard, ArrowDown, Calendar, ArrowUp, Package, Loader } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ErrorToast } from "@/components/ErrorToast"
 import { authService } from "@/lib/auth"
@@ -53,6 +53,8 @@ interface MyAccountInfo {
 export default function SettingsPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState('whatsapp')
+  const user = authService.getCurrentUser()
+  const isSuperAdmin = user?.role === 'superadmin'
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([])
   const [apiKeys, setApiKeys] = useState<ApiKeyData[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -97,12 +99,11 @@ export default function SettingsPage() {
     accountId: '',
     userId: ''
   })
-  
-  // Billing states
-  const [invoices, setInvoices] = useState<any[]>([])
-  const [subscription, setSubscription] = useState<any>(null)
-  const [billingLoading, setBillingLoading] = useState(false)
-  const [billingError, setBillingError] = useState<string | null>(null)
+
+  // Transactions states
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [transactionsLoading, setTransactionsLoading] = useState(false)
+  const [transactionsError, setTransactionsError] = useState<string | null>(null)
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api"
 
@@ -416,6 +417,94 @@ export default function SettingsPage() {
     }
   }
 
+  const fetchTransactions = async () => {
+    try {
+      setTransactionsLoading(true)
+      setTransactionsError(null)
+
+      const token = authService.getToken()
+      if (!token) {
+        setTransactionsError('Authentication required')
+        return
+      }
+
+      // Fetch organizations data
+      const response = await fetch(`${API_URL}/admin/organizations`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch transactions")
+      }
+
+      const data = await response.json()
+      const orgs = data.data || []
+      
+      // Convert organizations to transactions format
+      const transactionsList: any[] = []
+      
+      orgs.forEach((org: any) => {
+        // Add organization signup transaction
+        transactionsList.push({
+          id: `signup-${org._id}`,
+          date: org.createdAt,
+          organization: org.name,
+          email: org.email,
+          type: 'signup',
+          description: `Signup - ${org.plan} plan`,
+          plan: org.plan,
+          amount: 0,
+          status: 'completed',
+          billingCycle: org.billingCycle,
+          nextBillingDate: org.nextBillingDate
+        })
+
+        // Add billing cycle transaction if next billing date exists
+        if (org.nextBillingDate) {
+          transactionsList.push({
+            id: `billing-${org._id}`,
+            date: org.nextBillingDate,
+            organization: org.name,
+            email: org.email,
+            type: 'billing',
+            description: `${org.billingCycle} billing cycle`,
+            plan: org.plan,
+            amount: 0,
+            status: 'scheduled',
+            billingCycle: org.billingCycle,
+            nextBillingDate: org.nextBillingDate
+          })
+        }
+
+        // Add payment transaction if payments exist
+        if (org.totalPayments && org.totalPayments > 0) {
+          transactionsList.push({
+            id: `payment-${org._id}`,
+            date: org.createdAt,
+            organization: org.name,
+            email: org.email,
+            type: 'payment',
+            description: `Payment received`,
+            plan: org.plan,
+            amount: org.totalPayments,
+            status: 'completed',
+            billingCycle: org.billingCycle,
+            nextBillingDate: org.nextBillingDate
+          })
+        }
+      })
+
+      // Sort by date descending
+      transactionsList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      
+      setTransactions(transactionsList)
+    } catch (err) {
+      setTransactionsError(err instanceof Error ? err.message : 'Failed to load transactions')
+    } finally {
+      setTransactionsLoading(false)
+    }
+  }
+
   // Profile handlers
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -651,32 +740,6 @@ export default function SettingsPage() {
   }
 
   // Initial load and authentication check
-  const fetchBillingData = async () => {
-    try {
-      setBillingLoading(true)
-      setBillingError(null)
-      
-      const response = await fetch(`${API_URL}/billing/invoices`, {
-        method: 'GET',
-        headers: getHeaders()
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setInvoices(data.invoices || [])
-      } else if (response.status === 404) {
-        setInvoices([])
-      } else {
-        setBillingError('Failed to load billing data')
-      }
-    } catch (error) {
-      console.error('Error fetching billing data:', error)
-      setBillingError('Failed to load billing data')
-    } finally {
-      setBillingLoading(false)
-    }
-  }
-
   // Initial load and authentication check
   useEffect(() => {
     const initializePage = async () => {
@@ -713,8 +776,8 @@ export default function SettingsPage() {
       fetchApiKeys()
     } else if (activeTab === 'profile') {
       fetchProfile()
-    } else if (activeTab === 'billing') {
-      fetchBillingData()
+    } else if (activeTab === 'transactions') {
+      fetchTransactions()
     }
   }, [activeTab])
 
@@ -738,7 +801,7 @@ export default function SettingsPage() {
               {[
                 { name: "WhatsApp Setup", icon: MessageSquare, id: 'whatsapp' },
                 { name: "Profile", icon: User, id: 'profile' },
-                { name: "Billing", icon: CreditCard, id: 'billing' },
+                { name: "Transactions", icon: CreditCard, id: 'transactions' },
                 { name: "API Keys", icon: Key, id: 'api-keys' },
                 { name: "Security", icon: Lock, id: 'security' },
               ].map((item) => (
@@ -1040,81 +1103,93 @@ export default function SettingsPage() {
                 </div>
               </form>
             </div>
-          ) : activeTab === 'billing' ? (
+          ) : activeTab === 'transactions' ? (
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Billing & Invoices</h2>
-              <p className="text-sm text-gray-600 mb-6">View your invoices and payment history</p>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Transactions</h2>
+              <p className="text-sm text-gray-600 mb-6">View your transaction history</p>
 
-              {billingError && (
+              {transactionsError && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-red-700">{billingError}</p>
+                  <p className="text-red-700">{transactionsError}</p>
                 </div>
               )}
 
-              {billingLoading ? (
+              {transactionsLoading ? (
                 <div className="text-center py-12">
-                  <p className="text-gray-600">Loading billing data...</p>
+                  <Loader className="h-8 w-8 text-gray-400 mx-auto mb-3 animate-spin" />
+                  <p className="text-gray-600">Loading transactions...</p>
                 </div>
-              ) : invoices.length === 0 ? (
+              ) : transactions.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600">No invoices yet</p>
-                  <p className="text-sm text-gray-500 mt-1">Your invoices will appear here once you have an active subscription</p>
+                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600">No transactions yet</p>
+                  <p className="text-sm text-gray-500 mt-1">Your transactions will appear here</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-gray-200 bg-gray-50">
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Invoice</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Type</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Organization</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Description</th>
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Date</th>
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Amount</th>
                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {invoices.map((invoice: any) => (
-                        <tr key={invoice._id} className="border-b border-gray-200 hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900">
-                            <div className="flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-gray-400" />
-                              <span className="font-medium">INV-{invoice.invoiceNumber || invoice._id.slice(-6)}</span>
-                            </div>
+                      {transactions.map((transaction: any) => (
+                        <tr key={transaction.id} className="border-b border-gray-200 hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              transaction.type === 'payment'
+                                ? 'bg-red-100 text-red-800'
+                                : transaction.type === 'billing'
+                                ? 'bg-blue-100 text-blue-800'
+                                : transaction.type === 'signup'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {transaction.type === 'payment'
+                                ? 'Payment'
+                                : transaction.type === 'billing'
+                                ? 'Billing'
+                                : transaction.type === 'signup'
+                                ? 'Signup'
+                                : 'Transaction'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                            {transaction.organization}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">
-                            {new Date(invoice.createdAt || invoice.date).toLocaleDateString('en-IN', {
+                            {transaction.description}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {new Date(transaction.date).toLocaleDateString('en-IN', {
                               year: 'numeric',
                               month: 'short',
                               day: 'numeric'
                             })}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900 font-medium">
-                            {typeof invoice.amount === 'number' 
-                              ? `₹${invoice.amount.toFixed(2)}` 
-                              : invoice.amount}
+                            {transaction.amount > 0 ? `₹${transaction.amount.toFixed(2)}` : '-'}
                           </td>
                           <td className="px-4 py-3 text-sm">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              invoice.status === 'paid' || invoice.paymentStatus === 'paid'
-                                ? 'bg-green-100 text-green-700'
-                                : invoice.status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-700'
-                                : 'bg-gray-100 text-gray-700'
+                              transaction.status === 'completed'
+                                ? 'bg-green-100 text-green-800'
+                                : transaction.status === 'scheduled'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-gray-100 text-gray-800'
                             }`}>
-                              {invoice.status === 'paid' || invoice.paymentStatus === 'paid' ? 'Paid' : invoice.status || 'Pending'}
+                              {transaction.status === 'completed'
+                                ? 'Completed'
+                                : transaction.status === 'scheduled'
+                                ? 'Scheduled'
+                                : transaction.status}
                             </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <a
-                              href={invoice.pdfUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-green-600 hover:text-green-700 transition"
-                            >
-                              <Download className="h-4 w-4" />
-                              Download
-                            </a>
                           </td>
                         </tr>
                       ))}

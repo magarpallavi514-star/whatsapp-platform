@@ -131,10 +131,10 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     { name: "System Health", icon: Activity, href: "/dashboard/system-health", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     { name: "Platform Billing", icon: DollarSign, href: "/dashboard/platform-billing", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     { name: "Transactions", icon: CreditCard, href: "/dashboard/transactions", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
+    { name: "Invoices", icon: Receipt, href: "/dashboard/invoices", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     { name: "Website Settings", icon: Sliders, href: "/dashboard/website-settings", roles: [UserRole.SUPERADMIN], superAdminOnly: true },
     
     // Regular pages - Available to clients (USER role) too
-    { name: "Invoices", icon: Receipt, href: "/dashboard/invoices", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER] },
     { name: "Broadcasts", icon: Megaphone, href: "/dashboard/broadcasts", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER] },
     { name: "Contacts", icon: Users, href: "/dashboard/contacts", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER] },
     { name: "Templates", icon: FileText, href: "/dashboard/templates", roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER] },

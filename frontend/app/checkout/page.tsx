@@ -357,24 +357,24 @@ function CheckoutContent() {
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Column: Plan Selection & Tenure */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 w-full">
             {/* Step 1: Select Plan */}
-            <div className="bg-white rounded-2xl border border-gray-300 p-4 sm:p-8 mb-6 sm:mb-8 shadow-sm hover:shadow-md transition">
-              <h2 className="text-xl sm:text-2xl font-bold text-black mb-4 sm:mb-6">1. Select Your Plan</h2>
+            <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-300 p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8 shadow-sm hover:shadow-md transition">
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-black mb-3 sm:mb-4 lg:mb-6">1. Select Your Plan</h2>
 
               {isLoadingPlans ? (
                 <div className="text-center py-8">
                   <Loader className="h-8 w-8 text-black animate-spin mx-auto" />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {allPlans.map((plan) => (
                     <button
                       key={plan.name}
                       onClick={() => setSelectedPlanId(plan.name)}
-                      className={`p-6 rounded-xl border-2 text-left transition ${
+                      className={`p-4 sm:p-5 lg:p-6 rounded-lg sm:rounded-xl border-2 text-left transition min-h-[140px] ${
                         selectedPlanId === plan.name
                           ? 'border-black bg-gray-50'
                           : 'border-gray-300 bg-white hover:border-gray-400'
@@ -391,10 +391,10 @@ function CheckoutContent() {
 
             {/* Step 2: Select Tenure */}
             {selectedPlan && (
-              <div className="bg-white rounded-2xl border border-gray-300 p-4 sm:p-8 mb-6 sm:mb-8 shadow-sm hover:shadow-md transition">
-                <h2 className="text-xl sm:text-2xl font-bold text-black mb-4 sm:mb-6">2. Choose Billing Period</h2>
+              <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-300 p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 lg:mb-8 shadow-sm hover:shadow-md transition">
+                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-black mb-3 sm:mb-4 lg:mb-6">2. Choose Billing Period</h2>
 
-                <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
                   {[
                     { value: 'monthly' as const, label: '1 Month', discountKey: 'monthlyDiscount' },
                     { value: 'quarterly' as const, label: '3 Months', discountKey: 'quarterlyDiscount' },
@@ -405,15 +405,15 @@ function CheckoutContent() {
                       <button
                         key={option.value}
                         onClick={() => setSelectedTenure(option.value)}
-                        className={`p-2 sm:p-4 rounded-xl border-2 text-center transition relative ${
+                        className={`pt-6 sm:pt-8 pb-3 sm:pb-4 px-2 sm:px-4 rounded-xl border-2 text-center transition relative ${
                           selectedTenure === option.value
                             ? 'border-green-600 bg-green-50'
                             : 'border-gray-300 bg-white hover:border-gray-400'
                         }`}
                       >
                         {discountPercent > 0 && (
-                          <div className="absolute -top-2 sm:-top-3 left-1/2 transform -translate-x-1/2">
-                            <span className="bg-red-600 text-white text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full animate-pulse text-xs">
+                          <div className="absolute -top-3 sm:-top-4 left-1/2 transform -translate-x-1/2 z-10">
+                            <span className="bg-red-600 text-white text-xs font-bold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full whitespace-nowrap">
                               💰 Save {discountPercent}%
                             </span>
                           </div>
@@ -451,7 +451,7 @@ function CheckoutContent() {
                             placeholder="Email"
                             value={loginEmail}
                             onChange={(e) => setLoginEmail(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                            className="w-full px-4 py-3 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-base"
                             required
                           />
                           <div className="relative">
@@ -460,7 +460,7 @@ function CheckoutContent() {
                               placeholder="Password"
                               value={loginPassword}
                               onChange={(e) => setLoginPassword(e.target.value)}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                              className="w-full px-4 py-3 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-base"
                               required
                             />
                             <button
@@ -474,7 +474,7 @@ function CheckoutContent() {
                           <Button
                             type="submit"
                             disabled={isProcessing}
-                            className="w-full bg-black hover:bg-gray-900 text-white"
+                            className="w-full bg-black hover:bg-gray-900 text-white py-3 text-base font-semibold"
                           >
                             {isProcessing ? 'Logging in...' : 'Login'}
                           </Button>
@@ -607,7 +607,7 @@ function CheckoutContent() {
               <p className="text-center text-xs mt-1 sm:mt-2 font-semibold text-gray-800">Offer ends soon - Don't miss out!</p>
             </div>
 
-            <div className="sticky top-20 sm:top-24 bg-white rounded-2xl border border-gray-300 p-4 sm:p-6 shadow-lg">
+            <div className="sticky bottom-0 lg:relative lg:bottom-auto bg-white rounded-xl sm:rounded-2xl border border-gray-300 p-4 sm:p-6 shadow-lg lg:shadow-none">
               <h3 className="text-lg sm:text-xl font-bold text-black mb-4 sm:mb-6">Order Summary</h3>
 
               {selectedPlan && (

@@ -61,12 +61,15 @@ export const routeAccess = {
   '/dashboard/team/roles': [UserRole.SUPERADMIN, UserRole.ADMIN],
   
   // Billing
-  '/dashboard/billing': [UserRole.SUPERADMIN, UserRole.ADMIN],
-  '/dashboard/billing/invoices': [UserRole.SUPERADMIN, UserRole.ADMIN],
-  '/dashboard/billing/subscriptions': [UserRole.SUPERADMIN, UserRole.ADMIN],
+  '/dashboard/billing': [UserRole.SUPERADMIN],
+  '/dashboard/billing/invoices': [UserRole.SUPERADMIN],
+  '/dashboard/billing/subscriptions': [UserRole.SUPERADMIN],
   
-  // Invoices - Allow USER role for clients
-  '/dashboard/invoices': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
+  // Invoices - SuperAdmin only
+  '/dashboard/invoices': [UserRole.SUPERADMIN],
+  
+  // Transactions - Allow all authenticated users to view their transactions
+  '/dashboard/transactions': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
   
   // Settings
   '/dashboard/settings': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
@@ -78,7 +81,6 @@ export const routeAccess = {
   '/dashboard/organizations': [UserRole.SUPERADMIN],
   '/dashboard/system-health': [UserRole.SUPERADMIN],
   '/dashboard/platform-billing': [UserRole.SUPERADMIN],
-  '/dashboard/transactions': [UserRole.SUPERADMIN],
   '/dashboard/website-settings': [UserRole.SUPERADMIN],
 }
 
