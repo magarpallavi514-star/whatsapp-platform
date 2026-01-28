@@ -96,15 +96,31 @@ export const handleWhatsAppOAuth = async (req, res) => {
     
     // 1. Exchange code for access token
     console.log('🔄 Exchanging code for access token...')
-    const tokenResponse = await axios.post(
-      `${GRAPH_API_URL}/oauth/access_token`,
-      {
-        client_id: process.env.META_APP_ID,
-        client_secret: process.env.META_APP_SECRET,
-        redirect_uri: `${process.env.FRONTEND_URL}/integrations/whatsapp/callback`,
-        code
-      }
-    )
+    console.log('OAuth Params:', {
+      client_id: process.env.META_APP_ID,
+      redirect_uri: `${process.env.FRONTEND_URL}/integrations/whatsapp/callback`,
+      code: code?.substring(0, 20) + '...' // Log first 20 chars only
+    })
+    
+    let tokenResponse
+    try {
+      tokenResponse = await axios.post(
+        `${GRAPH_API_URL}/oauth/access_token`,
+        {
+          client_id: process.env.META_APP_ID,
+          client_secret: process.env.META_APP_SECRET,
+          redirect_uri: `${process.env.FRONTEND_URL}/integrations/whatsapp/callback`,
+          code
+        }
+      )
+    } catch (error) {
+      console.error('❌ OAuth token exchange failed:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      })
+      throw error
+    }
     
     const { access_token } = tokenResponse.data
     console.log('✅ Token exchanged successfully')
