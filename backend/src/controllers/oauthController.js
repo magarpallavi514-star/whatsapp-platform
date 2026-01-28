@@ -104,22 +104,44 @@ export const handleWhatsAppOAuth = async (req, res) => {
     
     let tokenResponse
     try {
-      tokenResponse = await axios.post(
+      // Use GET request with params for token exchange
+      console.log('🔄 Making GET request to Meta token endpoint...')
+      tokenResponse = await axios.get(
         `${GRAPH_API_URL}/oauth/access_token`,
         {
-          client_id: process.env.META_APP_ID,
-          client_secret: process.env.META_APP_SECRET,
-          redirect_uri: `${process.env.FRONTEND_URL}/integrations/whatsapp/callback`,
-          code
+          params: {
+            client_id: process.env.META_APP_ID,
+            client_secret: process.env.META_APP_SECRET,
+            redirect_uri: `${process.env.FRONTEND_URL}/integrations/whatsapp/callback`,
+            code
+          }
         }
       )
+      console.log('✅ Token response received:', {
+        hasAccessToken: !!tokenResponse.data?.access_token,
+        responseKeys: Object.keys(tokenResponse.data || {})
+      })
     } catch (error) {
-      console.error('❌ OAuth token exchange failed:', {
+      console.error('❌ OAuth token exchange FAILED:', {
         status: error.response?.status,
         statusText: error.response?.statusText,
-        data: error.response?.data
+        data: error.response?.data,
+        message: error.message,
+        code: error.code
       })
-      throw error
+      
+      // Always return proper JSON error response
+      return res.status(error.response?.status || 400).json({
+        success: false,
+        message: 'Failed to exchange code for access token',
+        error: error.response?.data?.error?.message || error.message,
+        meta: error.response?.data || {
+          error: {
+            type: error.code,
+            message: error.message
+          }
+        }
+      })
     }
     
     const { access_token } = tokenResponse.data
