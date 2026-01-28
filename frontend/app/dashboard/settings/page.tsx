@@ -2,10 +2,19 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { MessageSquare, User, Lock, Shield, Plus, Trash2, CheckCircle, XCircle, RefreshCw, Phone, X, Copy, Eye, EyeOff, Key, Download, FileText, CreditCard, ArrowDown, Calendar, ArrowUp, Package, Loader } from "lucide-react"
+import { MessageSquare, User, Lock, Shield, Plus, Trash2, CheckCircle, XCircle, RefreshCw, Phone, X, Copy, Eye, EyeOff, Key, Download, FileText, CreditCard, ArrowDown, Calendar, ArrowUp, Package, Loader, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ErrorToast } from "@/components/ErrorToast"
 import { authService } from "@/lib/auth"
+
+// Declare global window functions
+declare global {
+  interface Window {
+    launchWhatsAppSignup: () => void
+    fbLoginCallback: (response: any) => void
+    FB: any
+  }
+}
 
 interface PhoneNumber {
   _id: string
@@ -59,37 +68,15 @@ export default function SettingsPage() {
   const [apiKeys, setApiKeys] = useState<ApiKeyData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false)
-  const [newApiKey, setNewApiKey] = useState('')
   const [testingId, setTestingId] = useState<string | null>(null)
-  const [showEditModal, setShowEditModal] = useState(false)
   const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
-  const [formData, setFormData] = useState({
-    phoneNumberId: '',
+  const [editFormData, setEditFormData] = useState({
     wabaId: '',
-    accessToken: '',
     displayName: '',
     displayPhone: ''
   })
-  const [tenantFormData, setTenantFormData] = useState({
-    accountName: 'John Doe',
-    email: 'john@example.com',
-    company: 'My Company',
-    phone: '+1 234 567 8900',
-    timezone: 'America/New_York'
-  })
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  })
-  const [apiKeyName, setApiKeyName] = useState('')
-  const [tenantAccounts, setTenantAccounts] = useState<any[]>([])
-  const [showTenantModal, setShowTenantModal] = useState(false)
-  const [newTenantKey, setNewTenantKey] = useState('')
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -104,6 +91,24 @@ export default function SettingsPage() {
   const [transactions, setTransactions] = useState<any[]>([])
   const [transactionsLoading, setTransactionsLoading] = useState(false)
   const [transactionsError, setTransactionsError] = useState<string | null>(null)
+  
+  // Tenant management states
+  const [tenantAccounts, setTenantAccounts] = useState<any[]>([])
+  const [showAddTenant, setShowAddTenant] = useState(false)
+  const [tenantFormData, setTenantFormData] = useState({ name: '', email: '', phone: '' })
+  const [addingTenant, setAddingTenant] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  
+  // API Key states
+  const [newApiKey, setNewApiKey] = useState<string | null>(null)
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false)
+  const [apiKeyName, setApiKeyName] = useState('')
+  const [creatingKey, setCreatingKey] = useState(false)
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api"
 
@@ -227,40 +232,6 @@ export default function SettingsPage() {
     }
   }
 
-  const addPhoneNumber = async () => {
-    if (!formData.phoneNumberId || !formData.wabaId || !formData.accessToken) {
-      alert('Please fill all required fields')
-      return
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/settings/phone-numbers`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify(formData)
-      })
-
-      if (response.status === 401) {
-        alert('Your session expired. Please login again.')
-        router.push('/login')
-        return
-      }
-
-      const result = await response.json()
-      if (response.ok) {
-        alert('Phone number added successfully')
-        fetchPhoneNumbers()
-        setShowAddModal(false)
-        setFormData({ phoneNumberId: '', wabaId: '', accessToken: '', displayName: '', displayPhone: '' })
-      } else {
-        alert('Failed to add phone number: ' + result.message)
-      }
-    } catch (error) {
-      console.error("Error adding phone number:", error)
-      alert('Failed to add phone number')
-    }
-  }
-
   const toggleActive = async (id: string, currentStatus: boolean) => {
     try {
       const response = await fetch(`${API_URL}/settings/phone-numbers/${id}`, {
@@ -297,6 +268,37 @@ export default function SettingsPage() {
     }
   }
 
+  const handleConnectWhatsAppFBLogin = () => {
+    try {
+      console.log('🎯 Initiating Facebook Business Login for WhatsApp...')
+      
+      // Check if FB SDK is loaded
+      if (typeof window.launchWhatsAppSignup === 'undefined') {
+        setError('Facebook SDK not loaded. Please refresh the page.')
+        return
+      }
+      
+      // Store return URL
+      localStorage.setItem('oauth_return_to', '/dashboard/settings?tab=whatsapp')
+      
+      // Launch the Facebook Business Login flow
+      window.launchWhatsAppSignup()
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to initiate login'
+      console.error('❌ Error:', errorMsg)
+      setError(errorMsg)
+    }
+  }
+
+  const generateRandomString = (length: number): string => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    let result = ''
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return result
+  }
+
   const deletePhoneNumber = async (id: string) => {
     if (!confirm('Are you sure you want to delete this phone number?')) return
     try {
@@ -314,58 +316,6 @@ export default function SettingsPage() {
     } catch (error) {
       console.error("Error deleting phone number:", error)
       alert('Failed to delete phone number')
-    }
-  }
-
-  const openEditModal = (phone: PhoneNumber) => {
-    setEditingPhoneId(phone._id)
-    setFormData({
-      phoneNumberId: phone.phoneNumberId,
-      wabaId: phone.wabaId,
-      accessToken: '',
-      displayName: phone.displayName,
-      displayPhone: phone.displayPhone
-    })
-    setShowEditModal(true)
-  }
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingPhoneId) return
-    try {
-      const payload: any = {
-        phoneNumberId: formData.phoneNumberId,
-        wabaId: formData.wabaId,
-        displayName: formData.displayName,
-        displayPhone: formData.displayPhone
-      }
-      if (formData.accessToken.trim()) {
-        payload.accessToken = formData.accessToken
-      }
-      const response = await fetch(`${API_URL}/settings/phone-numbers/${editingPhoneId}`, {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify(payload)
-      })
-      if (response.ok) {
-        alert('Phone number updated successfully')
-        setShowEditModal(false)
-        setEditingPhoneId(null)
-        setFormData({
-          phoneNumberId: '',
-          wabaId: '',
-          accessToken: '',
-          displayName: '',
-          displayPhone: ''
-        })
-        fetchPhoneNumbers()
-      } else {
-        const data = await response.json()
-        alert(data.message || 'Failed to update phone number')
-      }
-    } catch (error) {
-      console.error("Error updating phone number:", error)
-      alert('Failed to update phone number')
     }
   }
 
@@ -781,6 +731,116 @@ export default function SettingsPage() {
     }
   }, [activeTab])
 
+  // WhatsApp Embedded Signup Message Handler
+  useEffect(() => {
+    const handleEmbeddedSignup = (event: CustomEvent) => {
+      const signupData = event.detail
+      console.log('✅ WhatsApp Embedded Signup Session Data:', signupData)
+      
+      try {
+        // Extract session info from signup data
+        const { phone_number_id, waba_id, business_account_id, access_token, phone_number, display_name, status } = signupData
+        
+        if (phone_number_id && waba_id && access_token) {
+          console.log('📲 Signup Data Extracted:')
+          console.log('  Phone Number ID:', phone_number_id)
+          console.log('  WABA ID:', waba_id)
+          console.log('  Business Account ID:', business_account_id)
+          console.log('  Phone:', phone_number)
+          console.log('  Display Name:', display_name)
+          console.log('  Status:', status)
+          
+          // Store to sessionStorage for later use
+          sessionStorage.setItem('pending_wa_signup', JSON.stringify({
+            phoneNumberId: phone_number_id,
+            wabaId: waba_id,
+            businessAccountId: business_account_id,
+            accessToken: access_token,
+            phoneNumber: phone_number,
+            displayName: display_name,
+            signupTime: new Date().toISOString()
+          }))
+          
+          // Refresh phone numbers list to show new connection
+          setTimeout(() => {
+            console.log('🔄 Refreshing phone numbers after Embedded Signup...')
+            fetchPhoneNumbers()
+          }, 1000)
+          
+          // Show success notification
+          setError("")
+        }
+      } catch (error) {
+        console.error('❌ Error handling WhatsApp Embedded Signup:', error)
+      }
+    }
+    
+    // Listen for the custom event dispatched from layout
+    window.addEventListener('wa_embedded_signup' as any, handleEmbeddedSignup as any)
+    
+    return () => {
+      window.removeEventListener('wa_embedded_signup' as any, handleEmbeddedSignup as any)
+    }
+  }, [])
+
+  // Facebook Business Login Success Handler
+  useEffect(() => {
+    const handleFBLoginSuccess = async (event: CustomEvent) => {
+      const { code } = event.detail
+      console.log('📲 Facebook Business Login Success Event - Code:', code.substring(0, 20) + '...')
+      
+      try {
+        setIsLoading(true)
+        setError("")
+        
+        // Exchange code with backend for System User token
+        const token = authService.getToken()
+        const response = await fetch(`${API_URL}/integrations/whatsapp/oauth`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            code: code,
+            method: 'fb_business_login' // Indicate this came from FB.login()
+          })
+        })
+        
+        console.log('📨 OAuth Exchange Response Status:', response.status)
+        
+        if (response.ok) {
+          const data = await response.json()
+          console.log('✅ OAuth Exchange Success:', {
+            success: data.success,
+            phoneCount: data.phoneNumbers?.length || 0
+          })
+          
+          // Refresh phone numbers list
+          await fetchPhoneNumbers()
+          setError("")
+        } else {
+          const errorData = await response.json()
+          console.error('❌ OAuth Exchange Failed:', errorData)
+          setError(errorData.message || 'Failed to connect WhatsApp account')
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Connection error'
+        console.error('❌ Error exchanging code:', errorMsg)
+        setError(errorMsg)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    // Listen for Facebook Business Login success event
+    window.addEventListener('fb_login_success' as any, handleFBLoginSuccess as any)
+    
+    return () => {
+      window.removeEventListener('fb_login_success' as any, handleFBLoginSuccess as any)
+    }
+  }, [])
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'Never'
     const date = new Date(dateString)
@@ -823,15 +883,11 @@ export default function SettingsPage() {
         <div className="lg:col-span-3">
           {activeTab === 'whatsapp' ? (
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-6">
+              <div className="mb-6">
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900">WhatsApp Business Accounts</h2>
                   <p className="text-sm text-gray-600 mt-1">Manage your connected WhatsApp Business numbers</p>
                 </div>
-                <Button className="bg-green-600 hover:bg-green-700" onClick={() => setShowAddModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Number
-                </Button>
               </div>
 
               {/* Available Connection Summary */}
@@ -875,10 +931,11 @@ export default function SettingsPage() {
                 <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
                   <Phone className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-600 mb-1">No WhatsApp numbers connected</p>
-                  <p className="text-sm text-gray-500 mb-4">Add your first WhatsApp Business number</p>
-                  <Button className="bg-green-600 hover:bg-green-700" onClick={() => setShowAddModal(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Phone Number
+                  <p className="text-sm text-gray-500 mb-4">Connect your WhatsApp Business Account securely via Meta</p>
+                  <Button className="bg-green-600 hover:bg-green-700" onClick={handleConnectWhatsAppFBLogin}>
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Connect WhatsApp
+                    <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
               ) : (
@@ -936,15 +993,6 @@ export default function SettingsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => openEditModal(phone)}
-                            className="text-blue-600 hover:bg-blue-50"
-                            title="Edit configuration"
-                          >
-                            <Key className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
                             onClick={() => deletePhoneNumber(phone._id)}
                             className="text-red-600 hover:bg-red-50"
                             title="Delete"
@@ -955,6 +1003,13 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   ))}
+                  <div className="mt-6 p-4 border-2 border-dashed border-gray-300 rounded-lg text-center">
+                    <p className="text-gray-600 mb-3">Want to connect another WhatsApp account?</p>
+                    <Button className="bg-green-600 hover:bg-green-700" onClick={handleConnectWhatsAppFBLogin}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Connect Another WhatsApp
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1366,295 +1421,6 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
-
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-semibold text-gray-900">Add WhatsApp Business Number</h2>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number ID *</label>
-                <input
-                  type="text"
-                  value={formData.phoneNumberId}
-                  onChange={(e) => setFormData({ ...formData, phoneNumberId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-                  placeholder="889344924259692"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">WABA ID *</label>
-                <input
-                  type="text"
-                  value={formData.wabaId}
-                  onChange={(e) => setFormData({ ...formData, wabaId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-                  placeholder="1536545574042607"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Access Token *</label>
-                <textarea
-                  value={formData.accessToken}
-                  onChange={(e) => setFormData({ ...formData, accessToken: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 font-mono text-xs"
-                  placeholder="EAAaBZBc8vE3c..."
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Display Name (Optional)</label>
-                <input
-                  type="text"
-                  value={formData.displayName}
-                  onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-                  placeholder="My Business WhatsApp"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Display Phone (Optional)</label>
-                <input
-                  type="text"
-                  value={formData.displayPhone}
-                  onChange={(e) => setFormData({ ...formData, displayPhone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-                  placeholder="+1 234 567 8900"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2 p-6 border-t justify-end">
-              <Button variant="outline" onClick={() => setShowAddModal(false)}>Cancel</Button>
-              <Button className="bg-green-600 hover:bg-green-700" onClick={addPhoneNumber}>
-                Add Phone Number
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-semibold text-gray-900">Edit WhatsApp Configuration</h2>
-              <button onClick={() => {
-                setShowEditModal(false)
-                setEditingPhoneId(null)
-              }} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number ID *</label>
-                <input
-                  type="text"
-                  value={formData.phoneNumberId}
-                  onChange={(e) => setFormData({ ...formData, phoneNumberId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-gray-50"
-                  disabled
-                />
-                <p className="text-xs text-gray-500 mt-1">Cannot change Phone Number ID</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">WABA ID *</label>
-                <input
-                  type="text"
-                  value={formData.wabaId}
-                  onChange={(e) => setFormData({ ...formData, wabaId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  placeholder="1536545574042607"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Access Token</label>
-                <textarea
-                  value={formData.accessToken}
-                  onChange={(e) => setFormData({ ...formData, accessToken: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 font-mono text-xs"
-                  placeholder="Leave empty to keep current token. Paste new token to update..."
-                  rows={3}
-                />
-                <p className="text-xs text-gray-500 mt-1">Only fill this if you want to update the token</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Display Name (Optional)</label>
-                <input
-                  type="text"
-                  value={formData.displayName}
-                  onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  placeholder="My Business WhatsApp"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Display Phone (Optional)</label>
-                <input
-                  type="text"
-                  value={formData.displayPhone}
-                  onChange={(e) => setFormData({ ...formData, displayPhone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  placeholder="+1 234 567 8900"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-6 border-t justify-end">
-                <Button variant="outline" onClick={() => {
-                  setShowEditModal(false)
-                  setEditingPhoneId(null)
-                }}>Cancel</Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  Save Changes
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {showApiKeyModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-semibold text-gray-900">API Key Generated</h2>
-              <button onClick={() => setShowApiKeyModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800 font-medium mb-2">⚠️ Important: Save this API key now!</p>
-                <p className="text-sm text-yellow-700">
-                  This is the only time you'll see the full API key. Store it securely.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Your API Key</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newApiKey}
-                    readOnly
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => copyToClipboard(newApiKey)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 p-6 border-t justify-end">
-              <Button className="bg-green-600 hover:bg-green-700" onClick={() => setShowApiKeyModal(false)}>
-                I've Saved My Key
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Tenant API Key Modal */}
-      {showTenantModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-2xl">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Tenant Account Created!</h3>
-                  <p className="text-sm text-gray-600">API key generated successfully</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm font-medium text-yellow-900 mb-1">⚠️ Important: Save This Key</p>
-                <p className="text-sm text-yellow-700">
-                  This is the only time you'll see the full API key. 
-                  Give this to your customer to integrate with the platform.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tenant API Key</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newTenantKey}
-                    readOnly
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm text-gray-900"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      copyToClipboard(newTenantKey)
-                    }}
-                    className="bg-green-600 hover:bg-green-700 text-white border-green-600"
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copy
-                  </Button>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm font-medium text-gray-900 mb-2">Usage Example:</p>
-                <pre className="text-xs bg-gray-900 text-gray-100 p-3 rounded overflow-x-auto">
-{`fetch('${API_URL}/messages/send', {
-  method: 'POST',
-  headers: {
-    'Authorization': 'Bearer ${newTenantKey}',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    to: '+1234567890',
-    message: 'Hello!'
-  })
-})`}
-                </pre>
-              </div>
-            </div>
-
-            <div className="flex gap-2 p-6 border-t justify-end">
-              <Button 
-                className="bg-green-600 hover:bg-green-700" 
-                onClick={() => {
-                  setShowTenantModal(false)
-                  setNewTenantKey('')
-                }}
-              >
-                I've Saved the Key
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

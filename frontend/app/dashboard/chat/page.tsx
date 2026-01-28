@@ -569,16 +569,24 @@ export default function ChatPage() {
     // Handler for new messages
     const handleNewMessage = (data: any) => {
       const { conversationId, message } = data;
-      console.log('💬 New message received:', conversationId, message);
+      console.log('%c💬 NEW MESSAGE RECEIVED', 'color: #25d366; font-weight: bold', {
+        broadcastConversationId: conversationId,
+        messageId: message._id,
+        messageType: message.messageType,
+        from: message.recipientPhone,
+        timestamp: new Date().toLocaleTimeString()
+      });
       
       // ✅ DEBUG: Log ID matching for real-time sync troubleshooting
-      console.log('%c🔍 CONVERSATION ID DEBUG', 'color: #ff6b6b; font-weight: bold', {
+      console.log('%c🔍 CONVERSATION ID MATCH CHECK', 'color: #ff6b6b; font-weight: bold', {
         broadcastConversationId: conversationId,
         selectedContactId: selectedContact?.id,
         selectedContactPhone: selectedContact?.phone,
         messageFrom: message.recipientPhone,
         messageType: message.messageType,
         match: conversationId === selectedContact?.id,
+        broadcastIdType: typeof conversationId,
+        selectedIdType: typeof selectedContact?.id,
         timestamp: new Date().toLocaleTimeString()
       });
       
@@ -682,12 +690,15 @@ export default function ChatPage() {
     socket.on('contact_active', handleContactActive);
     socket.on('typing_indicator', handleTypingIndicator);
     
+    console.log('%c🎧 Socket listeners attached for conversation updates', 'color: #00d4ff; font-weight: bold');
+    
     // Cleanup on unmount
     return () => {
       socket.off('new_message', handleNewMessage);
       socket.off('conversation_update', handleConversationUpdate);
       socket.off('contact_active', handleContactActive);
       socket.off('typing_indicator', handleTypingIndicator);
+      console.log('%c🎧 Socket listeners removed', 'color: #ff6b6b');
     };
   }, [selectedContact?.id]);
 
@@ -757,14 +768,24 @@ export default function ChatPage() {
       // Join Socket.io room for this conversation
       const socket = getSocket();
       if (socket) {
+        console.log('%c📍 JOINING CONVERSATION ROOM', 'color: #25d366; font-weight: bold', {
+          conversationId: selectedContact.id,
+          socketId: socket.id,
+          socketConnected: socket.connected,
+          conversationIdType: typeof selectedContact.id
+        });
         joinConversation(selectedContact.id);
-        console.log('📍 Joined conversation room:', selectedContact.id);
+      } else {
+        console.error('%c❌ SOCKET NOT FOUND - Cannot join conversation', 'color: #ff6b6b; font-weight: bold');
       }
     } else {
       // Leave Socket.io room when deselecting
       const prevContactId = selectedContactIdRef.current;
       const socket = getSocket();
       if (socket && prevContactId) {
+        console.log('%c📍 LEAVING CONVERSATION ROOM', 'color: #ff6b6b; font-weight: bold', {
+          conversationId: prevContactId
+        });
         leaveConversation(prevContactId);
       }
       

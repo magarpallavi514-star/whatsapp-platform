@@ -102,7 +102,15 @@ export const initSocketIO = (server) => {
         }
         conversationUsers.get(conversationId).add(socket.id);
         
-        console.log(`📍 User ${socket.email} joined conversation ${conversationId}`);
+        console.log('%c📍 USER JOINED CONVERSATION ROOM', {
+          userId: socket.email,
+          socketId: socket.id,
+          conversationId: conversationId,
+          conversationIdType: typeof conversationId,
+          room: `conversation:${conversationId}`,
+          totalUsersInConversation: conversationUsers.get(conversationId).size,
+          timestamp: new Date().toISOString()
+        });
       }
     });
 
@@ -183,21 +191,25 @@ export const broadcastNewMessage = (io, conversationId, message) => {
       timestamp: new Date().toISOString(),
     };
     
-    console.log('📡 Broadcasting new message:', {
-      room: `conversation:${conversationId}`,
+    const room = `conversation:${conversationId}`;
+    console.log('%c📡 BROADCASTING NEW MESSAGE', {
+      room: room,
       messageId: message._id,
-      type: message.messageType
+      messageType: message.messageType,
+      from: message.recipientPhone,
+      conversationIdType: typeof conversationId,
+      timestamp: new Date().toISOString()
     });
     
     // ✅ Emit with acknowledgment callback to detect failures
-    io.to(`conversation:${conversationId}`).emit('new_message', payload, (err) => {
+    io.to(room).emit('new_message', payload, (err) => {
       if (err) {
         console.error('❌ Broadcast new_message failed:', {
-          room: `conversation:${conversationId}`,
+          room: room,
           error: err.message
         });
       } else {
-        console.log('✅ Broadcast new_message successful');
+        console.log('✅ Broadcast new_message successful to room:', room);
       }
     });
   } catch (error) {
