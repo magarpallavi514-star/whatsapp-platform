@@ -81,12 +81,24 @@ function CallbackContent() {
         }
       )
 
-      const data = await response.json()
+      // Handle non-JSON responses safely
+      const contentType = response.headers.get('content-type')
+      let data
+      
+      if (contentType?.includes('application/json')) {
+        data = await response.json()
+      } else {
+        const text = await response.text()
+        console.error('❌ Non-JSON response from backend:', text)
+        setStatus('error')
+        setError('Invalid response from server. Please check backend logs.')
+        return
+      }
 
       if (!response.ok) {
         console.error('❌ Backend error:', data)
         setStatus('error')
-        setError(data.message || 'Failed to connect WhatsApp')
+        setError(data.message || data.error || 'Failed to connect WhatsApp')
         return
       }
 

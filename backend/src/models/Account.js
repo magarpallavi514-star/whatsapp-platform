@@ -68,6 +68,13 @@ const accountSchema = new mongoose.Schema({
     sparse: true  // Optional - only for accounts with WABA
   },
   
+  // Business ID (Meta Business Account ID owner of WABA - for API calls)
+  businessId: {
+    type: String,
+    index: true,
+    sparse: true  // Optional - only for accounts with Business ID
+  },
+  
   // Password (hashed with bcrypt)
   password: {
     type: String,

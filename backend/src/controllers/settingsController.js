@@ -537,7 +537,7 @@ export const getProfile = async (req, res) => {
     const accountId = req.account._id;
     
     const account = await Account.findById(accountId)
-      .select('name email company phone timezone')
+      .select('name email company phone timezone wabaId businessId subdomain')
       .lean();
     
     if (!account) {
@@ -549,7 +549,13 @@ export const getProfile = async (req, res) => {
     
     res.json({
       success: true,
-      profile: account
+      profile: account,
+      whatsappConfig: {
+        wabaId: account.wabaId || null,
+        businessId: account.businessId || null,
+        isConnected: !!(account.wabaId && account.businessId),
+        subdomain: account.subdomain || null
+      }
     });
     
   } catch (error) {
@@ -567,7 +573,7 @@ export const getProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const accountId = req.account._id;
-    const { name, email, company, phone, timezone } = req.body;
+    const { name, email, company, phone, timezone, wabaId, businessId } = req.body;
     
     const account = await Account.findById(accountId);
     
@@ -585,6 +591,16 @@ export const updateProfile = async (req, res) => {
     if (phone !== undefined) account.phone = phone;
     if (timezone) account.timezone = timezone;
     
+    // Update WhatsApp config if provided (typically set during OAuth, but allow manual override)
+    if (wabaId !== undefined) {
+      account.wabaId = wabaId || null;
+      console.log('📝 Updated wabaId:', wabaId || 'cleared');
+    }
+    if (businessId !== undefined) {
+      account.businessId = businessId || null;
+      console.log('📝 Updated businessId:', businessId || 'cleared');
+    }
+    
     await account.save();
     
     res.json({
@@ -596,6 +612,11 @@ export const updateProfile = async (req, res) => {
         company: account.company,
         phone: account.phone,
         timezone: account.timezone
+      },
+      whatsappConfig: {
+        wabaId: account.wabaId || null,
+        businessId: account.businessId || null,
+        isConnected: !!(account.wabaId && account.businessId)
       }
     });
     

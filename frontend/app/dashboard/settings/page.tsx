@@ -84,7 +84,11 @@ export default function SettingsPage() {
     phone: '',
     timezone: '',
     accountId: '',
-    userId: ''
+    userId: '',
+    wabaId: '',
+    businessId: '',
+    isWhatsAppConnected: false,
+    subdomain: ''
   })
 
   // Transactions states
@@ -336,8 +340,9 @@ export default function SettingsPage() {
       if (response.ok) {
         const data = await response.json()
         console.log('✅ Profile fetched:', data.profile)
+        console.log('✅ WhatsApp Config:', data.whatsappConfig)
         
-        // Populate form with fetched data
+        // Populate form with fetched data including WhatsApp config
         setProfileData({
           name: data.profile?.name || '',
           email: data.profile?.email || '',
@@ -345,7 +350,11 @@ export default function SettingsPage() {
           phone: data.profile?.phone || '',
           timezone: data.profile?.timezone || 'Asia/Kolkata',
           accountId: data.profile?.accountId || user?.accountId || '',
-          userId: data.profile?._id || user?.id || ''
+          userId: data.profile?._id || user?.id || '',
+          wabaId: data.whatsappConfig?.wabaId || '',
+          businessId: data.whatsappConfig?.businessId || '',
+          isWhatsAppConnected: data.whatsappConfig?.isConnected || false,
+          subdomain: data.profile?.subdomain || ''
         })
       } else {
         console.error('Failed to fetch profile:', response.status)
@@ -358,7 +367,11 @@ export default function SettingsPage() {
             phone: '',
             timezone: 'Asia/Kolkata',
             accountId: user.accountId || '',
-            userId: user.id || ''
+            userId: user.id || '',
+            wabaId: '',
+            businessId: '',
+            isWhatsAppConnected: false,
+            subdomain: ''
           })
         }
       }
@@ -1145,6 +1158,90 @@ export default function SettingsPage() {
                           >
                             <Copy className="h-4 w-4" />
                           </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* WhatsApp Configuration (Read-only) */}
+                  <div className="md:col-span-2 border-t pt-6 mt-2">
+                    <p className="text-sm font-medium text-gray-700 mb-4 flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-green-600" />
+                      WhatsApp Configuration
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          WABA ID
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={profileData.wabaId || 'Not connected'}
+                            readOnly
+                            className={`flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 font-mono text-sm ${!profileData.wabaId ? 'text-gray-400' : ''}`}
+                          />
+                          {profileData.wabaId && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(profileData.wabaId)
+                                alert('WABA ID copied!')
+                              }}
+                              className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-600"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Business ID
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={profileData.businessId || 'Not connected'}
+                            readOnly
+                            className={`flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 font-mono text-sm ${!profileData.businessId ? 'text-gray-400' : ''}`}
+                          />
+                          {profileData.businessId && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(profileData.businessId)
+                                alert('Business ID copied!')
+                              }}
+                              className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-600"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Connection Status
+                        </label>
+                        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-300">
+                          {profileData.isWhatsAppConnected ? (
+                            <>
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                              <span className="text-gray-900">
+                                ✅ WhatsApp connected and synchronized
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="h-5 w-5 text-orange-500" />
+                              <span className="text-gray-700">
+                                ⚠️ WhatsApp not yet connected. Complete OAuth setup to connect.
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
