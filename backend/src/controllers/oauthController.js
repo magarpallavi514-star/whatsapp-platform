@@ -363,11 +363,11 @@ export const handleWhatsAppOAuth = async (req, res) => {
       await axios.post(
         `${GRAPH_API_URL}/${wabaId}/subscribed_apps`,
         { 
-          subscribed_fields: ['messages', 'message_status'],
+          subscribed_fields: ['messages', 'message_status', 'account_update'],
           access_token: access_token
         }
       )
-      console.log('✅ Subscribed to webhooks')
+      console.log('✅ Subscribed to webhooks (messages, message_status, account_update)')
     } catch (webhookError) {
       console.warn('⚠️ Webhook subscription warning:', webhookError.message)
       // Don't fail - webhook might already be subscribed

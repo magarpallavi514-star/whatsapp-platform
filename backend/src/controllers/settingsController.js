@@ -554,7 +554,13 @@ export const getProfile = async (req, res) => {
         wabaId: account.wabaId || null,
         businessId: account.businessId || null,
         isConnected: !!(account.wabaId && account.businessId),
-        subdomain: account.subdomain || null
+        subdomain: account.subdomain || null,
+        metaSync: {
+          isSynced: account.metaSync?.isSynced || false,
+          lastWebhookAt: account.metaSync?.lastWebhookAt || null,
+          metaStatus: account.metaSync?.metaStatus || 'unknown',
+          hasWebhookData: !!(account.metaSync?.webhookData)
+        }
       }
     });
     

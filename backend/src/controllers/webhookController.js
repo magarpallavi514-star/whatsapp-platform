@@ -549,6 +549,107 @@ export const handleWebhook = async (req, res) => {
             } else {
               console.log('⚠️ No incoming messages in this webhook');
             }
+          } else if (change.field === 'account_update') {
+            console.log('🏢 ========== ACCOUNT UPDATE WEBHOOK ==========');
+            
+            // Extract Business ID from entry.id
+            const businessId = entry.id;
+            console.log('📍 Business ID from webhook:', businessId);
+            
+            const value = change.value;
+            console.log('Account update data:', JSON.stringify(value, null, 2));
+            
+            // 🔥 CRITICAL: Store ALL Meta details from webhook
+            if (businessId) {
+              try {
+                // Find account by WABA ID (if available from webhook)
+                const wabaId = value.id || entry.id;
+                
+                // Try to find account by WABA ID first
+                let account = await Account.findOne({ wabaId });
+                
+                if (account) {
+                  // Update account with ALL Meta details
+                  account.businessId = businessId;
+                  
+                  // Store complete webhook data
+                  if (!account.metaSync) {
+                    account.metaSync = {};
+                  }
+                  account.metaSync.webhookData = value;
+                  account.metaSync.lastWebhookAt = new Date();
+                  account.metaSync.isSynced = true;
+                  account.metaSync.metaStatus = value.status || 'active';
+                  
+                  // Extract individual fields if provided
+                  if (value.messaging_product) {
+                    console.log('📦 Messaging Product:', value.messaging_product);
+                  }
+                  if (value.waba_subscription_status) {
+                    console.log('📊 WABA Subscription Status:', value.waba_subscription_status);
+                  }
+                  if (value.account_review_status) {
+                    console.log('🔍 Account Review Status:', value.account_review_status);
+                  }
+                  if (value.phone_numbers) {
+                    console.log('📱 Phone Numbers in webhook:', value.phone_numbers);
+                  }
+                  
+                  await account.save();
+                  
+                  console.log('✅ Account synced with Meta details:', {
+                    accountId: account.accountId,
+                    wabaId: account.wabaId,
+                    businessId: account.businessId,
+                    metaStatus: account.metaSync.metaStatus,
+                    lastWebhookAt: account.metaSync.lastWebhookAt,
+                    isSynced: account.metaSync.isSynced
+                  });
+                  
+                  console.log('📋 Complete webhook data stored:', {
+                    fields: Object.keys(value),
+                    dataSize: JSON.stringify(value).length + ' bytes'
+                  });
+                } else {
+                  console.log('⚠️ Account not found by WABA ID, searching by any Phone Number in this WABA...');
+                  
+                  // Fallback: Find account by any active phone number in this WABA
+                  const phoneInWaba = await PhoneNumber.findOne({ wabaId });
+                  if (phoneInWaba) {
+                    const foundAccount = await Account.findOne({ accountId: phoneInWaba.accountId });
+                    if (foundAccount) {
+                      foundAccount.businessId = businessId;
+                      
+                      // Store complete webhook data
+                      if (!foundAccount.metaSync) {
+                        foundAccount.metaSync = {};
+                      }
+                      foundAccount.metaSync.webhookData = value;
+                      foundAccount.metaSync.lastWebhookAt = new Date();
+                      foundAccount.metaSync.isSynced = true;
+                      foundAccount.metaSync.metaStatus = value.status || 'active';
+                      
+                      await foundAccount.save();
+                      
+                      console.log('✅ Account synced via phone number lookup:', {
+                        accountId: foundAccount.accountId,
+                        wabaId: foundAccount.wabaId,
+                        businessId: foundAccount.businessId,
+                        metaStatus: foundAccount.metaSync.metaStatus
+                      });
+                    }
+                  } else {
+                    console.warn('⚠️ Could not find account or phone numbers for WABA:', wabaId);
+                  }
+                }
+              } catch (storageError) {
+                console.error('❌ Error storing Meta account details:', storageError.message);
+              }
+            } else {
+              console.warn('⚠️ No Business ID in account_update webhook');
+            }
+            
+            console.log('============================================\n');
           } else {
             console.log('ℹ️ Ignoring field:', change.field);
           }

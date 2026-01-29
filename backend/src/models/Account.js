@@ -75,6 +75,18 @@ const accountSchema = new mongoose.Schema({
     sparse: true  // Optional - only for accounts with Business ID
   },
   
+  // Meta Sync Details (from webhook account_update)
+  metaSync: {
+    // Raw webhook data from Meta account_update event
+    webhookData: mongoose.Schema.Types.Mixed,
+    // Last time Meta sent account_update webhook
+    lastWebhookAt: Date,
+    // Track if account is synced with Meta
+    isSynced: { type: Boolean, default: false },
+    // Status from webhook (e.g., active, pending, suspended)
+    metaStatus: String
+  },
+  
   // Password (hashed with bcrypt)
   password: {
     type: String,
