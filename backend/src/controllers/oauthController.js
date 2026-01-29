@@ -163,108 +163,59 @@ export const handleWhatsAppOAuth = async (req, res) => {
       console.warn('⚠️ Token verification failed (non-critical):', tokenError.message)
     }
     
-    // 3. Get Business ID (from Account or use as fallback)
+    // 3. Check Account for WABA ID (from webhook)
     const account = await Account.findOne({ accountId }).lean()
     const businessId = account?.businessId
+    const wabaId = account?.wabaId
     
-    console.log('🏢 Business ID:', businessId || 'not found in DB, will try direct WABA endpoint')
+    console.log('🏢 ========== CHECKING ACCOUNT SYNC STATUS ==========')
+    console.log('Business ID:', businessId || '⏳ waiting for webhook')
+    console.log('WABA ID:', wabaId || '⏳ waiting for webhook')
     
-    // 3a. Get WhatsApp Business Accounts (WABA) - native to Embedded Signup
-    console.log('📱 Fetching WhatsApp Business Accounts...')
-    let wabaResponse
-    try {
-      // If we have businessId, use it (recommended approach)
-      if (businessId) {
-        console.log(`🔗 Using Business ID: ${businessId}`)
-        wabaResponse = await axios.get(
-          `${GRAPH_API_URL}/${businessId}/owned_whatsapp_business_accounts`,
-          {
-            params: {
-              access_token: access_token
-            }
-          }
-        )
-      } else {
-        // Fallback: try direct WABA endpoint (may not work with Embedded Signup)
-        console.log('⚠️ No Business ID found, trying direct WABA endpoint...')
-        wabaResponse = await axios.get(
-          `${GRAPH_API_URL}/whatsapp_business_accounts`,
-          {
-            params: {
-              access_token: access_token
-            }
-          }
-        )
-      }
-    } catch (wabaError) {
-      console.warn('⚠️ First WABA fetch failed, trying alternate endpoint...')
-      // If business ID approach failed, try /me endpoint
-      try {
-        wabaResponse = await axios.get(
-          `${GRAPH_API_URL}/me`,
-          {
-            params: {
-              fields: 'whatsapp_business_accounts',
-              access_token: access_token
-            }
-          }
-        )
-      } catch (fallbackError) {
-        console.error('❌ WABA Fetch FAILED - All endpoints tried:', {
-          status: fallbackError.response?.status,
-          statusText: fallbackError.response?.statusText,
-          data: fallbackError.response?.data,
-          message: fallbackError.message
-        })
-        
-        return res.status(fallbackError.response?.status || 400).json({
-          success: false,
-          message: 'Failed to fetch WhatsApp Business Accounts',
-          error: fallbackError.response?.data?.error?.message || fallbackError.message,
-          details: fallbackError.response?.data,
-          hint: 'Make sure: (1) Business ID is stored in Account, or (2) Embedded Signup is fully completed with WABA selection'
-        })
-      }
-    }
-    
-    // Parse WABA response - handle both `/me` and `/{businessId}` endpoints
-    let wabaId, wabaName
-    const wabaData = wabaResponse.data.data || wabaResponse.data.whatsapp_business_accounts?.data
-    
-    if (!wabaData || wabaData.length === 0) {
-      console.error('❌ No WhatsApp Business Accounts in response')
-      return res.status(400).json({
-        success: false,
-        message: 'No WhatsApp Business Account found',
-        action: 'Complete WhatsApp Embedded Signup setup in Meta',
-        helpLink: 'https://business.facebook.com'
+    // 🔥 CRITICAL: In Embedded Signup, Meta sends WABA ID + Business ID via webhook
+    // We do NOT fetch WABA here - Meta gives us everything we need via webhook
+    if (!wabaId || !businessId) {
+      console.warn('⚠️ WABA/Business ID not yet synced from webhook')
+      console.log('   This is normal - webhook account_update event should arrive within seconds')
+      console.log('   Returning success and settings page will show status once webhook completes')
+      
+      return res.json({
+        success: true,
+        message: 'OAuth completed! Waiting for Meta webhook to sync WABA details...',
+        accountId: accountId,
+        status: 'awaiting_webhook',
+        waitingFor: {
+          businessId: !businessId,
+          wabaId: !wabaId
+        },
+        nextSteps: 'Refresh settings page in 5-10 seconds to see WABA details'
       })
     }
     
-    const firstWaba = wabaData[0]
-    wabaId = firstWaba.id
-    wabaName = firstWaba.name
+    console.log('✅ Account already synced from webhook - proceeding to fetch phone numbers')
+    console.log('================================================\n')
     
-    // Try to extract or update business ID
-    let extractedBusinessId = businessId
-    if (!extractedBusinessId && firstWaba.owner?.id) {
-      extractedBusinessId = firstWaba.owner.id
-      console.log('📍 Business ID extracted from WABA response:', extractedBusinessId)
-    }
-    
-    console.log('✅ WABA Found:', { wabaId, wabaName, businessId: extractedBusinessId })
-    console.log('✅ WABA found:', { wabaId, wabaName })
-    
-    // 4. Get phone numbers from WABA
-    console.log('📞 Fetching phone numbers...')
-    const phoneResponse = await axios.get(
-      `${GRAPH_API_URL}/${wabaId}/phone_numbers`,
-      {
-        params: {
-          access_token: access_token
+    // 4. Fetch phone numbers using WABA ID from webhook
+    console.log('📱 Fetching phone numbers from WABA:', wabaId)
+    let phoneResponse
+    try {
+      phoneResponse = await axios.get(
+        `${GRAPH_API_URL}/${wabaId}/phone_numbers`,
+        {
+          params: {
+            access_token: access_token
+          }
         }
-      }
-    )
+      )
+    } catch (phoneError) {
+      console.error('❌ Failed to fetch phone numbers:', phoneError.message)
+      
+      return res.status(phoneError.response?.status || 400).json({
+        success: false,
+        message: 'Failed to fetch phone numbers',
+        error: phoneError.response?.data?.error?.message || phoneError.message
+      })
+    }
     
     const phoneNumbers = phoneResponse.data.data || []
     
