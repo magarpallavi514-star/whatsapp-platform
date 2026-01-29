@@ -164,12 +164,27 @@ export const handleWhatsAppOAuth = async (req, res) => {
       console.warn('⚠️ Token verification failed (non-critical):', tokenError.message)
     }
     
-    // 3. Get businesses
+    // 3. Get businesses using System User token (has proper permissions)
     console.log('🏢 Fetching businesses...')
-    const businessResponse = await axios.get(
-      `${GRAPH_API_URL}/me/businesses`,
-      { headers: { 'Authorization': `Bearer ${access_token}` } }
-    )
+    let businessResponse
+    try {
+      businessResponse = await axios.get(
+        `${GRAPH_API_URL}/me/businesses`,
+        { headers: { 'Authorization': `Bearer ${process.env.META_SYSTEM_TOKEN}` } }
+      )
+    } catch (error) {
+      console.error('❌ Failed to fetch businesses with system token:', error.response?.data || error.message)
+      // Fallback to user token if system token fails
+      try {
+        businessResponse = await axios.get(
+          `${GRAPH_API_URL}/me/businesses`,
+          { headers: { 'Authorization': `Bearer ${access_token}` } }
+        )
+      } catch (fallbackError) {
+        console.error('❌ Failed to fetch businesses with user token:', fallbackError.response?.data || fallbackError.message)
+        throw fallbackError
+      }
+    }
     
     if (!businessResponse.data.data?.length) {
       return res.status(400).json({
