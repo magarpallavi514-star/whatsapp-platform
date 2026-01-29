@@ -165,15 +165,33 @@ export const handleWhatsAppOAuth = async (req, res) => {
     
     // 3. Get WhatsApp Business Accounts (WABA) - native to Embedded Signup
     console.log('📱 Fetching WhatsApp Business Accounts...')
-    const wabaResponse = await axios.get(
-      `${GRAPH_API_URL}/me`,
-      {
-        params: {
-          fields: 'whatsapp_business_accounts',
-          access_token: access_token
+    let wabaResponse
+    try {
+      wabaResponse = await axios.get(
+        `${GRAPH_API_URL}/me`,
+        {
+          params: {
+            fields: 'whatsapp_business_accounts',
+            access_token: access_token
+          }
         }
-      }
-    )
+      )
+    } catch (wabaError) {
+      console.error('❌ WABA Fetch FAILED - Details:', {
+        status: wabaError.response?.status,
+        statusText: wabaError.response?.statusText,
+        data: wabaError.response?.data,
+        message: wabaError.message
+      })
+      
+      return res.status(wabaError.response?.status || 400).json({
+        success: false,
+        message: 'Failed to fetch WhatsApp Business Accounts',
+        error: wabaError.response?.data?.error?.message || wabaError.message,
+        details: wabaError.response?.data,
+        hint: 'Make sure you completed the Embedded Signup flow in Meta and have a WABA'
+      })
+    }
     
     if (!wabaResponse.data.whatsapp_business_accounts?.data?.length) {
       return res.status(400).json({
