@@ -164,61 +164,32 @@ export const handleWhatsAppOAuth = async (req, res) => {
       console.warn('⚠️ Token verification failed (non-critical):', tokenError.message)
     }
     
-    // 3. Get businesses using System User token (has proper permissions)
-    console.log('🏢 Fetching businesses...')
-    let businessResponse
-    try {
-      businessResponse = await axios.get(
-        `${GRAPH_API_URL}/me/businesses`,
-        { headers: { 'Authorization': `Bearer ${process.env.META_SYSTEM_TOKEN}` } }
-      )
-    } catch (error) {
-      console.error('❌ Failed to fetch businesses with system token:', error.response?.data || error.message)
-      // Fallback to user token if system token fails
-      try {
-        businessResponse = await axios.get(
-          `${GRAPH_API_URL}/me/businesses`,
-          { headers: { 'Authorization': `Bearer ${access_token}` } }
-        )
-      } catch (fallbackError) {
-        console.error('❌ Failed to fetch businesses with user token:', fallbackError.response?.data || fallbackError.message)
-        throw fallbackError
+    // 3. Get WhatsApp Business Accounts (WABA) - native to Embedded Signup
+    console.log('📱 Fetching WhatsApp Business Accounts...')
+    const wabaResponse = await axios.get(
+      `${GRAPH_API_URL}/me`,
+      {
+        params: {
+          fields: 'whatsapp_business_accounts',
+          access_token: access_token
+        }
       }
-    }
+    )
     
-    if (!businessResponse.data.data?.length) {
+    if (!wabaResponse.data.whatsapp_business_accounts?.data?.length) {
       return res.status(400).json({
         success: false,
-        message: 'No Meta Business Account found',
-        action: 'Create a Meta Business Account in Meta Business Manager',
+        message: 'No WhatsApp Business Account found',
+        action: 'Complete WhatsApp Embedded Signup setup in Meta',
         helpLink: 'https://business.facebook.com'
       })
     }
     
-    const businessId = businessResponse.data.data[0].id
-    const businessName = businessResponse.data.data[0].name
-    console.log('✅ Business found:', businessName)
+    const wabaId = wabaResponse.data.whatsapp_business_accounts.data[0].id
+    const wabaName = wabaResponse.data.whatsapp_business_accounts.data[0].name
+    console.log('✅ WABA found:', { wabaId, wabaName })
     
-    // 4. Get WABAs
-    console.log('📱 Fetching WhatsApp Business Accounts...')
-    const wabaResponse = await axios.get(
-      `${GRAPH_API_URL}/${businessId}/whatsapp_business_accounts`,
-      { headers: { 'Authorization': `Bearer ${access_token}` } }
-    )
-    
-    if (!wabaResponse.data.data?.length) {
-      return res.status(400).json({
-        success: false,
-        message: 'No WhatsApp Business Account found',
-        action: 'Create a WhatsApp Business Account in your Meta Business Account',
-        helpLink: 'https://business.facebook.com/settings/whatsapp'
-      })
-    }
-    
-    const wabaId = wabaResponse.data.data[0].id
-    console.log('✅ WABA found:', wabaId)
-    
-    // 5. Get phone numbers
+    // 4. Get phone numbers from WABA
     console.log('📞 Fetching phone numbers...')
     const phoneResponse = await axios.get(
       `${GRAPH_API_URL}/${wabaId}/phone_numbers`,
