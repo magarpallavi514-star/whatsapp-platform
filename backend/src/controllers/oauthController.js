@@ -192,7 +192,11 @@ export const handleWhatsAppOAuth = async (req, res) => {
     console.log('📞 Fetching phone numbers...')
     const phoneResponse = await axios.get(
       `${GRAPH_API_URL}/${wabaId}/phone_numbers`,
-      { headers: { 'Authorization': `Bearer ${access_token}` } }
+      {
+        params: {
+          access_token: access_token
+        }
+      }
     )
     
     const phoneNumbers = phoneResponse.data.data || []
@@ -285,8 +289,10 @@ export const handleWhatsAppOAuth = async (req, res) => {
     try {
       await axios.post(
         `${GRAPH_API_URL}/${wabaId}/subscribed_apps`,
-        { subscribed_fields: ['messages', 'message_status'] },
-        { headers: { 'Authorization': `Bearer ${access_token}` } }
+        { 
+          subscribed_fields: ['messages', 'message_status'],
+          access_token: access_token
+        }
       )
       console.log('✅ Subscribed to webhooks')
     } catch (webhookError) {
