@@ -98,7 +98,6 @@ export const handleWhatsAppOAuth = async (req, res) => {
     console.log('🔄 Exchanging code for access token...')
     console.log('OAuth Params:', {
       client_id: process.env.META_APP_ID,
-      redirect_uri: `${process.env.FRONTEND_URL}/integrations/whatsapp/callback`,
       code: code?.substring(0, 20) + '...' // Log first 20 chars only
     })
     
