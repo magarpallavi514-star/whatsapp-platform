@@ -167,30 +167,44 @@ export const handleWhatsAppOAuth = async (req, res) => {
     console.log('📱 Fetching WhatsApp Business Accounts...')
     let wabaResponse
     try {
+      // Try direct WABA endpoint first (more reliable for Embedded Signup)
       wabaResponse = await axios.get(
-        `${GRAPH_API_URL}/me`,
+        `${GRAPH_API_URL}/whatsapp_business_accounts`,
         {
           params: {
-            fields: 'whatsapp_business_accounts',
             access_token: access_token
           }
         }
       )
     } catch (wabaError) {
-      console.error('❌ WABA Fetch FAILED - Details:', {
-        status: wabaError.response?.status,
-        statusText: wabaError.response?.statusText,
-        data: wabaError.response?.data,
-        message: wabaError.message
-      })
-      
-      return res.status(wabaError.response?.status || 400).json({
-        success: false,
-        message: 'Failed to fetch WhatsApp Business Accounts',
-        error: wabaError.response?.data?.error?.message || wabaError.message,
-        details: wabaError.response?.data,
-        hint: 'Make sure you completed the Embedded Signup flow in Meta and have a WABA'
-      })
+      console.warn('⚠️ Direct WABA endpoint failed, trying /me endpoint...')
+      // Fallback to /me endpoint
+      try {
+        wabaResponse = await axios.get(
+          `${GRAPH_API_URL}/me`,
+          {
+            params: {
+              fields: 'whatsapp_business_accounts',
+              access_token: access_token
+            }
+          }
+        )
+      } catch (fallbackError) {
+        console.error('❌ WABA Fetch FAILED - Details:', {
+          status: fallbackError.response?.status,
+          statusText: fallbackError.response?.statusText,
+          data: fallbackError.response?.data,
+          message: fallbackError.message
+        })
+        
+        return res.status(fallbackError.response?.status || 400).json({
+          success: false,
+          message: 'Failed to fetch WhatsApp Business Accounts',
+          error: fallbackError.response?.data?.error?.message || fallbackError.message,
+          details: fallbackError.response?.data,
+          hint: 'Make sure you completed the Embedded Signup flow in Meta and have a WABA'
+        })
+      }
     }
     
     if (!wabaResponse.data.whatsapp_business_accounts?.data?.length) {
