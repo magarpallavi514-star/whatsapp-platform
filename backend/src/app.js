@@ -37,6 +37,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
 import demoRoutes from './routes/demoRoutes.js';
 import oauthRoutes from './routes/oauthRoutes.js';
+import crmRoutes from './routes/crmRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -217,6 +218,9 @@ app.use('/api/billing', requireJWT, billingRoutes);
 
 // Mount dashboard routes (JWT AUTH for dashboard statistics)
 app.use('/api/dashboard', requireJWT, dashboardRoutes);
+
+// Mount CRM routes (JWT AUTH + SUBSCRIPTION REQUIRED - for managing contacts, conversations, analytics)
+app.use('/api/crm', requireJWT, requireSubscription, crmRoutes);
 
 // Mount self-service account routes (JWT AUTH - for dashboard users)
 app.use('/api/account', requireJWT, accountRoutes);

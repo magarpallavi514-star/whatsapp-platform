@@ -550,25 +550,27 @@ export const handleWebhook = async (req, res) => {
               console.log('⚠️ No incoming messages in this webhook');
             }
           } else if (change.field === 'account_update') {
-            console.log('🏢 ========== ACCOUNT UPDATE WEBHOOK ==========');
+            console.log('\n🏢 ════════════════════════════════════════════════════════════════');
+            console.log('🏢 🎯 ACCOUNT UPDATE WEBHOOK - BUSINESS ID SYNC');
+            console.log('🏢 ════════════════════════════════════════════════════════════════\n');
             
             // Extract Business ID from entry.id and WABA ID from webhook data
             const businessId = entry.id;
             const value = change.value;
             
-            console.log('📍 Business ID from webhook:', businessId);
-            console.log('📨 Account update data:', JSON.stringify(value, null, 2));
+            console.log('📍 📍 📍 CRITICAL: Business ID from webhook entry.id:', businessId);
+            console.log('📨 Complete webhook value received:', JSON.stringify(value, null, 2));
             
             // 🔥 CRITICAL: Extract WABA ID from webhook structure
             // Meta sends: waba_info.waba_id
             const wabaId = value.waba_info?.waba_id;
             
             if (!wabaId) {
-              console.warn('⚠️ No WABA ID found in webhook structure');
+              console.warn('⚠️ ⚠️ ⚠️ CRITICAL: No WABA ID found in webhook structure');
               console.log('   Expected: value.waba_info.waba_id');
               console.log('   Received:', value);
             } else {
-              console.log('✅ WABA ID from webhook:', wabaId);
+              console.log('✅ ✅ ✅ WABA ID found in webhook:', wabaId);
             }
             
             // 🔥 Store BOTH Business ID and WABA ID from webhook
@@ -577,24 +579,38 @@ export const handleWebhook = async (req, res) => {
                 // Find account - could be by multiple methods
                 // 1. Try finding by WABA ID (if already in system)
                 let account = await Account.findOne({ wabaId });
+                console.log('🔍 Step 1: Searching account by WABA ID...');
+                if (account) console.log('   ✅ Found account by WABA ID');
                 
                 if (!account) {
                   // 2. Try finding by Business ID (if already stored)
+                  console.log('🔍 Step 2: Searching account by Business ID...');
                   account = await Account.findOne({ businessId });
+                  if (account) console.log('   ✅ Found account by Business ID');
                 }
                 
                 if (!account) {
                   // 3. Try finding by any phone number in this WABA
+                  console.log('🔍 Step 3: Searching account by phone numbers in WABA...');
                   const phoneInWaba = await PhoneNumber.findOne({ wabaId });
                   if (phoneInWaba) {
+                    console.log(`   ✅ Found phone in WABA, looking up account ${phoneInWaba.accountId}`);
                     account = await Account.findOne({ accountId: phoneInWaba.accountId });
+                  } else {
+                    console.log('   ❌ No phones found in WABA');
                   }
                 }
                 
                 if (account) {
+                  console.log('\n✅ ✅ ✅ ACCOUNT FOUND! Now saving Business ID & WABA ID...\n');
+                  
                   // ✅ Found account - save BOTH IDs
                   account.wabaId = wabaId;  // Save WABA ID
                   account.businessId = businessId;  // Save Business ID
+                  
+                  console.log('💾 Setting account fields:');
+                  console.log(`   wabaId: ${wabaId}`);
+                  console.log(`   businessId: ${businessId}`);
                   
                   // Store complete webhook data
                   if (!account.metaSync) {
@@ -621,28 +637,30 @@ export const handleWebhook = async (req, res) => {
                   
                   await account.save();
                   
-                  console.log('✅ 🎯 ACCOUNT FULLY SYNCED WITH META:', {
+                  console.log('\n✅ ✅ ✅ 🎯 ACCOUNT FULLY SYNCED WITH META:\n', {
                     accountId: account.accountId,
                     wabaId: account.wabaId,
                     businessId: account.businessId,
                     metaStatus: account.metaSync.metaStatus,
                     syncedAt: account.metaSync.lastWebhookAt
                   });
+                  console.log('\n🟢 BUSINESS ID SYNC COMPLETE - READY FOR REALTIME!\n');
                   
                 } else {
-                  console.warn('⚠️ ACCOUNT NOT FOUND - Cannot link webhook to account');
+                  console.warn('\n⚠️ ⚠️ ⚠️ ACCOUNT NOT FOUND - Cannot link webhook to account');
                   console.warn('   Searched by: wabaId, businessId, and phone numbers');
                   console.warn('   This happens if OAuth hasnt completed yet');
-                  console.log('   Next OAuth attempt will save both IDs correctly');
+                  console.log('   Next OAuth attempt will save both IDs correctly\n');
                 }
               } catch (storageError) {
-                console.error('❌ Error storing Meta account details:', storageError.message);
+                console.error('❌ ❌ ❌ Error storing Meta account details:', storageError.message);
+                console.error('Stack:', storageError.stack);
               }
             } else {
-              console.warn('⚠️ Missing Business ID or WABA ID in webhook:', { businessId, wabaId });
+              console.warn('\n⚠️ ⚠️ ⚠️ Missing Business ID or WABA ID in webhook:', { businessId, wabaId });
             }
             
-            console.log('============================================\n');
+            console.log('🏢 ════════════════════════════════════════════════════════════════\n');
           } else {
             console.log('ℹ️ Ignoring field:', change.field);
           }
