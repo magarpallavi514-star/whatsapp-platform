@@ -1,6 +1,6 @@
 import express from 'express';
 import crmController from '../controllers/crmController.js';
-import { verifyJWT } from '../middlewares/auth.js';
+import { authenticate } from '../middlewares/auth.js';
 
 const router = express.Router();
 
@@ -10,18 +10,18 @@ const router = express.Router();
  */
 
 // Dashboard & Overview
-router.get('/dashboard', verifyJWT, crmController.getCRMDashboard);
+router.get('/dashboard', authenticate, crmController.getCRMDashboard);
 
 // Contact Management
-router.get('/contacts', verifyJWT, crmController.getCRMContacts);
-router.post('/contacts', verifyJWT, crmController.createCRMContact);
-router.put('/contacts/:id', verifyJWT, crmController.updateCRMContact);
+router.get('/contacts', authenticate, crmController.getCRMContacts);
+router.post('/contacts', authenticate, crmController.createCRMContact);
+router.put('/contacts/:id', authenticate, crmController.updateCRMContact);
 
 // Conversation Management
-router.get('/conversations', verifyJWT, crmController.getCRMConversations);
-router.get('/conversation/:conversationId', verifyJWT, crmController.getCRMConversationDetail);
+router.get('/conversations', authenticate, crmController.getCRMConversations);
+router.get('/conversation/:conversationId', authenticate, crmController.getCRMConversationDetail);
 
 // Analytics
-router.get('/analytics', verifyJWT, crmController.getCRMAnalytics);
+router.get('/analytics', authenticate, crmController.getCRMAnalytics);
 
 export default router;

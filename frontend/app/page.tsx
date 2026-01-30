@@ -1118,21 +1118,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* TRUSTED BY - Social Proof */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50 border-y border-gray-200">
-        <div className="max-w-6xl mx-auto">
-          <p className="text-center text-gray-600 font-semibold mb-8">Trusted by 500+ businesses across India</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center justify-items-center opacity-70">
-            {["E-Commerce", "EdTech", "Healthcare", "Finance"].map((category, i) => (
-              <div key={i} className="text-center">
-                <div className="text-3xl font-bold text-gray-400 mb-2">📊</div>
-                <p className="text-sm text-gray-600 font-semibold">{category}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* BENCHMARK - Performance */}
       <section className="py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-blue-50">
         <div className="max-w-6xl mx-auto">
