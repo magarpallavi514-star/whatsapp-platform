@@ -637,6 +637,22 @@ export const handleWebhook = async (req, res) => {
                   }
                 }
                 
+                if (!account) {
+                  // 4c. CRITICAL FALLBACK: Look for any account without wabaId (first-time WABA setup)
+                  // This handles case where webhook arrives before OAuth completes
+                  console.log('🔍 Step 4c: Searching for account without wabaId (first-time setup)...');
+                  account = await Account.findOne({ 
+                    wabaId: { $exists: false }
+                  }).sort({ createdAt: -1 });
+                  
+                  if (account) {
+                    console.log(`   ✅ Found account without wabaId: ${account.accountId}`);
+                    console.log(`      → This is likely first-time WABA connection for this account!`);
+                  } else {
+                    console.log('   ❌ No accounts without wabaId found');
+                  }
+                }
+                
                 if (account) {
                   console.log('\n✅ ✅ ✅ ACCOUNT FOUND! Now saving Business ID & WABA ID...\n');
                   
