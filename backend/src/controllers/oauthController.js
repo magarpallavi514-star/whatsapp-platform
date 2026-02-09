@@ -221,22 +221,58 @@ export const handleWhatsAppOAuth = async (req, res) => {
       }
     }
     
-    // If still no WABA after trying to fetch, wait for webhook
-    if (!wabaId || !businessId) {
-      console.warn('⚠️ WABA/Business ID not yet synced from webhook')
-      console.log('   This is normal - webhook account_update event should arrive within seconds')
-      console.log('   Returning success and settings page will show status once webhook completes')
+    // 🔥 CRITICAL FIX: If we got businessId from Meta but no wabaId yet,
+    // save businessId immediately so webhook can find account by businessId
+    if (businessId && !wabaId) {
+      console.log('💾 Saving businessId from Meta so webhook can find account...')
+      await Account.findOneAndUpdate(
+        { accountId },
+        { businessId },
+        { new: true }
+      )
+      console.log('✅ Saved businessId:', businessId)
+      
+      // Return early - webhook will provide wabaId and we'll fetch phones then
+      return res.json({
+        success: true,
+        message: 'OAuth completed! Waiting for Meta webhook to sync WABA ID...',
+        accountId: accountId,
+        status: 'awaiting_webhook',
+        syncedBusinessId: businessId,
+        waitingFor: {
+          wabaId: true
+        },
+        nextSteps: 'Webhook should arrive within 5-10 seconds with WABA ID'
+      })
+    }
+    
+    // If still no WABA and no businessId after trying to fetch, wait for webhook
+    if (!wabaId && !businessId) {
+      console.warn('⚠️ Neither WABA ID nor Business ID available')
+      console.log('   This might indicate OAuth incomplete or network issue')
+      console.log('   Marking account as "pending_oauth_sync" so webhook can find it...')
+      
+      // 🔥 CRITICAL: Mark account so webhook can find it by querying for pending sync
+      await Account.findOneAndUpdate(
+        { accountId },
+        { 
+          'metaSync.status': 'pending_oauth_sync',
+          'metaSync.pendingAt': new Date()
+        },
+        { new: true }
+      )
+      console.log('✅ Marked account as pending OAuth sync')
       
       return res.json({
         success: true,
-        message: 'OAuth completed! Waiting for Meta webhook to sync WABA details...',
+        message: 'OAuth initiated. Waiting for Meta webhook...',
         accountId: accountId,
         status: 'awaiting_webhook',
         waitingFor: {
-          businessId: !businessId,
-          wabaId: !wabaId
+          businessId: true,
+          wabaId: true
         },
-        nextSteps: 'Refresh settings page in 5-10 seconds to see WABA details'
+        nextSteps: 'Webhook should arrive within 5-10 seconds with WABA ID and Business ID'
       })
     }
     
@@ -336,9 +372,9 @@ export const handleWhatsAppOAuth = async (req, res) => {
     // 7. Update Account with wabaId and businessId (reference - not authority)
     console.log('📝 Updating Account.wabaId and Account.businessId...')
     const updatePayload = { wabaId }
-    if (extractedBusinessId) {
-      updatePayload.businessId = extractedBusinessId
-      console.log('🏢 Including businessId:', extractedBusinessId)
+    if (businessId) {
+      updatePayload.businessId = businessId
+      console.log('🏢 Including businessId:', businessId)
     }
     
     const updatedAccount = await Account.findOneAndUpdate(
@@ -346,7 +382,8 @@ export const handleWhatsAppOAuth = async (req, res) => {
       updatePayload,
       { new: true }
     )
-    console.log('✅ Updated Account:', { wabaId, businessId: extractedBusinessId })
+    console.log('✅ Updated Account:', { wabaId, businessId })
+
     
     logConsistencyEvent('account_update', {
       accountId,

@@ -574,7 +574,8 @@ export const handleWebhook = async (req, res) => {
             }
             
             // 🔥 Store BOTH Business ID and WABA ID from webhook
-            if (businessId && wabaId) {
+            // Process even if only one ID is available - webhook will provide what it has
+            if (businessId || wabaId) {
               try {
                 // Find account - could be by multiple methods
                 // 1. Try finding by WABA ID (if already in system)
@@ -602,10 +603,26 @@ export const handleWebhook = async (req, res) => {
                 }
                 
                 if (!account) {
-                  // 4. CRITICAL FALLBACK: Try finding account with WRONG/STALE WABA ID
+                  // 4a. CRITICAL FALLBACK: Look for accounts marked as "pending_oauth_sync"
+                  // These are accounts that just went through OAuth but couldn't fetch WABA from Meta
+                  console.log('🔍 Step 4a: Searching for account pending OAuth sync...');
+                  account = await Account.findOne({ 
+                    'metaSync.status': 'pending_oauth_sync',
+                    'metaSync.pendingAt': { $gte: new Date(Date.now() - 5 * 60 * 1000) }  // Last 5 minutes
+                  }).sort({ 'metaSync.pendingAt': -1 });
+                  
+                  if (account) {
+                    console.log(`   ✅ Found pending OAuth sync account: ${account.accountId}`);
+                  } else {
+                    console.log('   ❌ No pending OAuth sync accounts found');
+                  }
+                }
+                
+                if (!account) {
+                  // 4b. CRITICAL FALLBACK: Try finding account with stale WABA by recent updatedAt
                   // This happens when OAuth saves a wrong WABA before webhook arrives
                   // Find any account that was recently updated (doing OAuth flow)
-                  console.log('🔍 Step 4: Searching for account with stale WABA by recent updatedAt...');
+                  console.log('🔍 Step 4b: Searching for account with stale WABA by recent updatedAt...');
                   account = await Account.findOne({ 
                     updatedAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) }  // Last 5 minutes
                   }).sort({ updatedAt: -1 });
@@ -676,7 +693,9 @@ export const handleWebhook = async (req, res) => {
                 console.error('Stack:', storageError.stack);
               }
             } else {
-              console.warn('\n⚠️ ⚠️ ⚠️ Missing Business ID or WABA ID in webhook:', { businessId, wabaId });
+              console.warn('\n⚠️ ⚠️ ⚠️ Missing BOTH Business ID and WABA ID in webhook:', { businessId, wabaId });
+              console.warn('   This is unusual - check webhook payload');
+
             }
             
             console.log('🏢 ════════════════════════════════════════════════════════════════\n');
