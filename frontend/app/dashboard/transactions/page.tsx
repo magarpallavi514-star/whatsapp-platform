@@ -27,7 +27,7 @@ export default function TransactionsPage() {
         return
       }
 
-      // Fetch organizations data
+      // Fetch organizations data with invoices
       const response = await fetch(`${API_URL}/admin/organizations`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -42,7 +42,21 @@ export default function TransactionsPage() {
       // Convert organizations to transactions format
       const transactionsList: any[] = []
       
-      orgs.forEach((org: any) => {
+      for (const org of orgs) {
+        // Fetch invoices for this org
+        let invoices: any[] = []
+        try {
+          const invoiceResponse = await fetch(`${API_URL}/billing/invoices?accountId=${org._id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (invoiceResponse.ok) {
+            const invoiceData = await invoiceResponse.json()
+            invoices = invoiceData.data || []
+          }
+        } catch (err) {
+          console.error('Failed to fetch invoices for', org.name)
+        }
+
         // Add organization signup transaction
         transactionsList.push({
           id: `signup-${org._id}`,
@@ -50,7 +64,7 @@ export default function TransactionsPage() {
           organization: org.name,
           email: org.email,
           type: 'signup',
-          description: `Signup - ${org.plan} plan`,
+          description: `Signup - ${org.plan} plan (${org.billingCycle})`,
           plan: org.plan,
           amount: 0,
           status: 'completed',
@@ -58,28 +72,30 @@ export default function TransactionsPage() {
           nextBillingDate: org.nextBillingDate
         })
 
-        // Add billing cycle transaction if next billing date exists
-        if (org.nextBillingDate) {
+        // Add invoice transactions with exact amounts in INR
+        invoices.forEach((invoice: any, idx: number) => {
           transactionsList.push({
-            id: `billing-${org._id}`,
-            date: org.nextBillingDate,
+            id: `invoice-${org._id}-${idx}-${invoice.invoiceNumber}`,
+            date: invoice.invoiceDate,
             organization: org.name,
             email: org.email,
-            type: 'billing',
-            description: `${org.billingCycle} billing cycle`,
+            type: 'invoice',
+            description: `Invoice #${invoice.invoiceNumber} - ${invoice.status}`,
             plan: org.plan,
-            amount: 0,
-            status: 'scheduled',
+            amount: invoice.totalAmount || 0,
+            paidAmount: invoice.paidAmount || 0,
+            status: invoice.status,
+            invoiceNumber: invoice.invoiceNumber,
             billingCycle: org.billingCycle,
             nextBillingDate: org.nextBillingDate
           })
-        }
+        })
 
-        // Add payment transaction if payments exist
+        // Add payment transaction if totalPayments exist
         if (org.totalPayments && org.totalPayments > 0) {
           transactionsList.push({
             id: `payment-${org._id}`,
-            date: org.createdAt,
+            date: org.lastPaymentDate || org.createdAt,
             organization: org.name,
             email: org.email,
             type: 'payment',
@@ -91,7 +107,7 @@ export default function TransactionsPage() {
             nextBillingDate: org.nextBillingDate
           })
         }
-      })
+      }
 
       // Sort by date descending
       transactionsList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -107,11 +123,13 @@ export default function TransactionsPage() {
   const getTransactionIcon = (type: string) => {
     switch(type) {
       case 'payment':
-        return <ArrowDown className="h-4 w-4 text-red-600" />
+        return <ArrowDown className="h-4 w-4 text-green-600" />
+      case 'invoice':
+        return <CreditCard className="h-4 w-4 text-blue-600" />
       case 'billing':
         return <Calendar className="h-4 w-4 text-blue-600" />
       case 'signup':
-        return <ArrowUp className="h-4 w-4 text-green-600" />
+        return <ArrowUp className="h-4 w-4 text-gray-600" />
       default:
         return <Package className="h-4 w-4 text-gray-600" />
     }
@@ -120,7 +138,9 @@ export default function TransactionsPage() {
   const getTransactionTypeLabel = (type: string) => {
     switch(type) {
       case 'payment':
-        return 'Payment'
+        return 'Payment Received'
+      case 'invoice':
+        return 'Invoice'
       case 'billing':
         return 'Billing'
       case 'signup':
@@ -133,11 +153,13 @@ export default function TransactionsPage() {
   const getTransactionColor = (type: string) => {
     switch(type) {
       case 'payment':
-        return 'bg-red-100 text-red-800'
+        return 'bg-green-100 text-green-800'
+      case 'invoice':
+        return 'bg-blue-100 text-blue-800'
       case 'billing':
         return 'bg-blue-100 text-blue-800'
       case 'signup':
-        return 'bg-green-100 text-green-800'
+        return 'bg-gray-100 text-gray-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }

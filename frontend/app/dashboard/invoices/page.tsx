@@ -68,11 +68,30 @@ export default function InvoicesPage() {
         const invoiceList = data.data || data.invoices || []
         setInvoices(invoiceList)
         
-        // Calculate total revenue from paid invoices
-        const revenue = invoiceList
-          .filter((inv: Invoice) => inv.status === 'paid')
-          .reduce((sum: number, inv: Invoice) => sum + (inv.totalAmount ?? 0), 0)
-        setTotalRevenue(revenue)
+        // ✅ CLIENT ONBOARDING: Fetch revenue from proper endpoint (NEW)
+        if (user?.type === 'internal' || user?.role === UserRole.SUPERADMIN) {
+          try {
+            const revenueResponse = await fetch(`${API_URL}/billing/admin/revenue/summary`, {
+              headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+              }
+            })
+            
+            if (revenueResponse.ok) {
+              const revenueData = await revenueResponse.json()
+              setTotalRevenue(revenueData.data?.totalRevenue || 0)
+              console.log('✅ CLIENT ONBOARDING: Revenue updated from endpoint:', revenueData.data?.totalRevenue)
+            }
+          } catch (revErr) {
+            console.error('⚠️ Failed to fetch revenue summary:', revErr)
+            // Fallback to calculating from invoices
+            const revenue = invoiceList
+              .filter((inv: Invoice) => inv.status === 'paid')
+              .reduce((sum: number, inv: Invoice) => sum + (inv.paidAmount ?? 0), 0)
+            setTotalRevenue(revenue)
+          }
+        }
       } else if (response.status === 404) {
         // Fallback to user invoices if admin endpoint doesn't exist
         const fallbackResponse = await fetch(`${API_URL}/billing/invoices`, {

@@ -76,11 +76,45 @@ const subscriptionSchema = new mongoose.Schema({
   // Payment Info
   paymentGateway: {
     type: String,
-    enum: ['stripe', 'razorpay', 'paypal', 'manual'],
+    enum: ['stripe', 'razorpay', 'paypal', 'manual', 'cashfree'],
     required: true
   },
   paymentMethodId: String,
   transactionId: String,
+  
+  // ✅ CLIENT ONBOARDING: Payment Tracking (NEW FIELDS)
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'processing', 'completed', 'failed'],
+    default: 'pending',
+    index: true
+  },
+  
+  paymentAmount: {
+    type: Number,
+    default: 0
+  },
+  
+  orderId: {
+    type: String,
+    index: true
+  },
+  
+  invoiceId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Invoice'
+  },
+  
+  paidDate: Date,
+  
+  paymentMethod: {
+    type: {
+      type: String,
+      enum: ['card', 'upi', 'bank_transfer', 'wallet', 'manual']
+    },
+    last4: String,
+    brand: String
+  },
   
   // Auto Renewal
   autoRenew: {

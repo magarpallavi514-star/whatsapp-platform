@@ -2,7 +2,8 @@ import axios from 'axios';
 
 const ZEPTO_API_KEY = process.env.ZEPTOMAIL_API_TOKEN || process.env.ZEPTO_API_TOKEN || process.env.ZEPTO_API_KEY;
 const ZEPTO_BASE_URL = process.env.ZEPTO_API_URL || 'https://api.zeptomail.in/v1.1/email';
-const FROM_EMAIL = process.env.EMAIL_FROM || process.env.FROM_EMAIL || 'noreply@yourdomain.com';
+const FROM_EMAIL = process.env.EMAIL_FROM || process.env.FROM_EMAIL || 'support@replysys.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || process.env.SUPPORT_EMAIL || 'support@replysys.com';
 const FROM_NAME = 'Replysys'; // Changed from "Pixels WhatsApp" to "Replysys"
 const ENABLE_EMAIL = process.env.ENABLE_EMAIL !== 'false';
 
@@ -967,6 +968,86 @@ export const emailService = {
       if (error.response?.data) {
         console.error('  Response:', error.response.data);
       }
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Send admin notification for new signup
+  sendAdminSignupNotification: async (email, name, company = 'N/A', selectedPlan = 'Starter') => {
+    try {
+      if (!ENABLE_EMAIL) {
+        console.log('✅ Email service disabled - skipping admin notification');
+        return { success: true, skipped: true };
+      }
+
+      const signupTime = new Date().toLocaleString('en-IN');
+      
+      const htmlbody = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #667eea; color: white; padding: 20px; border-radius: 4px; }
+            .details { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0; }
+            .detail-row { margin: 10px 0; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+            .label { font-weight: bold; color: #667eea; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h2>🎉 New Signup Alert!</h2>
+            </div>
+            <p>A new user has registered on Replysys. Here are the details:</p>
+            <div class="details">
+              <div class="detail-row">
+                <span class="label">Name:</span> ${name}
+              </div>
+              <div class="detail-row">
+                <span class="label">Email:</span> <a href="mailto:${email}">${email}</a>
+              </div>
+              <div class="detail-row">
+                <span class="label">Company:</span> ${company}
+              </div>
+              <div class="detail-row">
+                <span class="label">Selected Plan:</span> ${selectedPlan}
+              </div>
+              <div class="detail-row">
+                <span class="label">Signup Time:</span> ${signupTime}
+              </div>
+            </div>
+            <p><strong>Action:</strong> This customer is awaiting payment to activate their account. Follow up via email or dashboard.</p>
+            <p>
+              <a href="${process.env.FRONTEND_URL || 'https://replysys.com'}/admin/users" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">View in Admin Panel</a>
+            </p>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const response = await axios.post(
+        `${ZEPTO_BASE_URL}/send`,
+        {
+          from: { address: FROM_EMAIL, name: 'Replysys Notifications' },
+          to: [{ email_address: { address: ADMIN_EMAIL } }],
+          subject: `🎉 New Signup: ${name}`,
+          htmlbody: htmlbody
+        },
+        {
+          headers: {
+            'Authorization': ZEPTO_API_KEY,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      console.log('✅ Admin signup notification sent to', ADMIN_EMAIL);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Admin notification failed:', error.message);
+      // Don't fail the signup if admin email fails
       return { success: false, error: error.message };
     }
   }

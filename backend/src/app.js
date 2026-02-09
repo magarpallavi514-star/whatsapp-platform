@@ -38,6 +38,7 @@ import jobRoutes from './routes/jobRoutes.js';
 import demoRoutes from './routes/demoRoutes.js';
 import oauthRoutes from './routes/oauthRoutes.js';
 import crmRoutes from './routes/crmRoutes.js';
+import discountRoutes from './routes/discountRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -230,6 +231,9 @@ app.use('/api/admin/organizations', requireJWT, organizationsRoutes);
 
 // Mount admin routes (JWT AUTH - for superadmin)
 app.use('/api/admin', requireJWT, adminRoutes);
+
+// Mount discount configuration routes (JWT AUTH - for superadmin)
+app.use('/api/admin/discounts', requireJWT, discountRoutes);
 
 // Mount demo admin routes (JWT AUTH - for superadmin)
 app.use('/api/admin/demo-requests', requireJWT, demoRoutes);

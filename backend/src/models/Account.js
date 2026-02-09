@@ -148,6 +148,32 @@ const accountSchema = new mongoose.Schema({
     contacts: { type: Number, default: 500 }
   },
   
+  // ✅ CLIENT ONBOARDING: Payment Tracking Fields
+  totalPayments: {
+    type: Number,
+    default: 0,
+    index: true
+  },
+  
+  lastPaymentDate: {
+    type: Date,
+    default: null
+  },
+  
+  nextBillingDate: {
+    type: Date,
+    default: null
+  },
+  
+  paymentHistory: [{
+    invoiceId: mongoose.Schema.Types.ObjectId,
+    orderId: String,
+    amount: Number,
+    paidDate: Date,
+    paymentMethod: String,
+    _id: false
+  }],
+  
   // Metadata
   createdAt: { type: Date, default: Date.now },
   lastActiveAt: Date,

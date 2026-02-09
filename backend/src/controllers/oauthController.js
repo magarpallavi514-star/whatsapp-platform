@@ -165,15 +165,63 @@ export const handleWhatsAppOAuth = async (req, res) => {
     
     // 3. Check Account for WABA ID (from webhook)
     const account = await Account.findOne({ accountId }).lean()
-    const businessId = account?.businessId
-    const wabaId = account?.wabaId
+    let businessId = account?.businessId
+    let wabaId = account?.wabaId
     
     console.log('🏢 ========== CHECKING ACCOUNT SYNC STATUS ==========')
     console.log('Business ID:', businessId || '⏳ waiting for webhook')
     console.log('WABA ID:', wabaId || '⏳ waiting for webhook')
     
-    // 🔥 CRITICAL: In Embedded Signup, Meta sends WABA ID + Business ID via webhook
-    // We do NOT fetch WABA here - Meta gives us everything we need via webhook
+    // 🔥 CRITICAL FIX: If WABA ID not in account, try to get it from Meta API
+    // This ensures we get the CORRECT WABA ID (not a stale/wrong one)
+    if (!wabaId && access_token) {
+      console.log('🔍 WABA ID not found in account - trying to fetch from Meta...')
+      try {
+        // Get the app token info first
+        const appTokenInfo = await axios.get(
+          `${GRAPH_API_URL}/app`,
+          { params: { access_token } }
+        )
+        console.log('✅ Got app info')
+        
+        // If we have a system user token, we need to find the WABA through the business accounts
+        // Try to find any business account accessible with this token
+        const businessesResponse = await axios.get(
+          `${GRAPH_API_URL}/me/businesses`,
+          { params: { access_token } }
+        )
+        
+        if (businessesResponse.data?.data?.length > 0) {
+          const firstBusiness = businessesResponse.data.data[0]
+          businessId = firstBusiness.id
+          console.log('✅ Found business ID from token:', businessId)
+          
+          // Now get WABA for this business
+          const wabaResponse = await axios.get(
+            `${GRAPH_API_URL}/${businessId}/whatsapp_business_accounts`,
+            { params: { access_token } }
+          )
+          
+          if (wabaResponse.data?.data?.length > 0) {
+            wabaId = wabaResponse.data.data[0].id
+            console.log('✅ Found WABA ID from business:', wabaId)
+            
+            // Save both to account
+            await Account.findOneAndUpdate(
+              { accountId },
+              { wabaId, businessId },
+              { new: true }
+            )
+            console.log('✅ Saved WABA and Business ID from Meta to account')
+          }
+        }
+      } catch (fetchError) {
+        console.warn('⚠️  Could not fetch WABA from Meta:', fetchError.message)
+        console.log('   This is OK - webhook will provide it shortly')
+      }
+    }
+    
+    // If still no WABA after trying to fetch, wait for webhook
     if (!wabaId || !businessId) {
       console.warn('⚠️ WABA/Business ID not yet synced from webhook')
       console.log('   This is normal - webhook account_update event should arrive within seconds')

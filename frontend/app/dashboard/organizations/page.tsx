@@ -1057,7 +1057,57 @@ export default function OrganizationsPage() {
                     </div>
                   </div>
 
-                  {/* Billing Info */}
+                  {/* Payment Summary Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Payment Summary</h3>
+                    <div className="grid grid-cols-3 gap-3">
+                      {selectedOrg.plan && selectedOrg.plan !== "free" && availablePlans.length > 0 && (() => {
+                        const planObj = availablePlans.find((p: any) => 
+                          p.name?.toLowerCase() === selectedOrg.plan?.toLowerCase()
+                        );
+                        
+                        let planAmount = 0;
+                        if (selectedOrg.billingCycle === "monthly") {
+                          planAmount = planObj?.monthlyPrice || 0;
+                        } else if (selectedOrg.billingCycle === "quarterly") {
+                          planAmount = planObj?.quarterlyPrice || 0;
+                        } else if (selectedOrg.billingCycle === "annual") {
+                          planAmount = planObj?.annualPrice || 0;
+                        }
+                        
+                        const totalPaid = selectedOrg.totalPayments || 0;
+                        const balance = Math.max(0, planAmount - totalPaid);
+                        
+                        return (
+                          <>
+                            <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded">
+                              <p className="text-xs font-semibold text-blue-600 uppercase">Bill</p>
+                              <p className="text-lg font-bold text-blue-700 mt-1">₹{planAmount?.toLocaleString('en-IN')}</p>
+                            </div>
+                            
+                            <div className="px-3 py-2 bg-green-50 border border-green-200 rounded">
+                              <p className="text-xs font-semibold text-green-600 uppercase">Paid</p>
+                              <p className="text-lg font-bold text-green-700 mt-1">₹{totalPaid?.toLocaleString('en-IN')}</p>
+                            </div>
+                            
+                            <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded">
+                              <p className="text-xs font-semibold text-amber-600 uppercase">Due</p>
+                              <p className="text-lg font-bold text-amber-700 mt-1">₹{balance?.toLocaleString('en-IN')}</p>
+                            </div>
+                          </>
+                        );
+                      })()}
+                      
+                      {/* Free Plan Message */}
+                      {selectedOrg.plan === "free" && (
+                        <div className="col-span-2 px-4 py-3 border-2 border-gray-300 bg-gray-100 rounded-lg">
+                          <p className="text-sm font-semibold text-gray-700 text-center">📦 Free Plan - No Billing</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Billing Info - Shows paid amount from actual invoices */}
                   <div className="space-y-4">
                     <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Billing Details</h3>
                     <div className="grid grid-cols-1 gap-4">
@@ -1068,60 +1118,70 @@ export default function OrganizationsPage() {
                         </p>
                       </div>
                       <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Total Payments</p>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">₹{selectedOrg.totalPayments || "0"}</p>
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Amount Paid</p>
+                        <p className="text-sm font-semibold text-green-700 mt-1">
+                          ₹{selectedOrg._invoices && selectedOrg._invoices.length > 0
+                            ? selectedOrg._invoices.filter((inv: any) => inv.status === 'paid').reduce((sum: number, inv: any) => sum + (inv.paidAmount || 0), 0).toLocaleString('en-IN')
+                            : (selectedOrg.totalPayments || 0).toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-600 uppercase">Pending Amount</p>
+                        <p className="text-sm font-semibold text-amber-700 mt-1">
+                          ₹{selectedOrg._invoices && selectedOrg._invoices.length > 0
+                            ? selectedOrg._invoices.filter((inv: any) => inv.status !== 'paid').reduce((sum: number, inv: any) => sum + (inv.dueAmount || 0), 0).toLocaleString('en-IN')
+                            : "0"}
+                        </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* ✅ Subscription Details */}
-                  {selectedOrg.subscription && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Subscription Details</h3>
-                      <div className="grid grid-cols-1 gap-4">
-                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-600 uppercase">Order ID</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-1">{selectedOrg.subscription.orderId || "N/A"}</p>
-                        </div>
-                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-600 uppercase">Payment Amount</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-1">₹{selectedOrg.subscription.paymentAmount || "0"}</p>
-                        </div>
-                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-600 uppercase">Payment Status</p>
-                          <span className={`inline-block text-xs font-bold mt-1 px-3 py-1 rounded-full ${
-                            selectedOrg.subscription.paymentStatus === 'completed'
-                              ? "bg-green-200 text-green-800"
-                              : selectedOrg.subscription.paymentStatus === 'pending'
-                              ? "bg-amber-200 text-amber-800"
-                              : "bg-red-200 text-red-800"
-                          }`}>
-                            {selectedOrg.subscription.paymentStatus || "N/A"}
-                          </span>
-                        </div>
-                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-600 uppercase">Payment Method</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-1 capitalize">{selectedOrg.subscription.paymentMethod || "N/A"}</p>
-                        </div>
-                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-600 uppercase">Next Renewal Date</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-1">
-                            {selectedOrg.subscription.nextRenewalDate 
-                              ? new Date(selectedOrg.subscription.nextRenewalDate).toLocaleDateString('en-IN') 
-                              : "Not Set"}
-                          </p>
-                        </div>
-                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-600 uppercase">Subscription Created</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-1">
-                            {selectedOrg.subscription.createdAt 
-                              ? new Date(selectedOrg.subscription.createdAt).toLocaleDateString('en-IN') 
-                              : "N/A"}
-                          </p>
+                  {/* Subscription Details */}
+                  {selectedOrg.subscription && (() => {
+                    // Calculate next renewal date from signup + billing cycle
+                    const signupDate = new Date(selectedOrg.createdAt);
+                    let nextRenewal = new Date(signupDate);
+                    
+                    if (selectedOrg.billingCycle === 'monthly') {
+                      nextRenewal.setMonth(nextRenewal.getMonth() + 1);
+                    } else if (selectedOrg.billingCycle === 'quarterly') {
+                      nextRenewal.setMonth(nextRenewal.getMonth() + 3);
+                    } else if (selectedOrg.billingCycle === 'annual') {
+                      nextRenewal.setFullYear(nextRenewal.getFullYear() + 1);
+                    }
+                    
+                    return (
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Subscription</h3>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded">
+                            <p className="text-xs font-semibold text-gray-600 uppercase">Order ID</p>
+                            <p className="font-medium text-gray-900 mt-1">{selectedOrg.subscription.orderId?.slice(-8) || "N/A"}</p>
+                          </div>
+                          <div className="px-3 py-2 bg-green-50 border border-green-200 rounded">
+                            <p className="text-xs font-semibold text-green-600 uppercase">Amount</p>
+                            <p className="font-semibold text-green-700 mt-1">₹{selectedOrg.subscription.paymentAmount || "0"}</p>
+                          </div>
+                          <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded">
+                            <p className="text-xs font-semibold text-gray-600 uppercase">Status</p>
+                            <span className={`text-xs font-bold mt-1 px-2 py-1 rounded inline-block ${
+                              selectedOrg.subscription.paymentStatus === 'completed' ? 'bg-green-100 text-green-700' :
+                              selectedOrg.subscription.paymentStatus === 'pending' ? 'bg-amber-100 text-amber-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {selectedOrg.subscription.paymentStatus?.charAt(0).toUpperCase() + selectedOrg.subscription.paymentStatus?.slice(1) || "N/A"}
+                            </span>
+                          </div>
+                          <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded">
+                            <p className="text-xs font-semibold text-blue-600 uppercase">Next Billing</p>
+                            <p className="font-semibold text-blue-700 mt-1">
+                              {nextRenewal.toLocaleDateString('en-IN', {day: '2-digit', month: '2-digit', year: '2-digit'})}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* ✅ Invoice Details */}
                   {selectedOrg.invoice && (
@@ -1168,58 +1228,40 @@ export default function OrganizationsPage() {
 
                   {/* Invoices Section */}
                   <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Recent Invoices</h3>
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead className="bg-gray-50 border-b border-gray-200">
-                          <tr>
-                            <th className="px-4 py-3 text-left font-semibold text-gray-700">Invoice #</th>
-                            <th className="px-4 py-3 text-left font-semibold text-gray-700">Date</th>
-                            <th className="px-4 py-3 text-left font-semibold text-gray-700">Amount</th>
-                            <th className="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
-                            <th className="px-4 py-3 text-center font-semibold text-gray-700">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedOrg._invoices && selectedOrg._invoices.length > 0 ? (
-                            selectedOrg._invoices.slice(0, 3).map((invoice: any, idx: number) => (
-                              <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                                <td className="px-4 py-3 text-gray-900 font-medium">{invoice.invoiceNumber}</td>
-                                <td className="px-4 py-3 text-gray-600">
-                                  {new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}
-                                </td>
-                                <td className="px-4 py-3 text-gray-900 font-medium">₹{invoice.totalAmount?.toFixed(2) || '0'}</td>
-                                <td className="px-4 py-3">
-                                  <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full ${
-                                    invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Invoices</h3>
+                    <div className="border border-gray-200 rounded overflow-hidden">
+                      {selectedOrg._invoices && selectedOrg._invoices.length > 0 ? (
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                              <th className="px-3 py-2 text-left font-semibold text-gray-700">Invoice</th>
+                              <th className="px-3 py-2 text-left font-semibold text-gray-700">Amount</th>
+                              <th className="px-3 py-2 text-left font-semibold text-gray-700">Status</th>
+                              <th className="px-3 py-2 text-center font-semibold text-gray-700">Date</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {selectedOrg._invoices.slice(0, 3).map((invoice: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-gray-50">
+                                <td className="px-3 py-2 font-medium text-gray-900">{invoice.invoiceNumber}</td>
+                                <td className="px-3 py-2 font-semibold text-gray-900">₹{invoice.totalAmount?.toFixed(0)}</td>
+                                <td className="px-3 py-2">
+                                  <span className={`text-xs font-bold px-2 py-1 rounded ${
+                                    invoice.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                                   }`}>
                                     {invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1)}
                                   </span>
                                 </td>
-                                <td className="px-4 py-3 text-center">
-                                  <a 
-                                    href={invoice.pdfUrl || '#'} 
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-800 font-semibold text-xs"
-                                  >
-                                    Download
-                                  </a>
+                                <td className="px-3 py-2 text-center text-xs text-gray-600">
+                                  {new Date(invoice.invoiceDate).toLocaleDateString('en-IN', {day: '2-digit', month: '2-digit', year: '2-digit'})}
                                 </td>
                               </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={5} className="px-4 py-6 text-center text-gray-500 text-sm">
-                                📄 No invoices yet. They will appear after payment confirmation.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                      <div className="px-4 py-3 bg-gray-50 text-center text-xs text-gray-600 border-t border-gray-200">
-                        💡 View all invoices in <a href="/dashboard/invoices" className="text-blue-600 hover:underline font-semibold">Invoices page</a>
-                      </div>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <div className="px-4 py-6 text-center text-gray-500 text-sm">No invoices</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1227,20 +1269,20 @@ export default function OrganizationsPage() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-200 bg-gray-50 px-8 py-4 flex gap-3">
+            <div className="border-t border-gray-200 bg-gray-50 px-6 py-3 flex gap-2">
               {isEditMode ? (
                 <>
                   <button
                     type="submit"
                     form="editForm"
-                    className="flex-1 bg-slate-900 text-white py-2.5 rounded-lg hover:bg-slate-800 transition-colors font-semibold text-sm"
+                    className="flex-1 bg-slate-900 text-white py-2 rounded hover:bg-slate-800 transition-colors font-semibold text-sm"
                   >
-                    Save Changes
+                    Save
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsEditMode(false)}
-                    className="flex-1 bg-gray-300 text-gray-900 py-2.5 rounded-lg hover:bg-gray-400 transition-colors font-semibold text-sm"
+                    className="flex-1 bg-gray-300 text-gray-900 py-2 rounded hover:bg-gray-400 transition-colors font-semibold text-sm"
                   >
                     Cancel
                   </button>
@@ -1249,31 +1291,29 @@ export default function OrganizationsPage() {
                 <>
                   <button
                     onClick={() => setIsPaymentLinkModal(true)}
-                    className="flex-1 bg-green-600 text-white py-1.5 px-2 rounded-lg hover:bg-green-700 transition-colors font-semibold text-xs"
-                    title="Generate payment link and create invoice"
+                    className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700 transition-colors font-semibold text-xs"
                   >
-                    💳 Generate Payment Link
+                    💳 Payment Link
                   </button>
                   <button
                     onClick={handleCreateInvoice}
                     disabled={isGeneratingPaymentLink}
-                    className="flex-1 bg-blue-600 text-white py-1.5 px-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Create a free invoice for this client"
+                    className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors font-semibold text-xs disabled:opacity-50"
                   >
-                    {isGeneratingPaymentLink ? "Creating..." : "📋 Create Invoice"}
+                    📋 Invoice
                   </button>
                   <button
                     onClick={() => setIsEditMode(true)}
-                    className="flex-1 bg-slate-900 text-white py-1.5 px-2 rounded-lg hover:bg-slate-800 transition-colors font-semibold text-xs"
+                    className="flex-1 bg-slate-600 text-white py-2 rounded hover:bg-slate-700 transition-colors font-semibold text-xs"
                   >
-                    Edit Details
+                    Edit
                   </button>
                   <button
                     onClick={() => {
                       setIsDetailDrawerOpen(false)
                       setIsEditMode(false)
                     }}
-                    className="flex-1 bg-gray-300 text-gray-900 py-1.5 px-2 rounded-lg hover:bg-gray-400 transition-colors font-semibold text-xs"
+                    className="flex-1 bg-gray-400 text-white py-2 rounded hover:bg-gray-500 transition-colors font-semibold text-xs"
                   >
                     Close
                   </button>

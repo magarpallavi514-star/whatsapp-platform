@@ -98,6 +98,18 @@ const invoiceSchema = new mongoose.Schema({
     required: true
   },
   
+  // ✅ CLIENT ONBOARDING: Payment Tracking (NEW FIELDS)
+  paidDate: {
+    type: Date,
+    default: null
+  },
+  
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'partial', 'paid'],
+    default: 'pending'
+  },
+  
   // Currency
   currency: {
     type: String,

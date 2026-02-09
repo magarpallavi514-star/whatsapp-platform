@@ -642,6 +642,114 @@ export const downloadInvoice = async (req, res) => {
   }
 };
 
+/**
+ * ✅ CLIENT ONBOARDING: Get Revenue Summary
+ * GET /api/billing/admin/revenue/summary
+ * Total revenue, paid invoices, pending revenue
+ */
+export const getRevenueSummary = async (req, res) => {
+  try {
+    // Verify superadmin
+    const account = await Account.findOne({ accountId: req.account.accountId });
+    if (!account || account.type !== 'internal') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Superadmin only' 
+      });
+    }
+
+    // Get revenue metrics from paid invoices (source of truth for accounting)
+    const paidInvoices = await Invoice.aggregate([
+      { $match: { status: 'paid' } },
+      { $group: {
+        _id: null,
+        totalRevenue: { $sum: '$paidAmount' },
+        invoiceCount: { $sum: 1 }
+      }}
+    ]);
+
+    const pendingInvoices = await Invoice.aggregate([
+      { $match: { status: 'pending' } },
+      { $group: {
+        _id: null,
+        totalPending: { $sum: '$totalAmount' },
+        invoiceCount: { $sum: 1 }
+      }}
+    ]);
+
+    const totalRevenue = paidInvoices[0]?.totalRevenue || 0; // ✅ ₹9,246
+    const totalPending = pendingInvoices[0]?.totalPending || 0;
+    const totalClients = await Account.countDocuments({ type: { $ne: 'internal' } });
+
+    console.log('✅ CLIENT ONBOARDING: Revenue summary calculated', { totalRevenue, totalClients });
+
+    res.json({
+      success: true,
+      data: {
+        totalRevenue,
+        paidInvoices: paidInvoices[0]?.invoiceCount || 0,
+        totalPending,
+        pendingInvoices: pendingInvoices[0]?.invoiceCount || 0,
+        totalClients,
+        summary: {
+          totalEarned: totalRevenue,
+          totalOutstanding: totalPending
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching revenue summary:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * ✅ CLIENT ONBOARDING: Get Monthly Revenue
+ * GET /api/billing/admin/revenue/monthly
+ * Revenue breakdown by month
+ */
+export const getMonthlyRevenue = async (req, res) => {
+  try {
+    // Verify superadmin
+    const account = await Account.findOne({ accountId: req.account.accountId });
+    if (!account || account.type !== 'internal') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Superadmin only' 
+      });
+    }
+
+    const monthlyRevenue = await Invoice.aggregate([
+      { $match: { status: 'paid' } },
+      { $group: {
+        _id: { 
+          year: { $year: '$paidDate' },
+          month: { $month: '$paidDate' }
+        },
+        totalRevenue: { $sum: '$paidAmount' },
+        invoiceCount: { $sum: 1 }
+      }},
+      { $sort: { '_id.year': -1, '_id.month': -1 } }
+    ]);
+
+    console.log('✅ CLIENT ONBOARDING: Monthly revenue calculated');
+
+    res.json({
+      success: true,
+      data: monthlyRevenue
+    });
+  } catch (error) {
+    console.error('Error fetching monthly revenue:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+};
+
 export default {
   createSubscription,
   getMySubscriptions,
@@ -650,5 +758,7 @@ export default {
   cancelSubscription,
   getInvoice,
   downloadInvoice,
-  getBillingStats
+  getBillingStats,
+  getRevenueSummary,
+  getMonthlyRevenue
 };

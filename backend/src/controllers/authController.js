@@ -548,6 +548,15 @@ export const signup = async (req, res) => {
           cycle,
           paymentLink
         ).catch(err => console.error('⚠️ Failed to send pending payment email:', err.message));
+
+        // Send admin notification
+        console.log('📧 Sending admin signup notification');
+        await emailService.sendAdminSignupNotification(
+          email,
+          name,
+          company,
+          selectedPlan
+        ).catch(err => console.error('⚠️ Failed to send admin notification:', err.message));
       }
     } catch (emailErr) {
       console.error('⚠️ Error in pending payment email:', emailErr.message);

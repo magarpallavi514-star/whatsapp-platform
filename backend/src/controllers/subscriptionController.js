@@ -3,6 +3,7 @@ import Payment from '../models/Payment.js';
 import Invoice from '../models/Invoice.js';
 import Account from '../models/Account.js';
 import PricingPlan from '../models/PricingPlan.js';
+import DiscountConfig from '../models/DiscountConfig.js';
 import { emailService } from '../services/emailService.js';
 import { generateId } from '../utils/idGenerator.js';
 
@@ -430,18 +431,25 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Calculate total amount based on billing cycle
+    // Calculate total amount based on billing cycle using discounts from database
     let amount;
     let billingPeriod;
+    let discountPercent = 0;
+    
+    // First, try to get discount from DiscountConfig
+    let discountConfig = await DiscountConfig.findOne({ pricingPlanId: pricingPlan._id });
     
     if (cycle === 'annual') {
-      amount = pricingPlan.monthlyPrice * 12 * 0.8; // 20% discount
+      discountPercent = (discountConfig?.annualDiscount ?? pricingPlan.annualDiscount ?? pricingPlan.yearlyDiscount ?? 20) / 100;
+      amount = Math.round(pricingPlan.monthlyPrice * 12 * (1 - discountPercent));
       billingPeriod = 'annual';
     } else if (cycle === 'quarterly') {
-      amount = pricingPlan.monthlyPrice * 3 * 0.95; // 5% discount
+      discountPercent = (discountConfig?.quarterlyDiscount ?? pricingPlan.quarterlyDiscount ?? 10) / 100;
+      amount = Math.round(pricingPlan.monthlyPrice * 3 * (1 - discountPercent));
       billingPeriod = 'quarterly';
     } else {
-      amount = pricingPlan.monthlyPrice; // No discount for monthly
+      discountPercent = (discountConfig?.monthlyDiscount ?? pricingPlan.monthlyDiscount ?? 0) / 100;
+      amount = Math.round(pricingPlan.monthlyPrice * (1 - discountPercent));
       billingPeriod = 'monthly';
     }
     
@@ -568,6 +576,49 @@ export const createOrder = async (req, res) => {
     await payment.save();
     console.log('✅ Payment record saved:', payment._id);
     console.log('🔴 Pricing snapshot captured:', JSON.stringify(pricingSnapshot, null, 2));
+
+    // 📄 CREATE INVOICE IMMEDIATELY (for audit trail and client visibility)
+    try {
+      const invoiceId = `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const invoiceNumber = `INV-${account.accountId || account._id}-${Date.now()}`;
+      
+      const newInvoice = new Invoice({
+        invoiceId: invoiceId,
+        invoiceNumber: invoiceNumber,
+        accountId: account.accountId || account._id.toString(),
+        orderId: orderId,
+        paymentId: payment._id,
+        invoiceDate: new Date(),
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        billTo: {
+          name: account.name || 'Customer',
+          email: account.email
+        },
+        subtotal: amount,
+        tax: 0,
+        totalAmount: amount,
+        dueAmount: amount,  // Initially unpaid
+        paidAmount: 0,
+        status: 'pending',  // Will change to 'paid' when webhook fires
+        items: [
+          {
+            description: `${pricingPlanName} Plan (${cycle})`,
+            quantity: 1,
+            unitPrice: amount,
+            amount: amount
+          }
+        ],
+        notes: `${pricingPlanName} subscription - ${cycle} billing cycle`,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      await newInvoice.save();
+      console.log('📄 Invoice created immediately on order placement:', invoiceNumber);
+    } catch (invoiceError) {
+      console.error('⚠️ Failed to create invoice:', invoiceError.message);
+      // Don't fail the entire order - invoice will be created on payment
+    }
 
     res.status(201).json({
       success: true,

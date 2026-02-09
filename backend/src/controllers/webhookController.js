@@ -601,6 +601,25 @@ export const handleWebhook = async (req, res) => {
                   }
                 }
                 
+                if (!account) {
+                  // 4. CRITICAL FALLBACK: Try finding account with WRONG/STALE WABA ID
+                  // This happens when OAuth saves a wrong WABA before webhook arrives
+                  // Find any account that was recently updated (doing OAuth flow)
+                  console.log('🔍 Step 4: Searching for account with stale WABA by recent updatedAt...');
+                  account = await Account.findOne({ 
+                    updatedAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) }  // Last 5 minutes
+                  }).sort({ updatedAt: -1 });
+                  
+                  if (account) {
+                    console.log(`   ✅ Found recently-updated account (likely in OAuth flow): ${account.accountId}`);
+                    console.log(`      Current Account.wabaId: ${account.wabaId}`);
+                    console.log(`      Webhook WABA ID: ${wabaId}`);
+                    console.log(`      → Will UPDATE account's WABA ID to match webhook!`);
+                  } else {
+                    console.log('   ❌ No recently-updated account found');
+                  }
+                }
+                
                 if (account) {
                   console.log('\n✅ ✅ ✅ ACCOUNT FOUND! Now saving Business ID & WABA ID...\n');
                   

@@ -1,56 +1,60 @@
 import app from './src/app.js';
-import connectDB from './src/config/database.js';
-import { initSocketIO } from './src/services/socketService.js';
-import { setSocketIO } from './src/controllers/webhookController.js';
-import http from 'http';
+import mongoose from 'mongoose';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const PORT = process.env.PORT || 5050;
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://pixelsagency:Pm02072023@pixelsagency.664wxw1.mongodb.net/pixelswhatsapp';
 
-// Initialize database and start server
-const startServer = async () => {
-  try {
-    // Connect to MongoDB
-    await connectDB();
-    
-    // Create HTTP server
-    const server = http.createServer(app);
+// Create HTTP server
+const httpServer = createServer(app);
 
-    // Initialize Socket.io
-    const io = initSocketIO(server);
-
-    // Pass Socket.io instance to webhook controller
-    setSocketIO(io);
-
-    // Start server
-    server.listen(PORT, () => {
-      console.log(`\n✅ Server running on port ${PORT}`);
-      console.log(`📡 WebSocket (Socket.io) enabled for real-time updates`);
-      console.log(`🔗 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🌍 Frontend URL: ${process.env.FRONTEND_URL || 'Not configured'}`);
-      console.log(`\n═══════════════════════════════════════════\n`);
-    });
-
-    // Graceful shutdown handlers
-    process.on('SIGTERM', () => {
-      console.log('\n🛑 SIGTERM signal received: closing HTTP server');
-      server.close(() => {
-        console.log('HTTP server closed');
-        process.exit(0);
-      });
-    });
-
-    process.on('SIGINT', () => {
-      console.log('\n🛑 SIGINT signal received: closing HTTP server');
-      server.close(() => {
-        console.log('HTTP server closed');
-        process.exit(0);
-      });
-    });
-  } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
-    process.exit(1);
+// Setup Socket.io
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST']
   }
-};
+});
 
-// Start the server
-startServer();
+// Connect to MongoDB
+mongoose.connect(MONGO_URI)
+  .then(() => {
+    console.log('✅ MongoDB connected successfully');
+  })
+  .catch((err) => {
+    console.error('❌ MongoDB connection error:', err.message);
+  });
+
+// Start server
+httpServer.listen(PORT, () => {
+  console.log(`
+╔═══════════════════════════════════════╗
+║  🚀 SERVER STARTED SUCCESSFULLY       ║
+╠═══════════════════════════════════════╣
+║  Port: ${PORT.toString().padEnd(33)} ║
+║  Environment: ${(process.env.NODE_ENV || 'development').padEnd(20)} ║
+║  Timestamp: ${new Date().toISOString().padEnd(18)} ║
+╚═══════════════════════════════════════╝
+  `);
+});
+
+// Handle server errors
+httpServer.on('error', (err) => {
+  console.error('❌ Server error:', err);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err);
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});

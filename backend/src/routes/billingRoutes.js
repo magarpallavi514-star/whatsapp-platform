@@ -47,4 +47,10 @@ router.get('/invoices/:invoiceId/download', requireJWT, billingController.downlo
 // Get billing stats
 router.get('/stats', requireJWT, billingController.getBillingStats);
 
+/**
+ * ✅ CLIENT ONBOARDING: Revenue Analytics
+ */
+router.get('/admin/revenue/summary', requireJWT, billingController.getRevenueSummary);
+router.get('/admin/revenue/monthly', requireJWT, billingController.getMonthlyRevenue);
+
 export default router;

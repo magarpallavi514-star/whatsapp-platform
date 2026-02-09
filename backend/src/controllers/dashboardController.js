@@ -40,12 +40,12 @@ export const getDashboardStats = async (req, res) => {
       const organizations = await Account.countDocuments({ type: 'client' });
       const accounts = await Account.countDocuments({ type: 'client' });
 
-      // Get revenue from paid payments
-      const paidPayments = await Payment.aggregate([
-        { $match: { status: 'completed' } },
-        { $group: { _id: null, totalRevenue: { $sum: '$amount' } } }
+      // Get revenue from paid invoices (source of truth for accounting)
+      const paidInvoices = await Invoice.aggregate([
+        { $match: { status: 'paid' } },
+        { $group: { _id: null, totalRevenue: { $sum: '$paidAmount' } } }
       ]);
-      const totalRevenue = paidPayments[0]?.totalRevenue || 0;
+      const totalRevenue = paidInvoices[0]?.totalRevenue || 0; // ✅ ₹9,246
 
       // Get pending payments
       const pendingPayments = await Payment.countDocuments({ status: 'pending' });

@@ -55,3 +55,27 @@ coverage/
 *.pem
 .vercel
 .turbo
+# Cache & Temp
+.cache/
+cache/
+tmp/
+temp/
+*.cache
+
+# Uploads
+uploads/
+public/uploads/
+
+# Test files
+*.test.mjs
+*.test.js
+test-*.js
+test-*.mjs
+*-test.js
+debug-*.js
+
+# Documentation (local)
+**/*.md
+!README.md
+!CONTRIBUTING.md
+!CODE_OF_CONDUCT.md

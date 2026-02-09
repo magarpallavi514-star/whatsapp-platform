@@ -116,12 +116,15 @@ export const handleCashfreeWebhook = async (req, res) => {
 
 /**
  * Activate subscription after successful payment
+ * ✅ CLIENT ONBOARDING: Updates all records atomically
  */
 async function activateSubscription(payment) {
   try {
-    const { accountId, planId } = payment;
+    const { accountId, planId, orderId, amount } = payment;
 
-    // 🔓 ACTIVATE ACCOUNT - Change status from 'pending' to 'active'
+    console.log('🔓 CLIENT ONBOARDING: Activating account:', accountId);
+
+    // STEP 1: ACTIVATE ACCOUNT - Change status from 'pending' to 'active'
     console.log('🔓 Activating account:', accountId);
     // IMPORTANT: Don't select password field - it has select:false in schema
     // This prevents accidentally clearing the password when we save
@@ -143,29 +146,54 @@ async function activateSubscription(payment) {
       ).catch(err => console.error('⚠️ Failed to send confirmation email:', err.message));
     }
 
-    // Check if subscription already exists
+    // ✅ STEP 2: UPDATE INVOICE (NEW - THIS WAS MISSING!)
+    console.log('📄 CLIENT ONBOARDING: Updating invoice for order:', orderId);
+    const invoice = await Invoice.findOne({ orderId: orderId });
+    if (invoice) {
+      invoice.status = 'paid';
+      invoice.paidAmount = amount;
+      invoice.paidDate = new Date();
+      invoice.dueAmount = Math.max(0, invoice.totalAmount - amount);
+      await invoice.save();
+      console.log('✅ Invoice marked as paid:', invoice._id);
+    } else {
+      console.warn('⚠️ No invoice found for order:', orderId);
+    }
+
+    // ✅ STEP 3: UPDATE SUBSCRIPTION WITH PAYMENT INFO (NEW)
+    console.log('🔄 CLIENT ONBOARDING: Updating subscription payment status');
     let subscription = await Subscription.findOne({ accountId: accountId });
 
     if (subscription) {
       // Update existing subscription
       subscription.planId = planId;
       subscription.status = 'active';
+      subscription.paymentStatus = 'completed';
+      subscription.paymentAmount = amount;
+      subscription.orderId = orderId;
+      subscription.invoiceId = invoice?._id;
+      subscription.paidDate = new Date();
       subscription.startDate = new Date();
       subscription.renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-      subscription.paymentHistory.push({
+      subscription.paymentHistory?.push({
         paymentId: payment._id,
         amount: payment.amount,
         date: new Date(),
         status: 'completed'
       });
       await subscription.save();
-      console.log('✅ Subscription updated for account:', accountId);
+      console.log('✅ Subscription updated with payment info for account:', accountId);
     } else {
       // Create new subscription
       subscription = new Subscription({
         accountId,
         planId,
         status: 'active',
+        paymentStatus: 'completed',
+        paymentAmount: amount,
+        orderId: orderId,
+        invoiceId: invoice?._id,
+        paidDate: new Date(),
         startDate: new Date(),
         renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         paymentHistory: [{
@@ -176,77 +204,24 @@ async function activateSubscription(payment) {
         }]
       });
       await subscription.save();
-      console.log('✅ New subscription created for account:', accountId);
+      console.log('✅ New subscription created with payment info for account:', accountId);
     }
 
-    // Generate invoice
-    const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-    
-    const invoiceData = {
-      invoiceNumber,
-      accountId,
-      subscriptionId: subscription._id,
-      invoiceDate: new Date(),
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      billTo: {
-        name: 'Customer', // Will be populated from Account
-        email: '',
-        company: '',
-        address: ''
-      },
-      lineItems: [{
-        description: `${planId} Plan - Monthly Subscription`,
-        quantity: 1,
-        unitPrice: payment.amount,
-        amount: payment.amount
-      }],
-      subtotal: payment.amount,
-      taxRate: 0,
-      taxAmount: 0,
-      discountAmount: 0,
-      totalAmount: payment.amount,
-      paidAmount: payment.amount,
-      status: 'paid',
-      currency: payment.currency || 'INR'
-    };
+    // ✅ STEP 4: UPDATE ACCOUNT TOTAL PAYMENTS (NEW)
+    console.log('💰 CLIENT ONBOARDING: Updating account totalPayments:', accountId);
+    await Account.updateOne(
+      { _id: accountId },
+      { 
+        $inc: { totalPayments: amount },
+        lastPaymentDate: new Date(),
+        nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      }
+    );
+    console.log('✅ Account totalPayments and dates updated');
 
-    // Generate PDF and upload to S3
-    let pdfUrl = null;
-    try {
-      const { s3Url } = await generateAndUploadInvoicePDF(invoiceData, accountId.toString());
-      pdfUrl = s3Url;
-      console.log('✅ Invoice PDF generated and uploaded to S3');
-    } catch (pdfError) {
-      console.error('⚠️ Failed to generate PDF:', pdfError.message);
-      // Continue even if PDF generation fails
-    }
-
-    const invoice = new Invoice({
-      invoiceNumber,
-      accountId,
-      subscriptionId: subscription._id,
-      invoiceDate: invoiceData.invoiceDate,
-      dueDate: invoiceData.dueDate,
-      billTo: invoiceData.billTo,
-      lineItems: invoiceData.lineItems,
-      subtotal: invoiceData.subtotal,
-      totalAmount: invoiceData.totalAmount,
-      paidAmount: invoiceData.paidAmount,
-      dueAmount: 0,
-      currency: invoiceData.currency,
-      status: 'paid',
-      pdfUrl: pdfUrl,
-      payments: [{
-        paymentId: payment._id.toString(),
-        amount: payment.amount,
-        date: new Date(),
-        method: payment.paymentGateway,
-        transactionId: payment.gatewayTransactionId,
-        status: 'success'
-      }]
-    });
-    await invoice.save();
-    console.log('✅ Invoice generated:', invoice._id);
+    // ✅ Invoice already updated in STEP 2 above
+    // No need to create a new one - we updated the existing one
+    console.log('✅ CLIENT ONBOARDING: All payment records updated successfully');
 
     // Link invoice to payment
     payment.invoiceId = invoice._id;
