@@ -338,7 +338,7 @@ export const handleWhatsAppOAuth = async (req, res) => {
             { accountId, phoneNumberId: phone.id },
             {
               wabaId,
-              accessToken,  // Encrypted automatically
+              accessToken: access_token,  // ✅ FIXED: Use access_token from token response
               displayPhone: phone.display_phone_number,
               displayName: phone.verified_name || 'WhatsApp Business',
               isActive: true,
@@ -354,7 +354,7 @@ export const handleWhatsAppOAuth = async (req, res) => {
             accountId,
             phoneNumberId: phone.id,
             wabaId,
-            accessToken,
+            accessToken: access_token,  // ✅ FIXED: Use access_token from token response
             displayPhone: phone.display_phone_number,
             displayName: phone.verified_name || 'WhatsApp Business',
             isActive: true,
