@@ -285,12 +285,36 @@ export default function SettingsPage() {
       // Store return URL
       localStorage.setItem('oauth_return_to', '/dashboard/settings?tab=whatsapp')
       
+      // Show loading state while OAuth is in progress
+      setIsLoading(true)
+      setError("")
+      
+      // Add a timeout to handle cases where callback never fires
+      const timeoutId = setTimeout(() => {
+        console.warn('⚠️ OAuth callback timeout - checking if token was exchanged anyway')
+        // Try to fetch phone numbers after 5 seconds
+        fetchPhoneNumbers().then(() => {
+          setIsLoading(false)
+        })
+      }, 5000)
+      
+      // Clear timeout when callback fires
+      const originalCallback = window.fbLoginCallback
+      window.fbLoginCallback = function(response) {
+        clearTimeout(timeoutId)
+        console.log('✅ Facebook Business Login callback fired')
+        if (originalCallback) {
+          originalCallback.call(this, response)
+        }
+      }
+      
       // Launch the Facebook Business Login flow
       window.launchWhatsAppSignup()
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to initiate login'
       console.error('❌ Error:', errorMsg)
       setError(errorMsg)
+      setIsLoading(false)
     }
   }
 
@@ -801,11 +825,9 @@ export default function SettingsPage() {
     const handleFBLoginSuccess = async (event: CustomEvent) => {
       const { code } = event.detail
       console.log('📲 Facebook Business Login Success Event - Code:', code.substring(0, 20) + '...')
+      console.log('🔄 Now exchanging code for WhatsApp access token...')
       
       try {
-        setIsLoading(true)
-        setError("")
-        
         // Exchange code with backend for System User token
         const token = authService.getToken()
         const response = await fetch(`${API_URL}/integrations/whatsapp/oauth`, {
@@ -826,22 +848,30 @@ export default function SettingsPage() {
           const data = await response.json()
           console.log('✅ OAuth Exchange Success:', {
             success: data.success,
-            phoneCount: data.phoneNumbers?.length || 0
+            message: data.message,
+            phoneCount: data.phoneCount || 0,
+            status: data.status
           })
           
+          // Give backend a moment to sync everything
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          
           // Refresh phone numbers list
+          console.log('🔄 Refreshing phone numbers...')
           await fetchPhoneNumbers()
           setError("")
+          
+          console.log('✅ WhatsApp connection complete! Page should now show your phone number.')
         } else {
           const errorData = await response.json()
           console.error('❌ OAuth Exchange Failed:', errorData)
           setError(errorData.message || 'Failed to connect WhatsApp account')
+          setIsLoading(false)
         }
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Connection error'
         console.error('❌ Error exchanging code:', errorMsg)
         setError(errorMsg)
-      } finally {
         setIsLoading(false)
       }
     }

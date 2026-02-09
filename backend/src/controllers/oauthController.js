@@ -327,6 +327,12 @@ export const handleWhatsAppOAuth = async (req, res) => {
     
     for (const phone of phoneNumbers) {
       try {
+        console.log('\n📝 Processing phone:', {
+          phoneNumberId: phone.id,
+          displayPhone: phone.display_phone_number,
+          verifiedName: phone.verified_name
+        })
+        
         const existing = await PhoneNumber.findOne({
           accountId,
           phoneNumberId: phone.id
@@ -334,6 +340,7 @@ export const handleWhatsAppOAuth = async (req, res) => {
         
         if (existing) {
           // Update existing
+          console.log('📝 Phone exists - updating...')
           const updated = await PhoneNumber.findOneAndUpdate(
             { accountId, phoneNumberId: phone.id },
             {
@@ -350,7 +357,13 @@ export const handleWhatsAppOAuth = async (req, res) => {
           savedPhones.push(updated)
         } else {
           // Create new
-          const savedPhone = await PhoneNumber.create({
+          console.log('📝 Phone is new - creating...')
+          console.log('  accountId:', accountId, '(type:', typeof accountId + ')')
+          console.log('  phoneNumberId:', phone.id)
+          console.log('  wabaId:', wabaId)
+          console.log('  access_token length:', access_token.length)
+          
+          const phoneData = {
             accountId,
             phoneNumberId: phone.id,
             wabaId,
@@ -359,12 +372,30 @@ export const handleWhatsAppOAuth = async (req, res) => {
             displayName: phone.verified_name || 'WhatsApp Business',
             isActive: true,
             verifiedAt: new Date()
+          }
+          
+          console.log('📝 Creating phone with data:', {
+            accountId: phoneData.accountId,
+            phoneNumberId: phoneData.phoneNumberId,
+            wabaId: phoneData.wabaId,
+            displayPhone: phoneData.displayPhone,
+            displayName: phoneData.displayName,
+            isActive: phoneData.isActive,
+            tokenLength: phoneData.accessToken.length
           })
+          
+          const savedPhone = await PhoneNumber.create(phoneData)
+          
           console.log('✅ Saved new phone:', phone.display_phone_number)
+          console.log('   Phone ID:', savedPhone._id)
+          console.log('   accountId:', savedPhone.accountId)
           savedPhones.push(savedPhone)
         }
       } catch (phoneError) {
-        console.error('❌ Error saving phone:', phone.id, phoneError.message)
+        console.error('❌ Error saving phone:', phone.id)
+        console.error('   Error message:', phoneError.message)
+        console.error('   Error code:', phoneError.code)
+        console.error('   Full error:', phoneError)
         throw phoneError
       }
     }
