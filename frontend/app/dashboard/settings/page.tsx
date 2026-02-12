@@ -955,11 +955,11 @@ export default function SettingsPage() {
 
               {/* Error Message Display */}
               {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="mb-6 p-4 border border-red-200 rounded-lg">
                   <div className="flex items-start gap-3">
                     <Phone className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <h3 className="font-semibold text-red-900">Configuration Issue</h3>
+                      <h3 className="font-semibold text-Green-900">Refresh the page if connection not updated</h3>
                       <p className="text-red-700 text-sm mt-1 whitespace-pre-line">{error}</p>
                     </div>
                   </div>
