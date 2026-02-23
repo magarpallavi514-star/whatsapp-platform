@@ -627,6 +627,8 @@ export default function SettingsPage() {
         setNewApiKey(result.integrationToken)
         setShowApiKeyModal(true)
         console.log("✅ Integration Token generated successfully")
+        console.log(response)
+        console.log(result)
       } else {
         const errorMsg = result.message || result.error || `HTTP ${response.status}`
         console.error("❌ Token generation failed:", errorMsg);
@@ -1402,6 +1404,7 @@ export default function SettingsPage() {
                       <Key className="h-4 w-4 mr-2" />
                       Generate Integration Token
                     </Button>
+                    
                   </div>
                 </div>
 
