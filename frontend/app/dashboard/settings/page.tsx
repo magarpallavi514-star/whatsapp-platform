@@ -336,7 +336,10 @@ export default function SettingsPage() {
       })
       if (response.ok) {
         alert('Phone number deleted successfully')
-        fetchPhoneNumbers()
+        //fetchPhoneNumbers()
+         await fetchPhoneNumbers()
+          await fetchProfile()
+
       } else {
         const data = await response.json()
         alert(data.message || 'Failed to delete phone number')
@@ -1429,6 +1432,49 @@ export default function SettingsPage() {
                     wpi_int_[64 random characters]
                   </p>
                 </div>
+
+              {/* 🔑 Integration Token Modal */}
+{showApiKeyModal && newApiKey && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg shadow-lg p-6 max-w-lg w-full space-y-4">
+      <h3 className="text-xl font-semibold text-gray-900">
+        Integration Token Generated
+      </h3>
+
+      <p className="text-sm text-gray-600">
+        Copy and save this token now. You won’t be able to see it again.
+      </p>
+
+      <code className="block w-full bg-gray-100 border border-gray-300 rounded p-3 text-sm font-mono break-all">
+        {newApiKey}
+      </code>
+
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(newApiKey)
+            alert("Token copied to clipboard")
+          }}
+          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+        >
+          Copy
+        </button>
+
+        <button
+          onClick={() => {
+            setShowApiKeyModal(false)
+            setNewApiKey(null)
+          }}
+          className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
 
                 {/* Security Note */}
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
