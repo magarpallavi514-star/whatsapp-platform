@@ -764,6 +764,10 @@ export default function SettingsPage() {
       // Load initial data
       console.log('📱 Calling fetchPhoneNumbers...');
       fetchPhoneNumbers()
+      
+      // Also load profile data immediately (includes businessId from webhook)
+      console.log('👤 Calling fetchProfile...');
+      fetchProfile()
     }
     
     initializePage()

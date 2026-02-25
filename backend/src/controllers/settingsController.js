@@ -536,9 +536,21 @@ export const getProfile = async (req, res) => {
   try {
     const accountId = req.account._id;
     
+    console.log('📝 GET PROFILE - Fetching account:');
+    console.log('  req.account._id:', accountId);
+    console.log('  req.account.accountId:', req.account.accountId);
+    
     const account = await Account.findById(accountId)
-      .select('name email company phone timezone wabaId businessId subdomain')
+      .select('name email company phone timezone wabaId businessId subdomain metaSync')
       .lean();
+    
+    console.log('✅ Account found:', {
+      _id: account?._id,
+      accountId: account?.accountId,
+      wabaId: account?.wabaId,
+      businessId: account?.businessId,
+      metaSyncStatus: account?.metaSync?.status
+    });
     
     if (!account) {
       return res.status(404).json({
