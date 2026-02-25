@@ -172,68 +172,16 @@ export const handleWhatsAppOAuth = async (req, res) => {
     console.log('Business ID:', businessId || '⏳ waiting for webhook')
     console.log('WABA ID:', wabaId || '⏳ waiting for webhook')
     
-    // 🔥 CRITICAL FIX: If WABA ID not in account, try to get it from Meta API
-    // This ensures we get the CORRECT WABA ID (not a stale/wrong one)
+    // 🔥 UPDATED APPROACH: Don't try to auto-fetch with limited permissions
+    // Instead, let user provide their WABA ID directly (they own it!)
+    // The webhook will sync everything else
     if (!wabaId && access_token) {
-      console.log('🔍 WABA ID not found in account - trying to fetch from Meta...')
-      try {
-        // Get the app token info first
-        const appTokenInfo = await axios.get(
-          `${GRAPH_API_URL}/app`,
-          { params: { access_token } }
-        )
-        console.log('✅ Got app info')
-        
-        // If we have a system user token, we need to find the WABA through the business accounts
-        // Try to find any business account accessible with this token
-        const businessesResponse = await axios.get(
-          `${GRAPH_API_URL}/me/businesses`,
-          { params: { access_token } }
-        )
-        
-        console.log('📊 Businesses Response:', {
-          hasData: !!businessesResponse.data?.data,
-          count: businessesResponse.data?.data?.length || 0,
-          data: businessesResponse.data?.data || []
-        })
-        
-        if (businessesResponse.data?.data?.length > 0) {
-          const firstBusiness = businessesResponse.data.data[0]
-          businessId = firstBusiness.id
-          console.log('✅ Found business ID from token:', businessId)
-          
-          // Now get WABA for this business
-          const wabaResponse = await axios.get(
-            `${GRAPH_API_URL}/${businessId}/whatsapp_business_accounts`,
-            { params: { access_token } }
-          )
-          
-          if (wabaResponse.data?.data?.length > 0) {
-            wabaId = wabaResponse.data.data[0].id
-            console.log('✅ Found WABA ID from business:', wabaId)
-            
-            // Save both to account
-            await Account.findOneAndUpdate(
-              { accountId },
-              { wabaId, businessId },
-              { new: true }
-            )
-            console.log('✅ Saved WABA and Business ID from Meta to account')
-          } else {
-            console.warn('⚠️ No WABAs found under business:', businessId)
-          }
-        } else {
-          console.warn('⚠️ No businesses found for this token - waiting for webhook to provide business context')
-        }
-      } catch (fetchError) {
-        console.warn('⚠️  Could not fetch WABA from Meta:', fetchError.message)
-        console.warn('    Error Details:', {
-          status: fetchError.response?.status,
-          data: fetchError.response?.data,
-          message: fetchError.message
-        })
-        console.log('   This is OK - webhook will provide it shortly')
-      }
+      console.log('🔍 WABA ID not found - user will provide it via webhook or manual entry')
+      console.log('   Instead of trying to fetch (which may fail due to permissions)')
+      console.log('   The system will:')
+      console.log('   1. Wait for webhook to provide WABA ID')
+      console.log('   2. Or let user manually enter WABA ID in settings')
+      console.log('   3. This is MORE RELIABLE than auto-fetching with possibly-limited token')
     }
     
     // 🔥 CRITICAL FIX: If we got businessId from Meta but no wabaId yet,
@@ -280,23 +228,27 @@ export const handleWhatsAppOAuth = async (req, res) => {
       
       return res.json({
         success: true,
-        message: 'OAuth completed! Your WhatsApp Business Account is being configured.',
+        message: 'OAuth token received! Your account will be synced via webhook.',
         accountId: accountId,
-        status: 'awaiting_webhook',
-        waitingFor: {
-          businessId: true,
-          wabaId: true
-        },
-        nextSteps: 'Meta webhook will complete the setup within 10-30 seconds. Please wait and refresh the page.',
+        status: 'awaiting_webhook_sync',
+        whatHappensNext: 'Meta will send a webhook to complete the setup',
+        nextSteps: [
+          '1. Wait 10-30 seconds for Meta webhook',
+          '2. Refresh this page',
+          '3. Your WhatsApp Business Account will appear',
+          'OR',
+          '1. Manually enter your WABA ID in settings if webhook is slow',
+          '2. Go to Meta Business Suite to find your WABA ID'
+        ],
         troubleshooting: {
-          issue: 'No business accounts found',
-          cause: 'This usually means either: (1) You logged in with personal Facebook account instead of Business account, or (2) The business is not linked to WhatsApp yet',
+          issue: 'Still showing "not connected"?',
+          cause: 'The webhook from Meta may be delayed or you need to manually provide your WABA ID',
           solution: [
-            '1. Make sure you are using a BUSINESS Facebook account',
-            '2. Go to Meta Business Suite (business.facebook.com)',
-            '3. Add or select your WhatsApp Business Account',
-            '4. Try connecting again'
-          ]
+            '✅ Option 1: Wait a bit longer (webhook can take up to 30 seconds)',
+            '✅ Option 2: Go to Settings → Manually add your WABA ID and Phone Number',
+            '✅ Option 3: Check that you used a BUSINESS Facebook account (not personal)'
+          ],
+          learnMore: 'https://business.facebook.com/settings/whatsapp'
         }
       })
     }
