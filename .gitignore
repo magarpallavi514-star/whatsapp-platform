@@ -79,3 +79,7 @@ debug-*.js
 !README.md
 !CONTRIBUTING.md
 !CODE_OF_CONDUCT.md
+
+# MJS Scripts & Diagnostic Files
+*.mjs
+backend/*.mjs

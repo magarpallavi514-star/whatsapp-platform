@@ -108,6 +108,7 @@ export default function SettingsPage() {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false)
   const [apiKeyName, setApiKeyName] = useState('')
   const [creatingKey, setCreatingKey] = useState(false)
+  const [savedIntegrationToken, setSavedIntegrationToken] = useState<{prefix: string, fullToken: string, createdAt: string, lastUsedAt?: string} | null>(null)
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -632,6 +633,14 @@ export default function SettingsPage() {
         console.log("✅ Integration Token generated successfully")
         console.log(response)
         console.log(result)
+        
+        // Save the token info to display in API Keys section
+        setSavedIntegrationToken({
+          prefix: result.tokenPrefix || '',
+          fullToken: result.integrationToken,
+          createdAt: result.createdAt || new Date().toISOString(),
+          lastUsedAt: undefined
+        })
       } else {
         const errorMsg = result.message || result.error || `HTTP ${response.status}`
         console.error("❌ Token generation failed:", errorMsg);
@@ -932,10 +941,8 @@ export default function SettingsPage() {
           {activeTab === 'whatsapp' ? (
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <div className="mb-6">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">WhatsApp Business Accounts</h2>
-                  <p className="text-sm text-gray-600 mt-1">Manage your connected WhatsApp Business numbers</p>
-                </div>
+                <h2 className="text-xl font-semibold text-gray-900">WhatsApp Business Accounts</h2>
+                <p className="text-sm text-gray-600 mt-1">Manage your connected WhatsApp Business numbers</p>
               </div>
 
               {/* Available Connection Summary */}
@@ -1410,6 +1417,76 @@ export default function SettingsPage() {
                     
                   </div>
                 </div>
+
+                {/* Saved Integration Token Display */}
+                {savedIntegrationToken && (
+                  <div className="border border-green-200 rounded-lg p-6 bg-green-50">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0">
+                        <CheckCircle className="h-6 w-6 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-green-900 mb-3">✅ Integration Token Saved</h3>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-green-900 mb-2">
+                              Full Integration Token
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={savedIntegrationToken.fullToken}
+                                readOnly
+                                className="flex-1 px-4 py-2 border border-green-300 rounded-lg bg-white text-gray-900 font-mono text-xs"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(savedIntegrationToken.fullToken)
+                                  alert('Full token copied to clipboard!')
+                                }}
+                                className="p-2 hover:bg-green-100 rounded-lg transition text-green-600"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-green-900 mb-2">
+                              Token Prefix
+                            </label>
+                            <input
+                              type="text"
+                              value={savedIntegrationToken.prefix}
+                              readOnly
+                              className="w-full px-4 py-2 border border-green-300 rounded-lg bg-white text-gray-900 font-mono text-sm"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-green-900 mb-2">
+                              Created Date
+                            </label>
+                            <input
+                              type="text"
+                              value={new Date(savedIntegrationToken.createdAt).toLocaleString()}
+                              readOnly
+                              className="w-full px-4 py-2 border border-green-300 rounded-lg bg-white text-gray-900 text-sm"
+                            />
+                          </div>
+                          
+                          <div className="bg-white border border-green-300 rounded-lg p-3">
+                            <p className="text-sm text-green-800">
+                              💡 Copy the full integration token above to connect Enromatics with your WhatsApp Business Account. The token prefix is also available for reference.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Usage Instructions */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

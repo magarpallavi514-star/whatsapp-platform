@@ -264,23 +264,40 @@ export default function ChatPage() {
   // Mark conversation as read
   const markAsRead = useCallback(async (conversationId: string) => {
     try {
-      // TODO: Implement PATCH endpoint on backend for marking conversations as read
-      // For now, just update local state
-      // await fetch(
-      //   `${API_URL}/conversations/${encodeURIComponent(conversationId)}/read`,
-      //   {
-      //     method: "PATCH",
-      //     headers: getHeaders(),
-      //   }
-      // )
-      // Update local state to clear unread count
-      setConversations(prev => prev.map(conv => 
-        conv.id === conversationId ? { ...conv, unreadCount: 0 } : conv
-      ))
+      console.log('📖 Marking conversation as read:', { conversationId });
+      
+      // Call backend endpoint to mark conversation as read
+      const response = await fetch(
+        `${API_URL}/conversations/${encodeURIComponent(conversationId)}/read`,
+        {
+          method: "PATCH",
+          headers: getHeaders(),
+        }
+      )
+      
+      const data = await response.json();
+      console.log('✅ Mark as read response:', data);
+      
+      if (response.ok) {
+        // Update local state to clear unread count
+        setConversations(prev => prev.map(conv => 
+          conv.id === conversationId ? { ...conv, unreadCount: 0 } : conv
+        ))
+        console.log('✅ Unread count cleared for:', conversationId);
+        
+        // Also refresh the full conversation list from backend to ensure sync
+        // This prevents stale data from WebSocket broadcasts
+        setTimeout(() => {
+          console.log('🔄 Refreshing conversation list after mark as read...');
+          fetchConversations(selectedPhoneId);
+        }, 500);
+      } else {
+        console.warn('⚠️ Mark as read failed:', data);
+      }
     } catch (error) {
       console.error("Error marking as read:", error)
     }
-  }, [API_URL])
+  }, [API_URL, selectedPhoneId])
 
   // Send message
   const sendMessage = useCallback(async () => {

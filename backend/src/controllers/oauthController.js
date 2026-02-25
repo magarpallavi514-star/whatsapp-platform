@@ -191,6 +191,12 @@ export const handleWhatsAppOAuth = async (req, res) => {
           { params: { access_token } }
         )
         
+        console.log('📊 Businesses Response:', {
+          hasData: !!businessesResponse.data?.data,
+          count: businessesResponse.data?.data?.length || 0,
+          data: businessesResponse.data?.data || []
+        })
+        
         if (businessesResponse.data?.data?.length > 0) {
           const firstBusiness = businessesResponse.data.data[0]
           businessId = firstBusiness.id
@@ -213,10 +219,19 @@ export const handleWhatsAppOAuth = async (req, res) => {
               { new: true }
             )
             console.log('✅ Saved WABA and Business ID from Meta to account')
+          } else {
+            console.warn('⚠️ No WABAs found under business:', businessId)
           }
+        } else {
+          console.warn('⚠️ No businesses found for this token - waiting for webhook to provide business context')
         }
       } catch (fetchError) {
         console.warn('⚠️  Could not fetch WABA from Meta:', fetchError.message)
+        console.warn('    Error Details:', {
+          status: fetchError.response?.status,
+          data: fetchError.response?.data,
+          message: fetchError.message
+        })
         console.log('   This is OK - webhook will provide it shortly')
       }
     }
@@ -265,14 +280,24 @@ export const handleWhatsAppOAuth = async (req, res) => {
       
       return res.json({
         success: true,
-        message: 'OAuth initiated. Waiting for Meta webhook...',
+        message: 'OAuth completed! Your WhatsApp Business Account is being configured.',
         accountId: accountId,
         status: 'awaiting_webhook',
         waitingFor: {
           businessId: true,
           wabaId: true
         },
-        nextSteps: 'Webhook should arrive within 5-10 seconds with WABA ID and Business ID'
+        nextSteps: 'Meta webhook will complete the setup within 10-30 seconds. Please wait and refresh the page.',
+        troubleshooting: {
+          issue: 'No business accounts found',
+          cause: 'This usually means either: (1) You logged in with personal Facebook account instead of Business account, or (2) The business is not linked to WhatsApp yet',
+          solution: [
+            '1. Make sure you are using a BUSINESS Facebook account',
+            '2. Go to Meta Business Suite (business.facebook.com)',
+            '3. Add or select your WhatsApp Business Account',
+            '4. Try connecting again'
+          ]
+        }
       })
     }
     

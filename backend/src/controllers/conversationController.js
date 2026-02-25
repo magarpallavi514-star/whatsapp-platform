@@ -1,6 +1,8 @@
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import whatsappService from '../services/whatsappService.js';
+import { broadcastConversationUpdate } from '../services/socketService.js';
+import { Types as MongooseTypes } from 'mongoose';
 
 /**
  * Conversation Controller
@@ -53,10 +55,11 @@ export const getConversations = async (req, res) => {
     
     console.log('  Found:', conversations.length, 'conversations');
     
-    // ✅ CRITICAL FIX: Ensure conversationId field for Socket.io matching
+    // ✅ CRITICAL FIX: Send both _id and conversationId to frontend
     const formattedConversations = conversations.map(conv => ({
       ...conv,
-      conversationId: conv._id.toString()  // MongoDB _id as Socket.io conversation ID
+      _id: conv._id.toString(),  // Include _id as string
+      conversationId: conv._id.toString()  // MongoDB _id for Socket.io & API calls
     }));
     
     res.json({
@@ -335,10 +338,31 @@ export const replyToConversation = async (req, res) => {
  */
 export const markAsRead = async (req, res) => {
   try {
-    const { conversationId } = req.params;
+    const { conversationId } = req.params;  // This is now the MongoDB _id as string
+    const accountId = req.account?.accountId || req.accountId;
     
-    const result = await Conversation.updateOne(
-      { conversationId },
+    console.log('📖 Mark As Read Request:', {
+      conversationId,
+      accountId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Convert conversationId string to MongoDB ObjectId for lookup
+    const ObjectId = MongooseTypes.ObjectId;
+    let queryId;
+    try {
+      queryId = new ObjectId(conversationId);
+    } catch (err) {
+      console.error('❌ Invalid conversationId format:', conversationId);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid conversation ID format'
+      });
+    }
+    
+    // 1. Update conversation to clear unread count
+    const convResult = await Conversation.updateOne(
+      { _id: queryId, accountId },  // Look up by MongoDB _id, filter by accountId for safety
       {
         $set: {
           unreadCount: 0,
@@ -347,16 +371,60 @@ export const markAsRead = async (req, res) => {
       }
     );
     
-    if (result.matchedCount === 0) {
+    console.log('✅ Conversation updated:', {
+      matchedCount: convResult.matchedCount,
+      modifiedCount: convResult.modifiedCount
+    });
+    
+    // 2. Also mark all unread messages in this conversation as read
+    const msgResult = await Message.updateMany(
+      { 
+        conversationId: queryId,  // Look up by conversation _id
+        accountId,
+        direction: 'inbound',  // Only mark inbound messages as read
+        readAt: { $exists: false }  // Only if not already read
+      },
+      {
+        $set: {
+          readAt: new Date()
+        }
+      }
+    );
+    
+    console.log('✅ Messages updated:', {
+      matchedCount: msgResult.matchedCount,
+      modifiedCount: msgResult.modifiedCount
+    });
+    
+    if (convResult.matchedCount === 0) {
+      console.warn('⚠️ Conversation not found:', { conversationId, accountId });
       return res.status(404).json({
         success: false,
         message: 'Conversation not found'
       });
     }
     
+    // 3. Fetch the updated conversation to send back to frontend
+    const updatedConversation = await Conversation.findById(queryId).lean();
+    
+    // 4. Broadcast the cleared unread count to all connected clients
+    // This ensures the conversation_update listener shows the cleared badge
+    const io = req.app.get('io');
+    if (io && updatedConversation) {
+      console.log('📡 Broadcasting marked-as-read update to all clients');
+      broadcastConversationUpdate(io, accountId, updatedConversation);
+    } else {
+      console.warn('⚠️ Could not broadcast: io or updatedConversation missing');
+    }
+    
     res.json({
       success: true,
-      message: 'Conversation marked as read'
+      message: 'Conversation marked as read',
+      conversation: updatedConversation,
+      updated: {
+        conversation: convResult.modifiedCount,
+        messages: msgResult.modifiedCount
+      }
     });
     
   } catch (error) {
