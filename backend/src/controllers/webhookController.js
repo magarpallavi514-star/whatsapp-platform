@@ -619,21 +619,21 @@ export const handleWebhook = async (req, res) => {
                 }
                 
                 if (!account) {
-                  // 4b. CRITICAL FALLBACK: Try finding account with stale WABA by recent updatedAt
-                  // This happens when OAuth saves a wrong WABA before webhook arrives
-                  // Find any account that was recently updated (doing OAuth flow)
-                  console.log('🔍 Step 4b: Searching for account with stale WABA by recent updatedAt...');
+                  // 4b. CRITICAL FIX: Look for account marked with this OAuth flow
+                  // The OAuth endpoint stores metaSync.accountId so webhook knows which account to update!
+                  console.log('🔍 Step 4b: Searching for account pending OAuth webhook sync...');
                   account = await Account.findOne({ 
-                    updatedAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) }  // Last 5 minutes
-                  }).sort({ updatedAt: -1 });
+                    'metaSync.status': 'oauth_completed_awaiting_webhook',
+                    'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 5 * 60 * 1000) }  // Last 5 minutes
+                  }).sort({ 'metaSync.oauth_timestamp': -1 });
                   
                   if (account) {
-                    console.log(`   ✅ Found recently-updated account (likely in OAuth flow): ${account.accountId}`);
-                    console.log(`      Current Account.wabaId: ${account.wabaId}`);
+                    console.log(`   ✅ Found OAuth pending account: ${account.accountId}`);
+                    console.log(`   📍 This account just did OAuth and is waiting for webhook`);
                     console.log(`      Webhook WABA ID: ${wabaId}`);
-                    console.log(`      → Will UPDATE account's WABA ID to match webhook!`);
+                    console.log(`      → Will UPDATE this account's WABA ID!`);
                   } else {
-                    console.log('   ❌ No recently-updated account found');
+                    console.log('   ❌ No accounts pending OAuth webhook found');
                   }
                 }
                 
@@ -661,6 +661,7 @@ export const handleWebhook = async (req, res) => {
                   account.businessId = businessId;  // Save Business ID
                   
                   console.log('💾 Setting account fields:');
+                  console.log(`   accountId: ${account.accountId}`);
                   console.log(`   wabaId: ${wabaId}`);
                   console.log(`   businessId: ${businessId}`);
                   
@@ -672,6 +673,7 @@ export const handleWebhook = async (req, res) => {
                   account.metaSync.lastWebhookAt = new Date();
                   account.metaSync.isSynced = true;
                   account.metaSync.metaStatus = value.status || 'active';
+                  account.metaSync.status = 'fully_synced';  // ✅ Clear the "awaiting" status
                   
                   // Extract individual fields if provided
                   if (value.messaging_product) {
@@ -700,9 +702,20 @@ export const handleWebhook = async (req, res) => {
                   
                 } else {
                   console.warn('\n⚠️ ⚠️ ⚠️ ACCOUNT NOT FOUND - Cannot link webhook to account');
-                  console.warn('   Searched by: wabaId, businessId, and phone numbers');
-                  console.warn('   This happens if OAuth hasnt completed yet');
-                  console.log('   Next OAuth attempt will save both IDs correctly\n');
+                  console.warn('   Searched by:');
+                  console.warn('   1. wabaId');
+                  console.warn('   2. businessId');
+                  console.warn('   3. phone numbers in WABA');
+                  console.warn('   4. OAuth pending status (metaSync.status="oauth_completed_awaiting_webhook")');
+                  console.warn('   5. account without wabaId');
+                  console.warn('\n   💡 Possible reasons:');
+                  console.warn('   - OAuth hasnt completed yet (code not exchanged)');
+                  console.warn('   - Client account not created in database');
+                  console.warn('   - Multiple OAuth flows happening simultaneously');
+                  console.warn('   - Webhook received before OAuth completes');
+                  console.log('\n   🔧 Next steps:');
+                  console.log('   - Try OAuth flow again');
+                  console.log('   - Check if account was created during login\n');
                 }
               } catch (storageError) {
                 console.error('❌ ❌ ❌ Error storing Meta account details:', storageError.message);

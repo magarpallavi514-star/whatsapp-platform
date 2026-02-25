@@ -177,19 +177,21 @@ export const handleWhatsAppOAuth = async (req, res) => {
     console.log('⏳ Waiting for Meta webhook to provide WABA ID')
     console.log('   (Each client gets their OWN WABA, not a default one)')
     
-    // Mark as pending webhook sync
+    // Mark as pending webhook sync - INCLUDE accountId so webhook knows which account to update!
     await Account.findOneAndUpdate(
       { accountId },
       { 
         'metaSync.status': 'oauth_completed_awaiting_webhook',
         'metaSync.oauth_timestamp': new Date(),
         'metaSync.oauthAccessToken': access_token,
+        'metaSync.accountId': accountId,  // ✅ CRITICAL: Store which account did this OAuth!
         'metaSync.note': 'OAuth successful - waiting for webhook with client WABA details'
       },
       { new: true }
     )
     
     console.log('✅ Marked account as awaiting webhook')
+    console.log('✅ Stored accountId in metaSync:', accountId)
     console.log('================================================\n')
     
     // Return immediately - let webhook handle everything
