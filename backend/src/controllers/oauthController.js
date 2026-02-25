@@ -163,51 +163,48 @@ export const handleWhatsAppOAuth = async (req, res) => {
       console.warn('⚠️ Token verification failed (non-critical):', tokenError.message)
     }
     
-    // 3. Check Account for WABA ID (from webhook)
-    const account = await Account.findOne({ accountId }).lean()
-    let businessId = account?.businessId
-    let wabaId = account?.wabaId
+    // 3. IMPORTANT: Do NOT load WABA from DB here!
+    // Each client's OAuth provides THEIR OWN WABA via webhook
+    // We wait for webhook instead of reusing old WABA
+    console.log('🏢 ========== OAUTH FLOW (NO AUTO-WABA REUSE) ==========')
+    console.log('This is a FRESH OAuth connection')
+    console.log('Waiting for webhook to provide client\'s actual WABA ID')
+    console.log('(not reusing old WABA from database)')
     
-    console.log('🏢 ========== CHECKING ACCOUNT SYNC STATUS ==========')
-    console.log('Business ID:', businessId || '⏳ waiting for webhook')
-    console.log('WABA ID:', wabaId || '⏳ waiting for webhook')
+    // ✅ CORRECT APPROACH: Don't fetch or assume anything
+    // Just wait for webhook to provide client's WABA
+    console.log('✅ OAuth token received and verified')
+    console.log('⏳ Waiting for Meta webhook to provide WABA ID')
+    console.log('   (Each client gets their OWN WABA, not a default one)')
     
-    // 🔥 UPDATED APPROACH: Don't try to auto-fetch with limited permissions
-    // Instead, let user provide their WABA ID directly (they own it!)
-    // The webhook will sync everything else
-    if (!wabaId && access_token) {
-      console.log('🔍 WABA ID not found - user will provide it via webhook or manual entry')
-      console.log('   Instead of trying to fetch (which may fail due to permissions)')
-      console.log('   The system will:')
-      console.log('   1. Wait for webhook to provide WABA ID')
-      console.log('   2. Or let user manually enter WABA ID in settings')
-      console.log('   3. This is MORE RELIABLE than auto-fetching with possibly-limited token')
-    }
+    // Mark as pending webhook sync
+    await Account.findOneAndUpdate(
+      { accountId },
+      { 
+        'metaSync.status': 'oauth_completed_awaiting_webhook',
+        'metaSync.oauth_timestamp': new Date(),
+        'metaSync.note': 'OAuth successful - waiting for webhook with client WABA details'
+      },
+      { new: true }
+    )
     
-    // 🔥 CRITICAL FIX: If we got businessId from Meta but no wabaId yet,
-    // save businessId immediately so webhook can find account by businessId
-    if (businessId && !wabaId) {
-      console.log('💾 Saving businessId from Meta so webhook can find account...')
-      await Account.findOneAndUpdate(
-        { accountId },
-        { businessId },
-        { new: true }
-      )
-      console.log('✅ Saved businessId:', businessId)
-      
-      // Return early - webhook will provide wabaId and we'll fetch phones then
-      return res.json({
-        success: true,
-        message: 'OAuth completed! Waiting for Meta webhook to sync WABA ID...',
-        accountId: accountId,
-        status: 'awaiting_webhook',
-        syncedBusinessId: businessId,
-        waitingFor: {
-          wabaId: true
-        },
-        nextSteps: 'Webhook should arrive within 5-10 seconds with WABA ID'
-      })
-    }
+    // Return immediately - let webhook handle everything
+    return res.json({
+      success: true,
+      message: 'OAuth successful! Your WhatsApp account details are being fetched.',
+      accountId: accountId,
+      status: 'awaiting_webhook',
+      whatHappensNext: 'Meta will send your account details (WABA ID, Business ID, Phone Numbers) within 10-30 seconds',
+      nextSteps: [
+        '1. Wait for webhook (usually instant to 30 seconds)',
+        '2. Refresh this page',
+        '3. Your WhatsApp Business Account will appear with all your phone numbers'
+      ],
+      ifNotWorking: [
+        'Manual entry option available in Settings > Add Phone Number',
+        'You can manually enter your WABA ID if webhook is delayed'
+      ]
+    })
     
     // If still no WABA and no businessId after trying to fetch, wait for webhook
     if (!wabaId && !businessId) {
