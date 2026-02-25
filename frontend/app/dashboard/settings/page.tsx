@@ -291,12 +291,20 @@ export default function SettingsPage() {
       setError("")
       
       // Add a timeout to handle cases where callback never fires
-      const timeoutId = setTimeout(() => {
-        console.warn('⚠️ OAuth callback timeout - checking if token was exchanged anyway')
-        // Try to fetch phone numbers after 5 seconds
-        fetchPhoneNumbers().then(() => {
-          setIsLoading(false)
-        })
+      const timeoutId = setTimeout(async () => {
+        console.warn('⚠️ OAuth callback timeout - polling for phone numbers...')
+        // Poll for phone numbers (webhook may still be processing)
+        let phonesFound = false
+        for (let i = 0; i < 10; i++) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          await fetchPhoneNumbers()
+          // Check if phoneNumbers state was updated
+          if (phoneNumbers.length > 0) {
+            phonesFound = true
+            break
+          }
+        }
+        setIsLoading(false)
       }, 5000)
       
       // Clear timeout when callback fires
@@ -871,15 +879,57 @@ export default function SettingsPage() {
             status: data.status
           })
           
-          // Give backend a moment to sync everything
-          await new Promise(resolve => setTimeout(resolve, 1000))
+          // ⏳ Poll for phone numbers (webhook takes 1-10 seconds)
+          console.log('⏳ Waiting for Meta webhook to provide phone numbers (up to 15 seconds)...')
+          let phonesFound = false
+          let pollAttempts = 0
+          const maxAttempts = 15 // 15 seconds with 1 second intervals
           
-          // Refresh phone numbers list
-          console.log('🔄 Refreshing phone numbers...')
-          await fetchPhoneNumbers()
-          setError("")
+          while (!phonesFound && pollAttempts < maxAttempts) {
+            // Wait before fetching
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            pollAttempts++
+            
+            // Try to fetch phone numbers
+            try {
+              const phoneToken = authService.getToken()
+              const phoneResponse = await fetch(`${API_URL}/settings/phone-numbers`, {
+                headers: {
+                  'Authorization': `Bearer ${phoneToken}`,
+                  'Content-Type': 'application/json'
+                }
+              })
+              
+              if (phoneResponse.ok) {
+                const phoneData = await phoneResponse.json()
+                if (phoneData.phoneNumbers && phoneData.phoneNumbers.length > 0) {
+                  console.log(`✅ Phone numbers received after ${pollAttempts}s: ${phoneData.phoneNumbers.length} phone(s)`)
+                  phonesFound = true
+                  setPhoneNumbers(phoneData.phoneNumbers)
+                  setError("")
+                  break
+                } else {
+                  console.log(`⏳ Attempt ${pollAttempts}/${maxAttempts}: Webhook not received yet...`)
+                }
+              }
+            } catch (pollError) {
+              console.warn(`⚠️ Poll attempt ${pollAttempts} failed:`, pollError)
+            }
+          }
           
-          console.log('✅ WhatsApp connection complete! Page should now show your phone number.')
+          if (!phonesFound) {
+            console.warn('⚠️ Phone numbers not synced yet - checking one more time...')
+            // Final attempt
+            await fetchPhoneNumbers()
+            
+            if (phoneNumbers.length === 0) {
+              setError("⚠️ Phone numbers sync delayed.\n\nMeta webhook is taking longer than expected. This sometimes happens due to network delays.\n\nYour connection is saved - try:\n1. Refreshing the page in 30 seconds\n2. Checking 'WhatsApp Status' in settings\n3. If still not showing, use manual entry to add your phone")
+            }
+          } else {
+            console.log('✅ WhatsApp connection complete! Your phone number(s) are now visible.')
+          }
+          
+          setIsLoading(false)
         } else {
           const errorData = await response.json()
           console.error('❌ OAuth Exchange Failed:', errorData)

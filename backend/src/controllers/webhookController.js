@@ -661,6 +661,34 @@ export const handleWebhook = async (req, res) => {
                 if (account) {
                   console.log('\n✅ ✅ ✅ ACCOUNT FOUND! Now saving Business ID & WABA ID...\n');
                   
+                  // ✅ CRITICAL: Migrate phone numbers from temporary account to real account
+                  // If this account didn't initiate OAuth (found by WABA/Business ID), check if phones exist elsewhere
+                  if (!oauthInitiated && wabaId) {
+                    console.log('\n🔄 MIGRATING PHONE NUMBERS FROM TEMPORARY ACCOUNT...');
+                    
+                    // Find phones with this WABA ID that might be under a temporary account
+                    const phonesWithThisWaba = await PhoneNumber.find({ wabaId });
+                    
+                    if (phonesWithThisWaba && phonesWithThisWaba.length > 0) {
+                      console.log(`   Found ${phonesWithThisWaba.length} phone number(s) with WABA ${wabaId}`);
+                      
+                      // Check if they belong to a different account
+                      for (const phone of phonesWithThisWaba) {
+                        if (phone.accountId !== account.accountId) {
+                          console.log(`   ⚠️  Phone ${phone.displayPhone} is under account ${phone.accountId}, not ${account.accountId}`);
+                          console.log(`   📱 Migrating phone number ${phone.phoneNumberId}...`);
+                          
+                          // Migrate the phone number to the correct account
+                          phone.accountId = account.accountId;
+                          await phone.save();
+                          
+                          console.log(`   ✅ Phone migrated to account ${account.accountId}`);
+                        }
+                      }
+                      console.log('   ✅ Phone number migration complete\n');
+                    }
+                  }
+                  
                   // ✅ Found account - save BOTH IDs
                   account.wabaId = wabaId;  // Save WABA ID
                   account.businessId = businessId;  // Save Business ID
