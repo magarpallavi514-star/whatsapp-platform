@@ -62,10 +62,12 @@ const accountSchema = new mongoose.Schema({
   },
   
   // WhatsApp WABA ID (Meta Business Account ID for webhook routing)
+  // ⚠️ CRITICAL: Must be unique to prevent cross-account contamination
   wabaId: {
     type: String,
     index: true,
-    sparse: true  // Optional - only for accounts with WABA
+    sparse: true,  // Optional - only for accounts with WABA
+    unique: true   // 🔥 ENFORCE: Only ONE account per WABA ID
   },
   
   // Business ID (Meta Business Account ID owner of WABA - for API calls)

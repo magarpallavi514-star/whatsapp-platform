@@ -689,10 +689,11 @@ export const handleWebhook = async (req, res) => {
                 console.log(`   Business ID: ${businessId}\n`);
                 
                 console.log('🔍 QUERY 1 (PRIMARY): metaSync.accountId with recent OAuth');
+                // Extended window to 2 hours to account for Meta delays
                 const recentOAuthAccounts = await Account.find({
                   'metaSync.accountId': { $exists: true, $ne: null },
                   'metaSync.status': { $in: ['oauth_completed_awaiting_webhook', 'fully_synced'] },
-                  'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 10 * 60 * 1000) }
+                  'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 120 * 60 * 1000) }  // 2 hour window
                 }).select('accountId metaSync.accountId metaSync.status type role');
                 
                 console.log(`   Found ${recentOAuthAccounts.length} account(s) with recent OAuth:\n`);
@@ -701,8 +702,9 @@ export const handleWebhook = async (req, res) => {
                 });
                 
                 // Look for exact match where metaSync.accountId was stored during OAuth
+                // Try exact match first
                 for (const candidate of recentOAuthAccounts) {
-                  if (candidate.metaSync?.accountId && candidate.metaSync.accountId === candidate.accountId) {
+                  if (candidate.metaSync?.accountId === candidate.accountId) {
                     // This account stored itself during OAuth - it's the RIGHT one
                     account = candidate;
                     console.log(`\n   ✅ FOUND EXACT MATCH: Account ${account.accountId} is awaiting THIS webhook!`);
@@ -711,9 +713,16 @@ export const handleWebhook = async (req, res) => {
                   }
                 }
                 
-                // If not found by metaSync, try by WABA ID (but ONLY if updating existing, with type check)
+                // If only ONE account in recent OAuth, use it (for fallback)
+                if (!account && recentOAuthAccounts.length === 1) {
+                  account = recentOAuthAccounts[0];
+                  console.log(`\n   ✅ FOUND (single account): Account ${account.accountId} was only one awaiting webhook`);
+                  console.log(`      metaSync.accountId=${account.metaSync?.accountId}`);
+                }
+                
+                // If not found by metaSync, try by WABA ID (but ONLY if updating existing, with strict type check)
                 if (!account) {
-                  console.log('\n🔍 QUERY 2 (FALLBACK): Existing WABA ID with type verification');
+                  console.log('\n🔍 QUERY 2 (FALLBACK): Existing WABA ID with strict type verification');
                   
                   if (wabaId) {
                     const existingByWaba = await Account.findOne({ wabaId });
@@ -721,17 +730,26 @@ export const handleWebhook = async (req, res) => {
                     if (existingByWaba) {
                       console.log(`   Found account with WABA: ${existingByWaba.accountId} (${existingByWaba.role}/${existingByWaba.type})`);
                       
-                      // 🔥 CRITICAL SAFETY: Account type check
-                      // Prevent supradmin WABA from being assigned to clients
+                      // 🔥 CRITICAL SAFETY CHECK #1: Prevent Supradmin WABA from being assigned to clients
                       if (existingByWaba.type === 'client' && businessId && businessId === '631302064701398') {
-                        console.log(`   🚨 BLOCKED: This is a CLIENT account, but webhook contains SUPRADMIN's Business ID!`);
-                        console.log(`   Business ID 631302064701398 belongs to supradmin, not to ${existingByWaba.name}`);
+                        console.log(`   🚨 BLOCKED: Client account cannot have SUPRADMIN's Business ID!`);
+                        console.log(`   Business ID 631302064701398 belongs to supradmin`);
                         console.log(`   Skipping to prevent cross-contamination`);
-                      } else if (existingByWaba.type === 'internal' && existingByWaba.role === 'superadmin') {
+                        existingByWaba = null;  // Don't use this match
+                      }
+                      
+                      // 🔥 CRITICAL SAFETY CHECK #2: Prevent client from taking Supradmin's WABA
+                      if (existingByWaba && existingByWaba.role === 'superadmin' && existingByWaba.type === 'internal') {
+                        console.log(`   🚨 BLOCKED: This is SUPRADMIN's WABA!`);
+                        console.log(`   Account ${existingByWaba.accountId} is role=superadmin, type=internal`);
+                        console.log(`   Webhook is trying to assign it to a different account`);
+                        console.log(`   Skipping to prevent cross-contamination`);
+                        account = null;  // Don't match
+                      } else if (existingByWaba && existingByWaba.type === 'internal' && existingByWaba.role === 'superadmin') {
                         // Supradmin updating their own account - OK
                         account = existingByWaba;
                         console.log(`   ✅ ACCEPTED: Supradmin account can update their own WABA`);
-                      } else {
+                      } else if (existingByWaba) {
                         account = existingByWaba;
                         console.log(`   ✅ ACCEPTED: This account already has this WABA (update scenario)`);
                       }
@@ -759,6 +777,19 @@ export const handleWebhook = async (req, res) => {
                 
                 if (account) {
                   console.log('\n✅ ✅ ✅ ACCOUNT FOUND! Now saving Business ID & WABA ID...\n');
+                  
+                  // 🔥 CRITICAL SAFEGUARD: Check if WABA is already assigned to another account
+                  if (account.wabaId !== wabaId && wabaId) {
+                    const existingWABA = await Account.findOne({ wabaId, accountId: { $ne: account.accountId } });
+                    if (existingWABA) {
+                      console.error('\n🚨 🚨 🚨 CRITICAL ALERT: WABA ALREADY ASSIGNED TO ANOTHER ACCOUNT!');
+                      console.error(`   WABA ID: ${wabaId}`);
+                      console.error(`   Already assigned to: ${existingWABA.accountId} (${existingWABA.name})`);
+                      console.error(`   Trying to assign to: ${account.accountId} (${account.name})`);
+                      console.error('\n   ❌ BLOCKING THIS ASSIGNMENT TO PREVENT CONTAMINATION!\n');
+                      return;  // FAIL - don't overwrite
+                    }
+                  }
                   
                   // ✅ CRITICAL: Migrate phone numbers from temporary account to real account
                   // If this account didn't initiate OAuth (found by WABA/Business ID), check if phones exist elsewhere
