@@ -301,91 +301,91 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      {/* Header - Mobile Optimized */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Templates</h1>
-          <p className="text-gray-600 mt-1">Manage your WhatsApp message templates</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Templates</h1>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">Manage your WhatsApp message templates</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <Button 
             variant="outline" 
             onClick={syncTemplatesFromWhatsApp}
             disabled={isSyncing}
-            className="border-green-600 text-green-600 hover:bg-green-50"
+            className="border-green-600 text-green-600 hover:bg-green-50 text-xs sm:text-sm px-2 sm:px-4 py-2"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Syncing...' : 'Sync from WhatsApp'}
+            {isSyncing ? 'Syncing...' : 'Sync'}
           </Button>
-          <Button className="bg-green-600 hover:bg-green-700" onClick={openCreateModal}>
+          <Button className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm px-2 sm:px-4 py-2" onClick={openCreateModal}>
             <Plus className="h-4 w-4 mr-2" />
-            Create Template
+            Create
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+      {/* Stats Cards - Mobile Optimized */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 text-green-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Approved</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.approved}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Clock className="h-6 w-6 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Pending</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">Approved</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{stats.approved}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-red-100 rounded-lg flex items-center justify-center">
-              <XCircle className="h-6 w-6 text-red-600" />
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Clock className="h-4 w-4 sm:h-6 sm:w-6 text-orange-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Rejected</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.rejected}</p>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">Pending</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{stats.pending}</p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <FileText className="h-6 w-6 text-blue-600" />
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <XCircle className="h-4 w-4 sm:h-6 sm:w-6 text-red-600" />
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Total</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">Rejected</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{stats.rejected}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <FileText className="h-4 w-4 sm:h-6 sm:w-6 text-blue-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">Total</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{stats.total}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Templates Table */}
+      {/* Templates List */}
       <div className="bg-white rounded-lg border border-gray-200">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">All Templates ({filteredTemplates.length})</h2>
-            <div className="relative">
+        <div className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900">All Templates ({filteredTemplates.length})</h2>
+            <div className="relative w-full sm:w-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search templates..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent w-64"
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent w-full text-xs sm:text-sm"
               />
             </div>
           </div>
@@ -405,71 +405,62 @@ export default function TemplatesPage() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Template Name</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Category</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Status</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Language</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Usage</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Last Used</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTemplates.map((template) => (
-                    <tr key={template._id} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="py-4 px-4 text-sm font-medium text-gray-900">{template.name}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{template.category}</td>
-                      <td className="py-4 px-4">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          template.status === "approved"
-                            ? "bg-green-100 text-green-700"
-                            : template.status === "pending"
-                            ? "bg-orange-100 text-orange-700"
-                            : template.status === "rejected"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-gray-100 text-gray-700"
-                        }`}>
-                          {template.status}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{template.language}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{template.usageCount || 0} times</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{formatDate(template.lastUsedAt)}</td>
-                      <td className="py-4 px-4">
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => openViewModal(template)}
-                            className="text-blue-600 hover:text-blue-700"
-                            title="View"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          {template.status === 'draft' && (
-                            <button 
-                              onClick={() => submitTemplateToMeta(template._id)}
-                              className="text-green-600 hover:text-green-700"
-                              title="Submit to Meta"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </button>
-                          )}
-                          <button 
-                            onClick={() => deleteTemplate(template._id)}
-                            className="text-red-600 hover:text-red-700"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              {filteredTemplates.map((template) => (
+                <div key={template._id} className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition">
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xs sm:text-sm font-medium text-gray-900 truncate">{template.name}</h3>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-[10px] sm:text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{template.category}</span>
+                        <span className="text-[10px] sm:text-xs text-gray-500">{template.language}</span>
+                      </div>
+                    </div>
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full flex-shrink-0 ${
+                      template.status === "approved"
+                        ? "bg-green-100 text-green-700"
+                        : template.status === "pending"
+                        ? "bg-orange-100 text-orange-700"
+                        : template.status === "rejected"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-gray-100 text-gray-700"
+                    }`}>
+                      {template.status}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      Used <span className="font-semibold">{template.usageCount || 0}</span> times • {formatDate(template.lastUsedAt)}
+                    </div>
+                    <div className="flex gap-1">
+                      <button 
+                        onClick={() => openViewModal(template)}
+                        className="text-blue-600 hover:text-blue-700 p-1 hover:bg-blue-50 rounded"
+                        title="View"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      {template.status === 'draft' && (
+                        <button 
+                          onClick={() => submitTemplateToMeta(template._id)}
+                          className="text-green-600 hover:text-green-700 p-1 hover:bg-green-50 rounded"
+                          title="Submit to Meta"
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => deleteTemplate(template._id)}
+                        className="text-red-600 hover:text-red-700 p-1 hover:bg-red-50 rounded"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

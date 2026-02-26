@@ -61,7 +61,7 @@ export const routeAccess = {
   '/dashboard/team/roles': [UserRole.SUPERADMIN, UserRole.ADMIN],
   
   // Billing
-  '/dashboard/billing': [UserRole.SUPERADMIN],
+  '/dashboard/billing': [UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
   '/dashboard/billing/invoices': [UserRole.SUPERADMIN],
   '/dashboard/billing/subscriptions': [UserRole.SUPERADMIN],
   
@@ -70,6 +70,9 @@ export const routeAccess = {
   
   // Transactions - Allow all authenticated users to view their transactions
   '/dashboard/transactions': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
+  
+  // Account - Org Admins only
+  '/dashboard/account': [UserRole.ADMIN, UserRole.MANAGER],
   
   // Settings
   '/dashboard/settings': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
@@ -153,7 +156,13 @@ export const getSidebarItems = (role: UserRole) => {
       label: 'Billing',
       href: '/dashboard/billing',
       icon: 'CreditCard',
-      roles: [UserRole.SUPERADMIN, UserRole.ADMIN]
+      roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER]
+    },
+    {
+      label: 'Account',
+      href: '/dashboard/account',
+      icon: 'User',
+      roles: [UserRole.ADMIN, UserRole.MANAGER]
     },
     {
       label: 'Settings',

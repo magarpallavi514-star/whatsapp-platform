@@ -127,12 +127,20 @@ export function PendingPaymentReminder() {
 
   if (pendingClients.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center gap-3 text-center justify-center py-12">
-          <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
-          <div>
-            <p className="font-semibold text-gray-900">All Caught Up!</p>
-            <p className="text-sm text-gray-600">No clients with pending payments</p>
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200 p-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <p className="font-bold text-gray-900 text-lg">Perfect! All Payments Clear</p>
+              <p className="text-sm text-gray-600 mt-1">No clients with pending payments • Revenue flowing smoothly</p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-600">Next action</p>
+            <p className="text-lg font-bold text-green-600 mt-1">Monitor Revenue</p>
           </div>
         </div>
       </div>
@@ -140,19 +148,19 @@ export function PendingPaymentReminder() {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Mail className="h-6 w-6 text-blue-600" />
-          <div>
-            <h3 className="font-semibold text-gray-900">Payment Reminders</h3>
-            <p className="text-sm text-gray-600">{pendingClients.length} clients with pending payments</p>
+    <div className="bg-white rounded-lg border border-gray-200 p-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <Mail className="h-6 w-6 text-blue-600" />
+            <h3 className="text-xl font-bold text-gray-900">Payment Reminders</h3>
           </div>
+          <p className="text-sm text-gray-600">{pendingClients.length} {pendingClients.length === 1 ? 'client' : 'clients'} with pending payments • Total Due: ₹{pendingClients.reduce((sum, c) => sum + (c.amount || 0), 0).toLocaleString()}</p>
         </div>
         <button
           onClick={sendBulkReminders}
           disabled={sending === 'bulk'}
-          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-2 px-4 rounded-lg transition flex items-center gap-2"
+          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-2 px-6 rounded-lg transition flex items-center gap-2"
         >
           {sending === 'bulk' && <Loader className="h-4 w-4 animate-spin" />}
           Send All Reminders

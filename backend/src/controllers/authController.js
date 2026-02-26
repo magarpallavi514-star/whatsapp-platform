@@ -429,6 +429,7 @@ export const signup = async (req, res) => {
     }
 
     // Create new account with PENDING status (will be activated after payment)
+    // Set role to 'admin' by default for account owners
     const newAccount = new Account({
       accountId,
       name: name.trim(),
@@ -437,6 +438,7 @@ export const signup = async (req, res) => {
       company: company?.trim() || undefined,
       phone: phone?.trim() || undefined,
       type: 'client',
+      role: 'admin', // ✅ Default role for account registrations
       plan: planName, // Use resolved plan name from database or input
       billingCycle: cycle, // Store billing cycle preference
       status: 'pending' // Account is PENDING until payment succeeds
@@ -565,11 +567,12 @@ export const signup = async (req, res) => {
 
     // Create user object for token
     // Use a temporary token that only allows checkout
+    // First user of new org account is automatically an admin
     const user = {
       accountId,
       email: newAccount.email,
       name: newAccount.name,
-      role: 'user',
+      role: 'admin', // First user is organization admin
       status: 'pending', // Mark token as pending
       workspaceId: newAccount._id.toString() // Add workspaceId for subdomain architecture
     };

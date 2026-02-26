@@ -972,7 +972,6 @@ export default function SettingsPage() {
               {[
                 { name: "WhatsApp Setup", icon: MessageSquare, id: 'whatsapp' },
                 { name: "Profile", icon: User, id: 'profile' },
-                { name: "Transactions", icon: CreditCard, id: 'transactions' },
                 { name: "API Keys", icon: Key, id: 'api-keys' },
                 { name: "Security", icon: Lock, id: 'security' },
               ].map((item) => (
@@ -1350,101 +1349,6 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </form>
-            </div>
-          ) : activeTab === 'transactions' ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Transactions</h2>
-              <p className="text-sm text-gray-600 mb-6">View your transaction history</p>
-
-              {transactionsError && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-red-700">{transactionsError}</p>
-                </div>
-              )}
-
-              {transactionsLoading ? (
-                <div className="text-center py-12">
-                  <Loader className="h-8 w-8 text-gray-400 mx-auto mb-3 animate-spin" />
-                  <p className="text-gray-600">Loading transactions...</p>
-                </div>
-              ) : transactions.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600">No transactions yet</p>
-                  <p className="text-sm text-gray-500 mt-1">Your transactions will appear here</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200 bg-gray-50">
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Type</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Organization</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Description</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Date</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Amount</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transactions.map((transaction: any) => (
-                        <tr key={transaction.id} className="border-b border-gray-200 hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              transaction.type === 'payment'
-                                ? 'bg-red-100 text-red-800'
-                                : transaction.type === 'billing'
-                                ? 'bg-blue-100 text-blue-800'
-                                : transaction.type === 'signup'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {transaction.type === 'payment'
-                                ? 'Payment'
-                                : transaction.type === 'billing'
-                                ? 'Billing'
-                                : transaction.type === 'signup'
-                                ? 'Signup'
-                                : 'Transaction'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">
-                            {transaction.organization}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            {transaction.description}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            {new Date(transaction.date).toLocaleDateString('en-IN', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">
-                            {transaction.amount > 0 ? `₹${transaction.amount.toFixed(2)}` : '-'}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              transaction.status === 'completed'
-                                ? 'bg-green-100 text-green-800'
-                                : transaction.status === 'scheduled'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {transaction.status === 'completed'
-                                ? 'Completed'
-                                : transaction.status === 'scheduled'
-                                ? 'Scheduled'
-                                : transaction.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </div>
           ) : activeTab === 'api-keys' ? (
             <div className="bg-white rounded-lg border border-gray-200 p-6">

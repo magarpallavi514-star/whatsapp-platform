@@ -237,11 +237,11 @@ export default function CampaignsPage() {
   // Show blocking message if WABA not connected
   if (checkingWABA) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Campaigns</h1>
-          <div className="p-8 text-center bg-white rounded-lg border border-gray-200">
-            <p className="text-gray-600">Checking WhatsApp connection...</p>
+      <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-8">Campaigns</h1>
+          <div className="p-4 sm:p-8 text-center bg-white rounded-lg border border-gray-200">
+            <p className="text-xs sm:text-sm text-gray-600">Checking WhatsApp connection...</p>
           </div>
         </div>
       </div>
@@ -250,9 +250,9 @@ export default function CampaignsPage() {
 
   if (hasWABA === false) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Campaigns</h1>
+      <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-8">Campaigns</h1>
           <div className="bg-red-50 border border-red-200 rounded-lg p-8">
             <div className="flex gap-4">
               <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-1" />
@@ -285,26 +285,26 @@ export default function CampaignsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+        {/* Header - Mobile Optimized */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Campaigns</h1>
-            <p className="mt-2 text-gray-600">Create and manage your WhatsApp campaigns</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Campaigns</h1>
+            <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-600">Create and manage your WhatsApp campaigns</p>
           </div>
           <Link
             href="/dashboard/campaigns/create"
-            className="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition"
+            className="inline-flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition text-xs sm:text-base"
           >
-            <span className="text-xl mr-2">+</span>
+            <span className="text-lg sm:text-xl mr-1 sm:mr-2">+</span>
             New Campaign
           </Link>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Filters - Mobile Optimized */}
+        <div className="bg-white rounded-lg shadow-sm p-3 sm:p-6 mb-4 sm:mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
             {/* Search */}
             <input
               type="text"
@@ -314,7 +314,7 @@ export default function CampaignsPage() {
                 setSearchQuery(e.target.value);
                 setPage(1);
               }}
-              className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
 
             {/* Status Filter */}
@@ -324,7 +324,7 @@ export default function CampaignsPage() {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
               <option value="">All Status</option>
               <option value="draft">Draft</option>
@@ -342,7 +342,7 @@ export default function CampaignsPage() {
                 setTypeFilter(e.target.value);
                 setPage(1);
               }}
-              className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
               <option value="">All Types</option>
               <option value="broadcast">Broadcast</option>
@@ -355,7 +355,7 @@ export default function CampaignsPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
               <option value="recent">Recent</option>
               <option value="oldest">Oldest</option>
@@ -371,7 +371,7 @@ export default function CampaignsPage() {
                   setSearchQuery('');
                   setPage(1);
                 }}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+                className="px-3 sm:px-4 py-2 text-xs sm:text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
               >
                 Clear Filters
               </button>
@@ -379,210 +379,160 @@ export default function CampaignsPage() {
           </div>
         </div>
 
-        {/* Error Message */}
+        {/* Error Message - Mobile Optimized */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6">
+          <div className="bg-red-50 border border-red-200 text-red-600 px-3 sm:px-4 py-2 sm:py-3 rounded-lg mb-4 sm:mb-6 text-xs sm:text-sm">
             {error}
           </div>
         )}
 
-        {/* Campaigns Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        {/* Campaigns - Mobile Card Layout */}
+        <div className="bg-white rounded-lg shadow-sm">
           {loading ? (
-            <div className="flex items-center justify-center h-64">
+            <div className="flex items-center justify-center h-48 sm:h-64">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading campaigns...</p>
+                <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-green-600 mx-auto mb-3 sm:mb-4"></div>
+                <p className="text-xs sm:text-sm text-gray-600">Loading campaigns...</p>
               </div>
             </div>
           ) : campaigns.length === 0 ? (
-            <div className="flex items-center justify-center h-64">
+            <div className="flex items-center justify-center h-48 sm:h-64">
               <div className="text-center">
-                <p className="text-gray-600 mb-4">No campaigns found</p>
+                <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">No campaigns found</p>
                 <Link
                   href="/dashboard/campaigns/create"
-                  className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition"
+                  className="inline-flex items-center px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition text-xs sm:text-sm"
                 >
                   Create your first campaign
                 </Link>
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Campaign
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Recipients
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Delivery Rate
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Open Rate
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {campaigns.map((campaign) => (
-                    <tr
-                      key={campaign._id}
-                      className="hover:bg-gray-50 transition"
-                    >
-                      {/* Campaign Name */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900">
-                            {campaign.name}
-                          </p>
-                          <p className="text-xs text-gray-500 truncate">
-                            {campaign.description || 'No description'}
-                          </p>
+            <div className="divide-y divide-gray-200">
+              {campaigns.map((campaign) => (
+                <div
+                  key={campaign._id}
+                  className="p-3 sm:p-6 hover:bg-gray-50 transition flex flex-col gap-3 sm:gap-4"
+                >
+                  {/* Header - Campaign Name + Status */}
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
+                        {campaign.name}
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-gray-600 truncate mt-1">
+                        {campaign.description || 'No description'}
+                      </p>
+                    </div>
+                    <span className="flex-shrink-0">
+                      <span className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${getStatusColor(campaign.status)}`}>
+                        {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                      </span>
+                    </span>
+                  </div>
+
+                  {/* Type + Recipients */}
+                  <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
+                    <div>
+                      <p className="text-[10px] sm:text-xs text-gray-600 mb-1">Type</p>
+                      <p className="font-medium text-gray-900">
+                        <span className="text-base mr-1">{getTypeIcon(campaign.type)}</span>
+                        <span className="capitalize">{campaign.type}</span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] sm:text-xs text-gray-600 mb-1">Recipients</p>
+                      <p className="font-semibold text-gray-900">
+                        {campaign.recipients.sent} / {campaign.recipients.total}
+                      </p>
+                      <p className="text-[10px] text-gray-500">{campaign.recipients.pending} pending</p>
+                    </div>
+                  </div>
+
+                  {/* Rates */}
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <p className="text-[10px] sm:text-xs text-gray-600 mb-2">Delivery Rate</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-gray-200 rounded-full">
+                          <div className="h-1.5 bg-green-600 rounded-full" style={{ width: `${campaign.stats.deliveryRate}%` }}></div>
                         </div>
-                      </td>
+                        <span className="font-semibold text-gray-900 text-[10px] sm:text-xs w-8 text-right">{campaign.stats.deliveryRate}%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] sm:text-xs text-gray-600 mb-2">Open Rate</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-gray-200 rounded-full">
+                          <div className="h-1.5 bg-blue-600 rounded-full" style={{ width: `${campaign.stats.openRate}%` }}></div>
+                        </div>
+                        <span className="font-semibold text-gray-900 text-[10px] sm:text-xs w-8 text-right">{campaign.stats.openRate}%</span>
+                      </div>
+                    </div>
+                  </div>
 
-                      {/* Type */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-lg mr-2">{getTypeIcon(campaign.type)}</span>
-                        <span className="text-sm text-gray-600 capitalize">
-                          {campaign.type}
-                        </span>
-                      </td>
+                  {/* Created Date + Actions */}
+                  <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-gray-200 gap-2">
+                    <p className="text-[10px] sm:text-xs text-gray-600">
+                      Created: {formatDate(campaign.createdAt)}
+                    </p>
+                    <div className="flex gap-1 sm:gap-2 flex-shrink-0">
+                      {/* View/Edit */}
+                      <Link
+                        href={`/dashboard/campaigns/${campaign._id}`}
+                        className="text-base sm:text-lg text-blue-600 hover:text-blue-700 transition"
+                        title="View details"
+                      >
+                        👁️
+                      </Link>
 
-                      {/* Status */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                            campaign.status
-                          )}`}
+                      {/* Start */}
+                      {campaign.status === 'draft' && (
+                        <button
+                          onClick={() => handleStatusAction(campaign._id, 'start')}
+                          className="text-base sm:text-lg text-green-600 hover:text-green-700 transition"
+                          title="Start campaign"
                         >
-                          {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                        </span>
-                      </td>
+                          ▶️
+                        </button>
+                      )}
 
-                      {/* Recipients */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            {campaign.recipients.sent} / {campaign.recipients.total}
-                          </p>
-                          <p className="text-xs">
-                            {campaign.recipients.pending} pending
-                          </p>
-                        </div>
-                      </td>
+                      {/* Pause */}
+                      {campaign.status === 'running' && (
+                        <button
+                          onClick={() => handleStatusAction(campaign._id, 'pause')}
+                          className="text-base sm:text-lg text-yellow-600 hover:text-yellow-700 transition"
+                          title="Pause campaign"
+                        >
+                          ⏸️
+                        </button>
+                      )}
 
-                      {/* Delivery Rate */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-12 h-2 bg-gray-200 rounded-full mr-2">
-                            <div
-                              className="h-2 bg-green-600 rounded-full"
-                              style={{ width: `${campaign.stats.deliveryRate}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {campaign.stats.deliveryRate}%
-                          </span>
-                        </div>
-                      </td>
+                      {/* Resume */}
+                      {campaign.status === 'paused' && (
+                        <button
+                          onClick={() => handleStatusAction(campaign._id, 'resume')}
+                          className="text-base sm:text-lg text-blue-600 hover:text-blue-700 transition"
+                          title="Resume campaign"
+                        >
+                          ▶️
+                        </button>
+                      )}
 
-                      {/* Open Rate */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-12 h-2 bg-gray-200 rounded-full mr-2">
-                            <div
-                              className="h-2 bg-blue-600 rounded-full"
-                              style={{ width: `${campaign.stats.openRate}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {campaign.stats.openRate}%
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Created */}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {formatDate(campaign.createdAt)}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end gap-2">
-                          {/* View/Edit */}
-                          <Link
-                            href={`/dashboard/campaigns/${campaign._id}`}
-                            className="text-blue-600 hover:text-blue-700"
-                            title="View details"
-                          >
-                            👁️
-                          </Link>
-
-                          {/* Start */}
-                          {campaign.status === 'draft' && (
-                            <button
-                              onClick={() => handleStatusAction(campaign._id, 'start')}
-                              className="text-green-600 hover:text-green-700"
-                              title="Start campaign"
-                            >
-                              ▶️
-                            </button>
-                          )}
-
-                          {/* Pause */}
-                          {campaign.status === 'running' && (
-                            <button
-                              onClick={() => handleStatusAction(campaign._id, 'pause')}
-                              className="text-yellow-600 hover:text-yellow-700"
-                              title="Pause campaign"
-                            >
-                              ⏸️
-                            </button>
-                          )}
-
-                          {/* Resume */}
-                          {campaign.status === 'paused' && (
-                            <button
-                              onClick={() => handleStatusAction(campaign._id, 'resume')}
-                              className="text-blue-600 hover:text-blue-700"
-                              title="Resume campaign"
-                            >
-                              ▶️
-                            </button>
-                          )}
-
-                          {/* Delete */}
-                          {(campaign.status === 'draft' || campaign.status === 'failed') && (
-                            <button
-                              onClick={() => handleDelete(campaign._id)}
-                              className="text-red-600 hover:text-red-700"
-                              title="Delete campaign"
-                            >
-                              🗑️
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      {/* Delete */}
+                      {(campaign.status === 'draft' || campaign.status === 'failed') && (
+                        <button
+                          onClick={() => handleDelete(campaign._id)}
+                          className="text-base sm:text-lg text-red-600 hover:text-red-700 transition"
+                          title="Delete campaign"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

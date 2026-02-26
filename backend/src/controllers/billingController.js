@@ -170,8 +170,9 @@ export const getMySubscriptions = async (req, res) => {
       planName: sub.planId?.name || 'Unknown',
       status: sub.status,
       billingCycle: sub.billingCycle,
-      monthlyAmount: sub.pricing.amount,
-      totalAmount: sub.pricing.finalAmount,
+      monthlyPrice: sub.pricing.amount || sub.planId?.monthlyPrice || 0,
+      monthlyAmount: sub.pricing.amount || sub.planId?.monthlyPrice || 0,
+      totalAmount: sub.pricing.finalAmount || 0,
       startDate: sub.startDate,
       endDate: sub.endDate,
       renewalDate: sub.renewalDate,
@@ -187,6 +188,7 @@ export const getMySubscriptions = async (req, res) => {
         planName: 'Pro Plan',
         status: 'active',
         billingCycle: 'monthly',
+        monthlyPrice: 4999,
         monthlyAmount: 4999,
         totalAmount: 4999,
         startDate: new Date('2025-08-15'),
@@ -201,6 +203,7 @@ export const getMySubscriptions = async (req, res) => {
         planName: 'Business Plan',
         status: 'active',
         billingCycle: 'quarterly',
+        monthlyPrice: 9999,
         monthlyAmount: 9999,
         totalAmount: 29997,
         startDate: new Date('2025-10-01'),
@@ -323,31 +326,38 @@ export const getAllInvoices = async (req, res) => {
     if (status) filter.status = status;
     if (accountId) filter.accountId = accountId;
 
-    // Fetch all invoices with account details
+    // Fetch all invoices (accountId is a String field, not a reference)
     const invoices = await Invoice.find(filter)
-      .populate('accountId', 'name email company phone accountId')
       .sort({ invoiceDate: -1 })
       .limit(parseInt(limit))
       .skip(parseInt(skip));
 
     const total = await Invoice.countDocuments(filter);
 
+    // Fetch account details separately for each unique accountId
+    const accountIds = [...new Set(invoices.map(inv => inv.accountId))];
+    const accounts = await Account.find({ accountId: { $in: accountIds } }).select('accountId name email company phone');
+    const accountMap = Object.fromEntries(accounts.map(acc => [acc.accountId, acc]));
+
     // Format response with account name
-    const formatted = invoices.map(inv => ({
-      _id: inv._id,
-      invoiceNumber: inv.invoiceNumber,
-      accountId: inv.accountId,
-      accountName: inv.accountId?.name,
-      accountEmail: inv.accountId?.email,
-      accountCompany: inv.accountId?.company,
-      date: inv.invoiceDate,
-      dueDate: inv.dueDate,
-      amount: inv.totalAmount,
-      status: inv.status,
-      paidAmount: inv.paidAmount,
-      billTo: inv.billTo,
-      downloadUrl: `/api/billing/invoices/${inv._id}/download`
-    }));
+    const formatted = invoices.map(inv => {
+      const accDetails = accountMap[inv.accountId];
+      return {
+        _id: inv._id,
+        invoiceNumber: inv.invoiceNumber,
+        accountId: inv.accountId,
+        accountName: accDetails?.name,
+        accountEmail: accDetails?.email,
+        accountCompany: accDetails?.company,
+        date: inv.invoiceDate,
+        dueDate: inv.dueDate,
+        amount: inv.totalAmount,
+        status: inv.status,
+        paidAmount: inv.paidAmount,
+        billTo: inv.billTo,
+        downloadUrl: `/api/billing/invoices/${inv._id}/download`
+      };
+    });
 
     res.status(200).json({
       success: true,
@@ -750,6 +760,148 @@ export const getMonthlyRevenue = async (req, res) => {
   }
 };
 
+/**
+ * Get usage metrics for the current account
+ */
+export const getUsageMetrics = async (req, res) => {
+  try {
+    const account = await Account.findById(req.account._id);
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found'
+      });
+    }
+
+    // Get current subscription to determine limits
+    const subscription = await Subscription.findOne({
+      accountId: account.accountId,
+      status: 'active'
+    });
+
+    // Default limits (Starter plan)
+    let messagesLimit = 10000;
+    let apiCallsLimit = 5000;
+    let storageLimit = 5;
+
+    if (subscription) {
+      const plan = await PricingPlan.findById(subscription.planId);
+      if (plan) {
+        messagesLimit = plan.features?.messagesPerMonth || 10000;
+        apiCallsLimit = plan.features?.apiCallsPerDay ? plan.features.apiCallsPerDay * 30 : 5000;
+        storageLimit = plan.features?.storageGB || 5;
+      }
+    }
+
+    // For now, return 0 usage (integrate with actual metrics collection later)
+    const messageCount = 0;
+    const apiCalls = 0;
+    const storageUsed = 0;
+
+    res.json({
+      success: true,
+      data: {
+        messagesSent: messageCount,
+        messagesLimit,
+        messagesUsagePercent: Math.round((messageCount / messagesLimit) * 100),
+        apiCallsUsed: apiCalls,
+        apiCallsLimit,
+        apiUsagePercent: Math.round((apiCalls / apiCallsLimit) * 100),
+        storageUsed,
+        storageLimit,
+        storageUsagePercent: Math.round((storageUsed / storageLimit) * 100),
+        period: {
+          startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+          endDate: new Date()
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching usage metrics',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get payment methods for the current account
+ */
+export const getPaymentMethods = async (req, res) => {
+  try {
+    const account = await Account.findById(req.account._id);
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found'
+      });
+    }
+
+    // For now, return empty array (payment methods stored in payment gateway)
+    // TODO: Integrate with payment gateway API to fetch actual payment methods
+    const paymentMethods = [];
+
+    res.json({
+      success: true,
+      data: paymentMethods
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching payment methods',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get transactions/billing transactions for the current account
+ */
+export const getTransactions = async (req, res) => {
+  try {
+    const account = await Account.findById(req.account._id);
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found'
+      });
+    }
+
+    // Get invoices which serve as transactions
+    const invoices = await Invoice.find({
+      accountId: account.accountId
+    })
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .lean();
+
+    const transactions = invoices.map(invoice => ({
+      transactionId: invoice._id.toString(),
+      description: `${invoice.planName} subscription`,
+      amount: invoice.totalAmount || 0,
+      type: 'debit',
+      date: invoice.createdAt,
+      status: invoice.status || 'pending',
+      invoiceNumber: invoice.invoiceNumber
+    }));
+
+    res.json({
+      success: true,
+      data: transactions
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching transactions',
+      error: error.message
+    });
+  }
+};
+
 export default {
   createSubscription,
   getMySubscriptions,
@@ -760,5 +912,8 @@ export default {
   downloadInvoice,
   getBillingStats,
   getRevenueSummary,
-  getMonthlyRevenue
+  getMonthlyRevenue,
+  getUsageMetrics,
+  getPaymentMethods,
+  getTransactions
 };

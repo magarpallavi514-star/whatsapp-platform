@@ -439,65 +439,65 @@ export default function BroadcastsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      {/* Header - Mobile Optimized */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Broadcasts</h1>
-          <p className="text-gray-600 mt-1">Send bulk messages to your contacts</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Broadcasts</h1>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">Send bulk messages to your contacts</p>
         </div>
         <Link href="/dashboard/broadcasts/create">
-          <Button className="bg-green-600 hover:bg-green-700">
+          <Button className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm px-3 sm:px-4 py-2 whitespace-nowrap">
             <Plus className="h-4 w-4 mr-2" />
             New Broadcast
           </Button>
         </Link>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Sent</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalSent.toLocaleString()}</p>
+      {/* Stats Cards - Mobile Optimized */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">Total Sent</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{stats.totalSent.toLocaleString()}</p>
             </div>
-            <Send className="h-8 w-8 text-green-600" />
+            <Send className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 flex-shrink-0" />
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Delivered</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalDelivered.toLocaleString()}</p>
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">Delivered</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{stats.totalDelivered.toLocaleString()}</p>
             </div>
-            <Megaphone className="h-8 w-8 text-blue-600" />
+            <Megaphone className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 flex-shrink-0" />
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Delivery Rate</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.readRate}%</p>
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">Delivery Rate</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{stats.readRate}%</p>
             </div>
-            <Users className="h-8 w-8 text-purple-600" />
+            <Users className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 flex-shrink-0" />
           </div>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Scheduled</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.scheduled}</p>
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">Scheduled</p>
+              <p className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{stats.scheduled}</p>
             </div>
-            <Calendar className="h-8 w-8 text-orange-600" />
+            <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600 flex-shrink-0" />
           </div>
         </div>
       </div>
 
-      {/* Broadcasts Table */}
+      {/* Broadcasts Table/Cards */}
       <div className="bg-white rounded-lg border border-gray-200">
-        <div className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">All Broadcasts</h2>
+        <div className="p-3 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">All Broadcasts</h2>
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
               {error}
@@ -520,51 +520,55 @@ export default function BroadcastsPage() {
               </Link>
             </div>
           ) : (
-            <div className="overflow-visible">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Campaign Name</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Status</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Date</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Sent</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Delivered</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Read</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {broadcasts.map((broadcast) => (
-                    <tr key={broadcast.id} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="py-4 px-4 text-sm font-medium text-gray-900">{broadcast.name}</td>
-                      <td className="py-4 px-4">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          broadcast.status === "completed"
-                            ? "bg-green-100 text-green-700"
-                            : broadcast.status === "running"
-                            ? "bg-blue-100 text-blue-700"
-                            : broadcast.status === "scheduled"
-                            ? "bg-orange-100 text-orange-700"
-                            : "bg-gray-100 text-gray-700"
-                        }`}>
-                          {broadcast.status.charAt(0).toUpperCase() + broadcast.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{broadcast.date}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{broadcast.sent.toLocaleString()}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{broadcast.delivered.toLocaleString()}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{broadcast.read.toLocaleString()}</td>
-                      <td className="py-4 px-4 relative">
-                        <div className="relative z-50">
-                          <button 
-                            onClick={() => setOpenMenu(openMenu === broadcast.id ? null : broadcast.id)}
-                            className="text-gray-600 hover:text-gray-900 p-2 hover:bg-gray-100 rounded"
-                          >
-                            <MoreVertical className="h-5 w-5" />
-                          </button>
-                          
-                          {openMenu === broadcast.id && (
-                            <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-[9999]">
+            <div className="space-y-3 sm:space-y-4">
+              {broadcasts.map((broadcast) => (
+                <div key={broadcast.id} className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition">
+                  {/* Header: Name and Status */}
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xs sm:text-sm font-medium text-gray-900 truncate">{broadcast.name}</h3>
+                      <p className="text-xs text-gray-500 mt-1">{broadcast.date}</p>
+                    </div>
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full flex-shrink-0 ${
+                      broadcast.status === "completed"
+                        ? "bg-green-100 text-green-700"
+                        : broadcast.status === "running"
+                        ? "bg-blue-100 text-blue-700"
+                        : broadcast.status === "scheduled"
+                        ? "bg-orange-100 text-orange-700"
+                        : "bg-gray-100 text-gray-700"
+                    }`}>
+                      {broadcast.status.charAt(0).toUpperCase() + broadcast.status.slice(1)}
+                    </span>
+                  </div>
+
+                  {/* Stats Row */}
+                  <div className="grid grid-cols-3 gap-2 mb-3 pb-3 border-b border-gray-200">
+                    <div>
+                      <p className="text-[10px] sm:text-xs text-gray-500 truncate">Sent</p>
+                      <p className="text-sm sm:text-base font-bold text-gray-900 truncate">{broadcast.sent.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] sm:text-xs text-gray-500 truncate">Delivered</p>
+                      <p className="text-sm sm:text-base font-bold text-gray-900 truncate">{broadcast.delivered.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] sm:text-xs text-gray-500 truncate">Read</p>
+                      <p className="text-sm sm:text-base font-bold text-gray-900 truncate">{broadcast.read.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="relative">
+                    <button 
+                      onClick={() => setOpenMenu(openMenu === broadcast.id ? null : broadcast.id)}
+                      className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 px-2 py-1 hover:bg-gray-100 rounded flex items-center gap-2"
+                    >
+                      <MoreVertical className="h-4 w-4" /> Options
+                    </button>
+                    
+                    {openMenu === broadcast.id && (
+                      <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-[9999]">
                               <button
                                 onClick={() => handleViewBroadcast(broadcast.id)}
                                 disabled={loadingDetail}
@@ -613,7 +617,6 @@ export default function BroadcastsPage() {
                                     <CheckCircle className="h-4 w-4" />
                                   )}
                                   <span>{actionLoading === broadcast.id ? "Sending..." : "Send Again"}</span>
-                                </button>
                               )}
 
                               {broadcast.status === "scheduled" && (
@@ -646,15 +649,11 @@ export default function BroadcastsPage() {
                             </div>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      )}
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
+                </div>
+              
 
       {/* View Details Modal */}
       {viewingBroadcast && (

@@ -4,6 +4,7 @@ import { Building2, Plus, Search, MoreVertical, Users, TrendingUp, DollarSign, A
 import { FaWhatsapp } from "react-icons/fa"
 import { Button } from "@/components/ui/button"
 import { ErrorToast } from "@/components/ErrorToast"
+import InvoiceTemplate from "@/components/InvoiceTemplate"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { API_URL } from "@/lib/config/api"
@@ -28,6 +29,8 @@ export default function OrganizationsPage() {
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [emailMessage, setEmailMessage] = useState("")
   const [newPassword, setNewPassword] = useState("")
+  const [invoicePreview, setInvoicePreview] = useState<any>(null)
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false)
   const [showPasswordSection, setShowPasswordSection] = useState(false)
   const [isGeneratingPassword, setIsGeneratingPassword] = useState(false)
   const [formData, setFormData] = useState({
@@ -136,53 +139,178 @@ export default function OrganizationsPage() {
     }
   }
 
+  // Refresh/Sync invoices for selected organization
+  const handleRefreshInvoices = async () => {
+    if (!selectedOrg) return
+    
+    const token = localStorage.getItem("token")
+    const orgAccountId = selectedOrg.accountId
+    
+    console.log("🔄 Refreshing invoices for accountId:", orgAccountId)
+    
+    try {
+      let invoices = []
+      
+      // Primary: Fetch by accountId
+      if (orgAccountId) {
+        const invoiceResponse = await fetch(`${API_URL}/billing/admin/invoices?accountId=${orgAccountId}&limit=100`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        })
+        
+        if (invoiceResponse.ok) {
+          const invoiceData = await invoiceResponse.json()
+          invoices = invoiceData.data || []
+          console.log("✅ Found", invoices.length, "invoices by accountId")
+        }
+      }
+      
+      // Fallback: Fetch all and filter
+      if (invoices.length === 0) {
+        console.log("⚠️ Trying fallback search...")
+        const allResponse = await fetch(`${API_URL}/billing/admin/invoices?limit=200`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        })
+        
+        if (allResponse.ok) {
+          const allData = await allResponse.json()
+          const allInvoices = allData.data || []
+          
+          invoices = allInvoices.filter((inv: any) => 
+            inv.accountId === orgAccountId || 
+            inv.accountId === selectedOrg._id ||
+            inv.accountId === selectedOrg._id.toString()
+          )
+          console.log("✅ Found", invoices.length, "invoices in fallback search")
+        }
+      }
+      
+      // Update state
+      setSelectedOrg({
+        ...selectedOrg,
+        _invoices: invoices
+      })
+      
+      alert(`✅ Synced! Found ${invoices.length} invoice(s)`)
+    } catch (err) {
+      console.error("Error refreshing invoices:", err)
+      alert("Failed to refresh invoices")
+    }
+  }
+
   const handleOpenDetails = async (org: any) => {
     setSelectedOrg(org)
     setEditData({ ...org })
     setIsDetailDrawerOpen(true)
     setIsEditMode(false)
     
-    // ✅ Fetch invoices AND subscription for this organization
+    // ✅ Fetch invoices and transactions using accountId
     try {
       const token = localStorage.getItem("token")
+      const orgAccountId = org.accountId // Use the 7-digit accountId (YYXXXXX format)
+      const orgId = org._id // MongoDB ObjectId
       
-      // Fetch invoices
-      const invoiceResponse = await fetch(`${API_URL}/billing/invoices?accountId=${org._id}`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      })
+      console.log("📦 Fetching details for organization:", org.name)
+      console.log("   - MongoDB ID (_id):", orgId)
+      console.log("   - Account ID (accountId):", orgAccountId)
       
+      // Fetch invoices directly using the accountId
       let invoices = []
-      if (invoiceResponse.ok) {
-        const data = await invoiceResponse.json()
-        invoices = data.data || []
-      }
-      
-      // ✅ Fetch subscription details
-      const subscriptionResponse = await fetch(`${API_URL}/subscriptions?accountId=${org._id}`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
+      if (orgAccountId) {
+        console.log("📋 Fetching invoices for accountId:", orgAccountId)
+        try {
+          const invoiceResponse = await fetch(`${API_URL}/billing/admin/invoices?accountId=${orgAccountId}`, {
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json"
+            }
+          })
+          
+          if (invoiceResponse.ok) {
+            const invoiceData = await invoiceResponse.json()
+            invoices = invoiceData.data || []
+            console.log("✅ Invoices fetched by accountId:", invoices.length, "found")
+            invoices.forEach((inv: any, idx: number) => {
+              console.log(`   [${idx + 1}] ${inv.invoiceNumber} - ₹${inv.amount} (${inv.status})`)
+            })
+          } else {
+            console.warn("⚠️ Invoice fetch returned status:", invoiceResponse.status)
+          }
+        } catch (e) {
+          console.error("❌ Error fetching invoices by accountId:", e)
         }
-      })
-      
-      let subscription = null
-      if (subscriptionResponse.ok) {
-        const data = await subscriptionResponse.json()
-        subscription = data.data || null
+      } else {
+        console.warn("⚠️ No accountId found for organization")
       }
       
-      // ✅ Update selectedOrg with both invoices and subscription
-      setSelectedOrg((prev: any) => ({
-        ...prev,
-        _invoices: invoices,
-        subscription: subscription  // Add subscription data
-      }))
+      // If no invoices found by accountId, try to fetch by searching all and filtering
+      if (invoices.length === 0) {
+        console.log("⚠️ No invoices by accountId, attempting fallback search...")
+        try {
+          const allInvoicesResponse = await fetch(`${API_URL}/billing/admin/invoices?limit=100`, {
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json"
+            }
+          })
+          
+          if (allInvoicesResponse.ok) {
+            const allInvoiceData = await allInvoicesResponse.json()
+            const allInvoices = allInvoiceData.data || []
+            
+            // Filter invoices that match this org's accountId or might be linked via subscription
+            invoices = allInvoices.filter((inv: any) => {
+              const matchesAccountId = inv.accountId === orgAccountId
+              const matchesOrgId = inv.accountId === orgId || inv.accountId === orgId.toString()
+              return matchesAccountId || matchesOrgId
+            })
+            
+            console.log("✅ Invoices found via fallback search:", invoices.length)
+            invoices.forEach((inv: any, idx: number) => {
+              console.log(`   [${idx + 1}] ${inv.invoiceNumber} - ₹${inv.amount} (${inv.status})`)
+            })
+          }
+        } catch (e) {
+          console.error("❌ Error in fallback search:", e)
+        }
+      }
+      
+      // Also fetch organization details for updated info
+      try {
+        const orgResponse = await fetch(`${API_URL}/admin/organizations/${org._id}`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        })
+        
+        if (orgResponse.ok) {
+          const orgData = await orgResponse.json()
+          console.log("✅ Organization details updated")
+          
+          // ✅ Update selectedOrg with invoices and latest org data
+          setSelectedOrg({
+            ...orgData.data,
+            _invoices: invoices // Use fetched invoices
+          })
+          setEditData(orgData.data)
+        }
+      } catch (e) {
+        console.error("Error fetching org details:", e)
+        // Still show invoices even if org detail fetch fails
+        setSelectedOrg({
+          ...org,
+          _invoices: invoices
+        })
+      }
     } catch (err) {
-      console.error("Error fetching invoices/subscription:", err)
-      // Continue without data - they'll show "No data" message
+      console.error("Error in handleOpenDetails:", err)
+      alert("Failed to load organization details")
     }
   }
 
@@ -412,11 +540,32 @@ export default function OrganizationsPage() {
   // 📋 Create Free Invoice for Client
   const handleCreateInvoice = async () => {
     try {
+      if (!selectedOrg || !selectedOrg._id) {
+        alert("❌ Error: Organization data not available. Please try again.")
+        return
+      }
+
       setIsGeneratingPaymentLink(true)
       const token = localStorage.getItem("token")
       
       console.log("📋 Creating invoice for:", selectedOrg?.name, "ID:", selectedOrg?._id)
       console.log("🔑 Token present:", !!token)
+
+      // Calculate next billing date based on plan and purchase date
+      const purchaseDate = new Date()
+      let nextBillingDate = new Date(purchaseDate)
+      const billingCycle = selectedOrg.billingCycle || "monthly"
+      
+      if (billingCycle === "monthly") {
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
+      } else if (billingCycle === "quarterly") {
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 3)
+      } else if (billingCycle === "annually") {
+        nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1)
+      }
+      
+      console.log(`📅 Billing Cycle: ${billingCycle}`)
+      console.log(`📅 Next Billing Date will be: ${nextBillingDate.toLocaleDateString('en-IN')}`)
 
       const response = await fetch(`${API_URL}/admin/organizations/${selectedOrg._id}/create-invoice`, {
         method: "POST",
@@ -426,7 +575,9 @@ export default function OrganizationsPage() {
         },
         body: JSON.stringify({
           amount: 0,
-          description: "Free account invoice"
+          description: `${selectedOrg.plan?.charAt(0).toUpperCase() + selectedOrg.plan?.slice(1) || "Plan"} Plan - ${billingCycle.charAt(0).toUpperCase() + billingCycle.slice(1)} Billing`,
+          nextBillingDate: nextBillingDate.toISOString(),
+          billingCycle: billingCycle
         })
       })
 
@@ -436,10 +587,12 @@ export default function OrganizationsPage() {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`
         try {
           const errorData = await response.json()
-          console.error("❌ API Error Response:", response.status, errorData)
-          errorMessage = errorData.message || errorData.error || errorMessage
+          console.error("❌ API Error Response:", response.status)
+          console.error("📋 Full Error Data:", JSON.stringify(errorData, null, 2))
+          errorMessage = errorData.message || errorData.error || errorData?.details?.message || errorMessage
+          console.error("📝 Error Message:", errorMessage)
         } catch (e) {
-          console.error("❌ Could not parse error response")
+          console.error("❌ Could not parse error response", e)
         }
         throw new Error(errorMessage)
       }
@@ -833,7 +986,7 @@ export default function OrganizationsPage() {
         </div>
       )}
 
-      {/* Detail Drawer - Professional View/Edit Organization */}
+      {/* Detail Drawer - Clean Organization Dashboard */}
       {isDetailDrawerOpen && selectedOrg && (
         <div className="fixed inset-0 z-50 flex justify-end">
           {/* Glass Blur Background */}
@@ -848,81 +1001,64 @@ export default function OrganizationsPage() {
           {/* Drawer */}
           <div className="relative w-[550px] h-full bg-white shadow-2xl flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white px-8 py-6 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-5 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-white">
-                  {isEditMode ? "Edit Organization" : "Organization Details"}
-                </h2>
-                <p className="text-sm text-gray-200 mt-1">{selectedOrg.name || "N/A"}</p>
+                <h2 className="text-xl font-bold text-white">{selectedOrg.name || "Organization"}</h2>
+                <p className="text-xs text-blue-100 mt-1">Organization Dashboard</p>
               </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => console.log('Send notification to ' + selectedOrg.email)}
-                  className="text-white hover:text-gray-300 transition-colors p-2 hover:bg-slate-700 rounded-lg"
-                  title="Send Email Notification"
-                >
-                  <Bell className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => console.log('Send WhatsApp to ' + selectedOrg.phoneNumber)}
-                  className="text-white hover:text-gray-300 transition-colors p-2 hover:bg-slate-700 rounded-lg"
-                  title="Send WhatsApp Message"
-                >
-                  <FaWhatsapp className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => {
-                    setIsDetailDrawerOpen(false)
-                    setIsEditMode(false)
-                  }}
-                  className="text-gray-300 hover:text-white transition-colors p-2 hover:bg-slate-700 rounded-lg"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  setIsDetailDrawerOpen(false)
+                  setIsEditMode(false)
+                }}
+                className="text-white hover:text-blue-100 transition-colors p-2"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto bg-gray-50">
               {isEditMode ? (
-                <form id="editForm" onSubmit={handleUpdateOrganization} onKeyDown={(e) => e.key === "Enter" && e.preventDefault()} className="p-8 space-y-6">
+                <form id="editForm" onSubmit={handleUpdateOrganization} onKeyDown={(e) => e.key === "Enter" && e.preventDefault()} className="p-6 space-y-5">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-3">Organization Name</label>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Organization Name</label>
                     <input
                       type="text"
                       value={editData?.name || ""}
                       onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-3">Email</label>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Email</label>
                     <input
                       type="email"
                       value={editData?.email || ""}
                       onChange={(e) => setEditData({ ...editData, email: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-3">Phone Number</label>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Phone Number</label>
                     <input
                       type="tel"
                       value={editData?.phoneNumber || ""}
                       onChange={(e) => setEditData({ ...editData, phoneNumber: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-3">Plan</label>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Plan</label>
                     <select
                       value={editData?.plan || ""}
                       onChange={(e) => setEditData({ ...editData, plan: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
                     >
+                      <option value="">Select Plan</option>
                       <option value="free">Free</option>
                       <option value="starter">Starter</option>
                       <option value="pro">Pro</option>
@@ -931,23 +1067,24 @@ export default function OrganizationsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-3">Status</label>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Status</label>
                     <select
                       value={editData?.status || ""}
                       onChange={(e) => setEditData({ ...editData, status: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
                     >
+                      <option value="">Select Status</option>
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-3">Billing Cycle</label>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">Billing Cycle</label>
                     <select
                       value={editData?.billingCycle || "monthly"}
                       onChange={(e) => setEditData({ ...editData, billingCycle: e.target.value })}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
                     >
                       <option value="monthly">Monthly</option>
                       <option value="quarterly">Quarterly</option>
@@ -956,17 +1093,17 @@ export default function OrganizationsPage() {
                   </div>
 
                   {/* Password Section */}
-                  <div className="border-t pt-6">
+                  <div className="border-t pt-5">
                     <button
                       type="button"
                       onClick={() => setShowPasswordSection(!showPasswordSection)}
-                      className="text-sm font-semibold text-blue-600 hover:text-blue-800 mb-4"
+                      className="text-sm font-semibold text-blue-600 hover:text-blue-800"
                     >
-                      {showPasswordSection ? "Hide" : "Show"} Set New Password
+                      {showPasswordSection ? "✓ Hide" : "+ Set"} New Password
                     </button>
 
                     {showPasswordSection && (
-                      <div className="space-y-3">
+                      <div className="space-y-3 mt-3">
                         <div>
                           <label className="block text-sm font-semibold text-gray-900 mb-2">New Password</label>
                           <input
@@ -974,315 +1111,196 @@ export default function OrganizationsPage() {
                             value={newPassword}
                             onChange={(e) => setNewPassword(e.target.value)}
                             placeholder="Enter new password"
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-600 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
                           />
-                          <p className="text-xs text-gray-500 mt-2">Email will be sent to {selectedOrg.email} after saving</p>
+                          <p className="text-xs text-gray-500 mt-1">Notification will be sent to {selectedOrg.email}</p>
                         </div>
                       </div>
                     )}
                   </div>
                 </form>
               ) : (
-                <div className="p-8 space-y-8">
-                  {/* Organization Info */}
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Organization Info</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Name</p>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">{selectedOrg.name || "N/A"}</p>
-                      </div>
-                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Email</p>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">{selectedOrg.email || "N/A"}</p>
-                      </div>
-                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Phone</p>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">{selectedOrg.phoneNumber || "N/A"}</p>
-                      </div>
+                <div className="p-6 space-y-5">
+                  {/* Organization Info Card */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+                    <h3 className="text-xs font-bold text-gray-600 uppercase">Basic Information</h3>
+                    <div>
+                      <p className="text-xs text-gray-500">Name</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedOrg.name || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedOrg.email || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Phone</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedOrg.phoneNumber || "—"}</p>
                     </div>
                   </div>
 
-                  {/* Plan Info */}
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Plan & Billing</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Plan</p>
-                        <p className="text-sm font-semibold text-gray-900 mt-1 capitalize">{selectedOrg.plan || "N/A"}</p>
+                  {/* Plan & Status Card */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+                    <h3 className="text-xs font-bold text-gray-600 uppercase">Plan & Status</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500">Plan</p>
+                        <p className="text-sm font-bold text-blue-700 capitalize">{selectedOrg.plan || "—"}</p>
                       </div>
-                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Tenure</p>
-                        <p className="text-sm font-semibold text-gray-900 mt-1 capitalize">{selectedOrg.billingCycle || "N/A"}</p>
+                      <div>
+                        <p className="text-xs text-gray-500">Billing Cycle</p>
+                        <p className="text-sm font-bold text-gray-900 capitalize">{selectedOrg.billingCycle || "—"}</p>
                       </div>
-                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Status</p>
-                        <span className={`inline-block text-xs font-bold mt-1 px-3 py-1 rounded-full ${
+                      <div>
+                        <p className="text-xs text-gray-500">Status</p>
+                        <span className={`inline-block text-xs font-bold px-2 py-1 rounded ${
                           selectedOrg.status === "active"
-                            ? "bg-green-200 text-green-800"
-                            : "bg-amber-200 text-amber-800"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
                         }`}>
-                          {selectedOrg.status || "N/A"}
+                          {selectedOrg.status?.charAt(0).toUpperCase() + selectedOrg.status?.slice(1) || "—"}
                         </span>
                       </div>
-                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Signup Date</p>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">
-                          {selectedOrg.createdAt ? new Date(selectedOrg.createdAt).toLocaleDateString('en-IN') : "N/A"}
-                        </p>
-                      </div>
-                      
-                      {/* ✅ Plan Amount */}
-                      {selectedOrg.plan && selectedOrg.plan !== "free" && availablePlans.length > 0 && (() => {
-                        const planObj = availablePlans.find((p: any) => 
-                          p.name?.toLowerCase() === selectedOrg.plan?.toLowerCase()
-                        );
-                        
-                        let amount = 0;
-                        if (selectedOrg.billingCycle === "monthly") {
-                          amount = planObj?.monthlyPrice || 0;
-                        } else if (selectedOrg.billingCycle === "quarterly") {
-                          amount = planObj?.quarterlyPrice || 0;
-                        } else if (selectedOrg.billingCycle === "annual") {
-                          amount = planObj?.annualPrice || 0;
-                        }
-                        
-                        return (
-                          <div className="col-span-2 px-4 py-3 border-2 border-green-400 bg-green-50 rounded-lg">
-                            <p className="text-xs font-semibold text-green-700 uppercase">Plan Amount ({selectedOrg.billingCycle})</p>
-                            <p className="text-2xl font-bold text-green-700 mt-1">₹{amount?.toLocaleString('en-IN')}</p>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-
-                  {/* Payment Summary Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Payment Summary</h3>
-                    <div className="grid grid-cols-3 gap-3">
-                      {selectedOrg.plan && selectedOrg.plan !== "free" && availablePlans.length > 0 && (() => {
-                        const planObj = availablePlans.find((p: any) => 
-                          p.name?.toLowerCase() === selectedOrg.plan?.toLowerCase()
-                        );
-                        
-                        let planAmount = 0;
-                        if (selectedOrg.billingCycle === "monthly") {
-                          planAmount = planObj?.monthlyPrice || 0;
-                        } else if (selectedOrg.billingCycle === "quarterly") {
-                          planAmount = planObj?.quarterlyPrice || 0;
-                        } else if (selectedOrg.billingCycle === "annual") {
-                          planAmount = planObj?.annualPrice || 0;
-                        }
-                        
-                        const totalPaid = selectedOrg.totalPayments || 0;
-                        const balance = Math.max(0, planAmount - totalPaid);
-                        
-                        return (
-                          <>
-                            <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded">
-                              <p className="text-xs font-semibold text-blue-600 uppercase">Bill</p>
-                              <p className="text-lg font-bold text-blue-700 mt-1">₹{planAmount?.toLocaleString('en-IN')}</p>
-                            </div>
-                            
-                            <div className="px-3 py-2 bg-green-50 border border-green-200 rounded">
-                              <p className="text-xs font-semibold text-green-600 uppercase">Paid</p>
-                              <p className="text-lg font-bold text-green-700 mt-1">₹{totalPaid?.toLocaleString('en-IN')}</p>
-                            </div>
-                            
-                            <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded">
-                              <p className="text-xs font-semibold text-amber-600 uppercase">Due</p>
-                              <p className="text-lg font-bold text-amber-700 mt-1">₹{balance?.toLocaleString('en-IN')}</p>
-                            </div>
-                          </>
-                        );
-                      })()}
-                      
-                      {/* Free Plan Message */}
-                      {selectedOrg.plan === "free" && (
-                        <div className="col-span-2 px-4 py-3 border-2 border-gray-300 bg-gray-100 rounded-lg">
-                          <p className="text-sm font-semibold text-gray-700 text-center">📦 Free Plan - No Billing</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Billing Info - Shows paid amount from actual invoices */}
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Billing Details</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Next Billing Date</p>
-                        <p className="text-sm font-semibold text-gray-900 mt-1">
-                          {selectedOrg.nextBillingDate ? new Date(selectedOrg.nextBillingDate).toLocaleDateString('en-IN') : "Not Set"}
-                        </p>
-                      </div>
-                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Amount Paid</p>
-                        <p className="text-sm font-semibold text-green-700 mt-1">
-                          ₹{selectedOrg._invoices && selectedOrg._invoices.length > 0
-                            ? selectedOrg._invoices.filter((inv: any) => inv.status === 'paid').reduce((sum: number, inv: any) => sum + (inv.paidAmount || 0), 0).toLocaleString('en-IN')
-                            : (selectedOrg.totalPayments || 0).toLocaleString('en-IN')}
-                        </p>
-                      </div>
-                      <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                        <p className="text-xs font-semibold text-gray-600 uppercase">Pending Amount</p>
-                        <p className="text-sm font-semibold text-amber-700 mt-1">
-                          ₹{selectedOrg._invoices && selectedOrg._invoices.length > 0
-                            ? selectedOrg._invoices.filter((inv: any) => inv.status !== 'paid').reduce((sum: number, inv: any) => sum + (inv.dueAmount || 0), 0).toLocaleString('en-IN')
-                            : "0"}
+                      <div>
+                        <p className="text-xs text-gray-500">Member Since</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {selectedOrg.createdAt ? new Date(selectedOrg.createdAt).toLocaleDateString('en-IN') : "—"}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Subscription Details */}
-                  {selectedOrg.subscription && (() => {
-                    // Calculate next renewal date from signup + billing cycle
-                    const signupDate = new Date(selectedOrg.createdAt);
-                    let nextRenewal = new Date(signupDate);
-                    
-                    if (selectedOrg.billingCycle === 'monthly') {
-                      nextRenewal.setMonth(nextRenewal.getMonth() + 1);
-                    } else if (selectedOrg.billingCycle === 'quarterly') {
-                      nextRenewal.setMonth(nextRenewal.getMonth() + 3);
-                    } else if (selectedOrg.billingCycle === 'annual') {
-                      nextRenewal.setFullYear(nextRenewal.getFullYear() + 1);
-                    }
-                    
-                    return (
-                      <div className="space-y-4">
-                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Subscription</h3>
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded">
-                            <p className="text-xs font-semibold text-gray-600 uppercase">Order ID</p>
-                            <p className="font-medium text-gray-900 mt-1">{selectedOrg.subscription.orderId?.slice(-8) || "N/A"}</p>
-                          </div>
-                          <div className="px-3 py-2 bg-green-50 border border-green-200 rounded">
-                            <p className="text-xs font-semibold text-green-600 uppercase">Amount</p>
-                            <p className="font-semibold text-green-700 mt-1">₹{selectedOrg.subscription.paymentAmount || "0"}</p>
-                          </div>
-                          <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded">
-                            <p className="text-xs font-semibold text-gray-600 uppercase">Status</p>
-                            <span className={`text-xs font-bold mt-1 px-2 py-1 rounded inline-block ${
-                              selectedOrg.subscription.paymentStatus === 'completed' ? 'bg-green-100 text-green-700' :
-                              selectedOrg.subscription.paymentStatus === 'pending' ? 'bg-amber-100 text-amber-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {selectedOrg.subscription.paymentStatus?.charAt(0).toUpperCase() + selectedOrg.subscription.paymentStatus?.slice(1) || "N/A"}
-                            </span>
-                          </div>
-                          <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded">
-                            <p className="text-xs font-semibold text-blue-600 uppercase">Next Billing</p>
-                            <p className="font-semibold text-blue-700 mt-1">
-                              {nextRenewal.toLocaleDateString('en-IN', {day: '2-digit', month: '2-digit', year: '2-digit'})}
-                            </p>
-                          </div>
-                        </div>
+                  {/* Billing Info Card */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+                    <h3 className="text-xs font-bold text-gray-600 uppercase">Billing Summary</h3>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                        <p className="text-xs text-blue-600 font-semibold">Total Bill</p>
+                        <p className="text-base font-bold text-blue-700 mt-1">₹{(selectedOrg.billAmount || 0)?.toLocaleString('en-IN')}</p>
                       </div>
-                    );
-                  })()}
+                      <div className="bg-green-50 p-3 rounded border border-green-200">
+                        <p className="text-xs text-green-600 font-semibold">Paid</p>
+                        <p className="text-base font-bold text-green-700 mt-1">₹{(selectedOrg.totalPayments || 0)?.toLocaleString('en-IN')}</p>
+                      </div>
+                      <div className={`p-3 rounded border ${(selectedOrg.billAmount || 0) - (selectedOrg.totalPayments || 0) > 0 ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}>
+                        <p className={`text-xs font-semibold ${(selectedOrg.billAmount || 0) - (selectedOrg.totalPayments || 0) > 0 ? 'text-red-600' : 'text-gray-600'}`}>Due</p>
+                        <p className={`text-base font-bold mt-1 ${(selectedOrg.billAmount || 0) - (selectedOrg.totalPayments || 0) > 0 ? 'text-red-700' : 'text-gray-700'}`}>
+                          ₹{Math.max(0, (selectedOrg.billAmount || 0) - (selectedOrg.totalPayments || 0))?.toLocaleString('en-IN')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="pt-3 border-t space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase font-semibold">Next Billing Date</p>
+                        <p className="text-sm font-bold text-blue-700 mt-1">
+                          {(() => {
+                            if (selectedOrg.nextBillingDate) {
+                              return new Date(selectedOrg.nextBillingDate).toLocaleDateString('en-IN', {day: 'numeric', month: 'long', year: 'numeric'})
+                            }
+                            // Auto-calculate based on createdAt + billingCycle
+                            if (selectedOrg.createdAt && selectedOrg.billingCycle) {
+                              const signupDate = new Date(selectedOrg.createdAt)
+                              let nextDate = new Date(signupDate)
+                              if (selectedOrg.billingCycle === 'monthly') {
+                                nextDate.setMonth(nextDate.getMonth() + 1)
+                              } else if (selectedOrg.billingCycle === 'quarterly') {
+                                nextDate.setMonth(nextDate.getMonth() + 3)
+                              } else if (selectedOrg.billingCycle === 'annually') {
+                                nextDate.setFullYear(nextDate.getFullYear() + 1)
+                              }
+                              return nextDate.toLocaleDateString('en-IN', {day: 'numeric', month: 'long', year: 'numeric'})
+                            }
+                            return 'Not scheduled'
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-                  {/* ✅ Invoice Details */}
-                  {selectedOrg.invoice && (
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Invoice Details</h3>
-                      <div className="grid grid-cols-1 gap-4">
-                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-600 uppercase">Invoice Number</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-1">{selectedOrg.invoice.invoiceNumber || "N/A"}</p>
-                        </div>
-                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-600 uppercase">Amount</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-1">₹{selectedOrg.invoice.amount || "0"}</p>
-                        </div>
-                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-600 uppercase">Status</p>
-                          <span className={`inline-block text-xs font-bold mt-1 px-3 py-1 rounded-full ${
-                            selectedOrg.invoice.status === 'paid'
-                              ? "bg-green-200 text-green-800"
-                              : "bg-amber-200 text-amber-800"
-                          }`}>
-                            {selectedOrg.invoice.status || "N/A"}
-                          </span>
-                        </div>
-                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-600 uppercase">Due Date</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-1">
-                            {selectedOrg.invoice.dueDate 
-                              ? new Date(selectedOrg.invoice.dueDate).toLocaleDateString('en-IN') 
-                              : "N/A"}
-                          </p>
-                        </div>
-                        <div className="px-4 py-3 border border-gray-200 rounded-lg">
-                          <p className="text-xs font-semibold text-gray-600 uppercase">Paid Date</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-1">
-                            {selectedOrg.invoice.paidDate 
-                              ? new Date(selectedOrg.invoice.paidDate).toLocaleDateString('en-IN') 
-                              : "Not Paid"}
-                          </p>
-                        </div>
-                      </div>
+                  {/* Wallet Card */}
+                  {selectedOrg.walletBalance > 0 && (
+                    <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-300 p-4">
+                      <p className="text-xs font-bold text-green-700 uppercase">Wallet Credit</p>
+                      <p className="text-2xl font-bold text-green-700 mt-2">₹{selectedOrg.walletBalance?.toLocaleString('en-IN')}</p>
                     </div>
                   )}
 
-                  {/* Invoices Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Invoices</h3>
-                    <div className="border border-gray-200 rounded overflow-hidden">
-                      {selectedOrg._invoices && selectedOrg._invoices.length > 0 ? (
-                        <table className="w-full text-sm">
-                          <thead className="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                              <th className="px-3 py-2 text-left font-semibold text-gray-700">Invoice</th>
-                              <th className="px-3 py-2 text-left font-semibold text-gray-700">Amount</th>
-                              <th className="px-3 py-2 text-left font-semibold text-gray-700">Status</th>
-                              <th className="px-3 py-2 text-center font-semibold text-gray-700">Date</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
-                            {selectedOrg._invoices.slice(0, 3).map((invoice: any, idx: number) => (
-                              <tr key={idx} className="hover:bg-gray-50">
-                                <td className="px-3 py-2 font-medium text-gray-900">{invoice.invoiceNumber}</td>
-                                <td className="px-3 py-2 font-semibold text-gray-900">₹{invoice.totalAmount?.toFixed(0)}</td>
-                                <td className="px-3 py-2">
-                                  <span className={`text-xs font-bold px-2 py-1 rounded ${
-                                    invoice.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                                  }`}>
-                                    {invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1)}
-                                  </span>
-                                </td>
-                                <td className="px-3 py-2 text-center text-xs text-gray-600">
-                                  {new Date(invoice.invoiceDate).toLocaleDateString('en-IN', {day: '2-digit', month: '2-digit', year: '2-digit'})}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      ) : (
-                        <div className="px-4 py-6 text-center text-gray-500 text-sm">No invoices</div>
-                      )}
+                  {/* Free Plan Badge */}
+                  {selectedOrg.plan === "free" && (
+                    <div className="bg-blue-50 rounded-lg border border-blue-200 p-4 text-center">
+                      <p className="text-sm font-semibold text-blue-700">📦 Free Plan - No Billing</p>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Recent Invoices */}
+                  {selectedOrg._invoices && selectedOrg._invoices.length > 0 ? (
+                    <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-bold text-gray-600 uppercase">Transactions & Invoices ({selectedOrg._invoices.length})</h3>
+                        <button
+                          onClick={handleRefreshInvoices}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1"
+                        >
+                          🔄 Sync
+                        </button>
+                      </div>
+                      <div className="space-y-2 max-h-72 overflow-y-auto">
+                        {selectedOrg._invoices.map((invoice: any, idx: number) => (
+                          <div key={idx} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded border border-gray-100">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">{invoice.invoiceNumber || `INV-${idx + 1}`}</p>
+                              <p className="text-xs text-gray-500">{new Date(invoice.invoiceDate || invoice.createdAt || invoice.date).toLocaleDateString('en-IN', {day: 'numeric', month: 'short', year: 'numeric'})}</p>
+                            </div>
+                            <div className="text-right space-x-2">
+                              <button
+                                onClick={() => {
+                                  setInvoicePreview(invoice)
+                                  setShowInvoicePreview(true)
+                                }}
+                                className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                              >
+                                👁️ View
+                              </button>
+                              <span className="text-sm font-bold text-gray-900">₹{(invoice.totalAmount || invoice.amount || 0)?.toLocaleString('en-IN')}</span>
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded inline-block ${
+                                invoice.status === 'paid' ? 'bg-green-100 text-green-700' : invoice.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                              }`}>
+                                {invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1) || 'Pending'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-lg border border-gray-200 p-4 text-center space-y-3">
+                      <p className="text-sm text-gray-600">No invoices/transactions yet</p>
+                      <button
+                        onClick={handleRefreshInvoices}
+                        className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 font-semibold"
+                      >
+                        🔄 Sync Invoices
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-200 bg-gray-50 px-6 py-3 flex gap-2">
+            <div className="border-t border-gray-200 bg-white px-6 py-3 flex gap-2">
               {isEditMode ? (
                 <>
                   <button
                     type="submit"
                     form="editForm"
-                    className="flex-1 bg-slate-900 text-white py-2 rounded hover:bg-slate-800 transition-colors font-semibold text-sm"
+                    className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors font-semibold text-sm"
                   >
-                    Save
+                    Save Changes
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsEditMode(false)}
-                    className="flex-1 bg-gray-300 text-gray-900 py-2 rounded hover:bg-gray-400 transition-colors font-semibold text-sm"
+                    className="flex-1 bg-gray-200 text-gray-900 py-2 rounded hover:bg-gray-300 transition-colors font-semibold text-sm"
                   >
                     Cancel
                   </button>
@@ -1293,29 +1311,20 @@ export default function OrganizationsPage() {
                     onClick={() => setIsPaymentLinkModal(true)}
                     className="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700 transition-colors font-semibold text-xs"
                   >
-                    💳 Payment Link
+                    Payment Link
                   </button>
                   <button
                     onClick={handleCreateInvoice}
                     disabled={isGeneratingPaymentLink}
                     className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors font-semibold text-xs disabled:opacity-50"
                   >
-                    📋 Invoice
+                    Invoice
                   </button>
                   <button
                     onClick={() => setIsEditMode(true)}
-                    className="flex-1 bg-slate-600 text-white py-2 rounded hover:bg-slate-700 transition-colors font-semibold text-xs"
+                    className="flex-1 bg-gray-200 text-gray-900 py-2 rounded hover:bg-gray-300 transition-colors font-semibold text-xs"
                   >
                     Edit
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsDetailDrawerOpen(false)
-                      setIsEditMode(false)
-                    }}
-                    className="flex-1 bg-gray-400 text-white py-2 rounded hover:bg-gray-500 transition-colors font-semibold text-xs"
-                  >
-                    Close
                   </button>
                 </>
               )}
@@ -1557,6 +1566,28 @@ export default function OrganizationsPage() {
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invoice Preview Modal */}
+      {showInvoicePreview && invoicePreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            {/* Close Button */}
+            <div className="sticky top-0 right-0 p-4 flex justify-end bg-white border-b border-gray-200">
+              <button
+                onClick={() => setShowInvoicePreview(false)}
+                className="text-gray-600 hover:text-gray-900 p-2"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Invoice Template */}
+            <div className="p-8">
+              <InvoiceTemplate invoice={invoicePreview} organization={selectedOrg} />
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@
  * Handles admin operations for managing registered organizations/users
  */
 
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Account from '../models/Account.js';
 import Counter from '../models/Counter.js';
@@ -11,7 +12,6 @@ import Invoice from '../models/Invoice.js';
 import PricingPlan from '../models/PricingPlan.js';
 import { generateAccountId, generateId } from '../utils/idGenerator.js';
 import { emailService } from '../services/emailService.js';
-import mongoose from 'mongoose';
 import bcryptjs from 'bcryptjs';
 
 /**
@@ -288,6 +288,29 @@ export const getOrganizationById = async (req, res) => {
       });
     }
 
+    // Fetch invoices for this account
+    const db = mongoose.connection.db;
+    const invoices = await db.collection('invoices').find({ accountId: account.accountId }).toArray();
+    const payments = await db.collection('payments').find({ accountId: account.accountId }).toArray();
+
+    // Get plan pricing
+    const pricingPlan = await db.collection('pricingplans').findOne({ name: { $regex: `^${account.plan}$`, $options: 'i' } });
+    
+    // Calculate bill amount based on billing cycle
+    let billAmount = 0;
+    if (pricingPlan) {
+      if (account.billingCycle === 'annual') {
+        billAmount = pricingPlan.yearlyPrice || pricingPlan.annualPrice || 0;
+      } else if (account.billingCycle === 'quarterly') {
+        billAmount = pricingPlan.quarterlyPrice || 0;
+      } else {
+        billAmount = pricingPlan.monthlyPrice || 0;
+      }
+    }
+
+    // Calculate total paid from invoices
+    const totalBilled = invoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+
     res.json({
       success: true,
       data: {
@@ -303,7 +326,14 @@ export const getOrganizationById = async (req, res) => {
         billingCycle: account.billingCycle,
         nextBillingDate: account.nextBillingDate,
         createdAt: account.createdAt,
-        updatedAt: account.updatedAt
+        updatedAt: account.updatedAt,
+        walletBalance: account.walletBalance || 0,
+        totalPayments: account.totalPayments || 0,
+        totalBilled: totalBilled,
+        billAmount: billAmount,
+        subscription: account.subscription || null,
+        invoice: invoices.length > 0 ? invoices[invoices.length - 1] : null,
+        _invoices: invoices
       }
     });
   } catch (error) {

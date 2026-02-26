@@ -4,6 +4,7 @@
  */
 
 import express from 'express';
+import { requireJWT } from '../middlewares/jwtAuth.js';
 import {
   getMyAccount,
   regenerateMyApiKey,

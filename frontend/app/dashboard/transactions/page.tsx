@@ -112,7 +112,10 @@ export default function TransactionsPage() {
       // Sort by date descending
       transactionsList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       
-      setTransactions(transactionsList)
+      // Filter to only completed transactions
+      const completedTransactions = transactionsList.filter(t => t.status === 'completed')
+      
+      setTransactions(completedTransactions)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load transactions')
     } finally {

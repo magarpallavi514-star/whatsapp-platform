@@ -5,6 +5,7 @@ import { Subscription } from '../models/Subscription.js';
 import { PricingPlan } from '../models/PricingPlan.js';
 import { Account } from '../models/Account.js';
 import { Organization } from '../models/Organization.js';
+import { Payment } from '../models/Payment.js';
 
 /**
  * @route   POST /api/payment/create-order
@@ -265,11 +266,19 @@ export const handlePaymentWebhook = async (req, res) => {
       invoice.paymentDate = new Date();
       await invoice.save();
 
+      // Update Payment record if exists
+      await Payment.findOneAndUpdate(
+        { orderId: order_id },
+        { status: 'completed' }
+      );
+
       // Create/update subscription
       const plan = await PricingPlan.findById(invoice.planId);
       const renewalDate = new Date();
       if (invoice.billingCycle === 'annual') {
         renewalDate.setFullYear(renewalDate.getFullYear() + 1);
+      } else if (invoice.billingCycle === 'quarterly') {
+        renewalDate.setMonth(renewalDate.getMonth() + 3);
       } else {
         renewalDate.setMonth(renewalDate.getMonth() + 1);
       }
@@ -294,6 +303,16 @@ export const handlePaymentWebhook = async (req, res) => {
         { upsert: true, new: true }
       );
 
+      // ✅ Update Account with nextBillingDate
+      await Account.findByIdAndUpdate(
+        invoice.accountId,
+        {
+          nextBillingDate: renewalDate,
+          totalPayments: (await Account.findById(invoice.accountId))?.totalPayments || 0 + order_amount
+        }
+      );
+      );
+
       // Send email
       const account = await Account.findById(invoice.accountId);
       if (account) {
@@ -314,6 +333,12 @@ export const handlePaymentWebhook = async (req, res) => {
         invoice.status = 'failed';
         await invoice.save();
 
+        // Update Payment record if exists
+        await Payment.findOneAndUpdate(
+          { orderId: order_id },
+          { status: 'failed' }
+        );
+
         const account = await Account.findById(invoice.accountId);
         if (account) {
           await emailService.sendPaymentConfirmationEmail(
@@ -321,6 +346,30 @@ export const handlePaymentWebhook = async (req, res) => {
             order_id,
             order_amount,
             'failed'
+          );
+        }
+      }
+    } else if (order_status === 'CANCELLED') {
+      console.log('⛔ Payment cancelled for order:', order_id);
+      
+      const invoice = await Invoice.findOne({ orderId: order_id });
+      if (invoice) {
+        invoice.status = 'cancelled';
+        await invoice.save();
+
+        // Update Payment record if exists
+        await Payment.findOneAndUpdate(
+          { orderId: order_id },
+          { status: 'cancelled' }
+        );
+
+        const account = await Account.findById(invoice.accountId);
+        if (account) {
+          await emailService.sendPaymentConfirmationEmail(
+            account.email,
+            order_id,
+            order_amount,
+            'cancelled'
           );
         }
       }

@@ -442,44 +442,44 @@ export default function ChatbotPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      {/* Header - Mobile Optimized */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Chatbot</h1>
-          <p className="text-gray-600 mt-1">Build and manage your AI chatbots</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Chatbot</h1>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">Build and manage your AI chatbots</p>
         </div>
-        <Button onClick={openCreateModal} className="bg-green-600 hover:bg-green-700">
+        <Button onClick={openCreateModal} className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm px-3 sm:px-4 py-2">
           <Plus className="h-4 w-4 mr-2" />
           Create Bot
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <p className="text-sm text-gray-600">Total Bots</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.totalBots}</p>
-          <p className="text-xs text-green-600 mt-1">{stats.activeBots} active</p>
+      {/* Stats Cards - Mobile Optimized */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-600">Total Bots</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalBots}</p>
+          <p className="text-[10px] sm:text-xs text-green-600 mt-1">{stats.activeBots} active</p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <p className="text-sm text-gray-600">Total Interactions</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.totalInteractions.toLocaleString()}</p>
-          <p className="text-xs text-gray-600 mt-1">all time</p>
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-600">Total Interactions</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalInteractions.toLocaleString()}</p>
+          <p className="text-[10px] sm:text-xs text-gray-600 mt-1">all time</p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <p className="text-sm text-gray-600">Avg Success Rate</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.avgSuccessRate.toFixed(1)}%</p>
-          <p className="text-xs text-gray-600 mt-1">across all bots</p>
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-600">Avg Success Rate</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.avgSuccessRate.toFixed(1)}%</p>
+          <p className="text-[10px] sm:text-xs text-gray-600 mt-1">across all bots</p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <p className="text-sm text-gray-600">Automation Rate</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.automationRate.toFixed(1)}%</p>
-          <p className="text-xs text-gray-600 mt-1">of conversations</p>
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-600">Automation Rate</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.automationRate.toFixed(1)}%</p>
+          <p className="text-[10px] sm:text-xs text-gray-600 mt-1">of conversations</p>
         </div>
       </div>
 
-      {/* Search */}
+      {/* Search - Mobile Optimized */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
         <input
@@ -487,33 +487,33 @@ export default function ChatbotPage() {
           placeholder="Search bots by name or keywords..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
         />
       </div>
 
       {/* Bots Grid */}
       {filteredBots.length === 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-          <Bot className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No chatbots yet</h3>
-          <p className="text-gray-600 mb-4">Create your first chatbot to automate conversations</p>
-          <Button onClick={openCreateModal} className="bg-green-600 hover:bg-green-700">
+        <div className="bg-white rounded-lg border border-gray-200 p-6 sm:p-12 text-center">
+          <Bot className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">No chatbots yet</h3>
+          <p className="text-xs sm:text-sm text-gray-600 mb-4">Create your first chatbot to automate conversations</p>
+          <Button onClick={openCreateModal} className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm">
             <Plus className="h-4 w-4 mr-2" />
             Create Bot
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {filteredBots.map((bot) => (
-            <div key={bot._id} className="bg-white rounded-lg border border-gray-200 p-6">
+            <div key={bot._id} className="bg-white rounded-lg border border-gray-200 p-3 sm:p-6">
               <div className="flex items-start justify-between mb-4">
-                <div className="flex items-start gap-3">
-                  <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <Bot className="h-6 w-6 text-green-600" />
+                <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Bot className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{bot.name}</h3>
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full mt-1 ${
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm sm:text-lg font-semibold text-gray-900 truncate">{bot.name}</h3>
+                    <span className={`inline-flex px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full mt-1 ${
                       bot.isActive
                         ? "bg-green-100 text-green-700"
                         : bot.triggerCount === 0
@@ -527,19 +527,19 @@ export default function ChatbotPage() {
               </div>
 
               {bot.description && (
-                <p className="text-sm text-gray-600 mb-3">{bot.description}</p>
+                <p className="text-xs sm:text-sm text-gray-600 mb-3 truncate">{bot.description}</p>
               )}
 
               <div className="mb-3">
-                <p className="text-xs text-gray-500 mb-1">Keywords:</p>
+                <p className="text-[10px] sm:text-xs text-gray-500 mb-1">Keywords:</p>
                 <div className="flex flex-wrap gap-1">
                   {bot.keywords.slice(0, 5).map((keyword, idx) => (
-                    <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                    <span key={idx} className="px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-700 text-[10px] sm:text-xs rounded-full">
                       {keyword}
                     </span>
                   ))}
                   {bot.keywords.length > 5 && (
-                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                    <span className="px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-600 text-[10px] sm:text-xs rounded-full">
                       +{bot.keywords.length - 5} more
                     </span>
                   )}
@@ -547,7 +547,7 @@ export default function ChatbotPage() {
               </div>
 
               <div className="mb-3">
-                <p className="text-xs text-gray-500 mb-1">Reply Type:</p>
+                <p className="text-[10px] sm:text-xs text-gray-500 mb-1">Reply Type:</p>
                 <div className="flex items-center gap-2">
                   {bot.replyType === 'workflow' ? (
                     <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full flex items-center gap-1">
@@ -569,43 +569,44 @@ export default function ChatbotPage() {
 
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <p className="text-sm text-gray-600">Interactions</p>
-                  <p className="text-xl font-bold text-gray-900">{bot.triggerCount.toLocaleString()}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Interactions</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">{bot.triggerCount.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Success Rate</p>
-                  <p className="text-xl font-bold text-gray-900">
+                  <p className="text-xs sm:text-sm text-gray-600">Success Rate</p>
+                  <p className="text-lg sm:text-xl font-bold text-gray-900">
                     {bot.successRate > 0 ? `${bot.successRate}%` : '-'}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                <p className="text-sm text-gray-600">Last active: {getLastActiveText(bot)}</p>
-                <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-gray-200 gap-3">
+                <p className="text-xs sm:text-sm text-gray-600">Last active: {getLastActiveText(bot)}</p>
+                <div className="flex gap-1 sm:gap-2 flex-wrap">
                   <Button 
                     onClick={() => openLeadsDrawer(bot)}
                     variant="outline" 
                     size="sm"
-                    className="text-blue-600 hover:text-blue-700"
+                    className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm px-2 sm:px-3 py-1"
                   >
-                    <Users className="h-4 w-4 mr-1" />
-                    Leads
+                    <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                    <span className="hidden sm:inline">Leads</span>
                   </Button>
                   <Button 
                     onClick={() => toggleBot(bot._id)}
                     variant="outline" 
                     size="sm"
+                    className="text-xs sm:text-sm px-2 sm:px-3 py-1"
                   >
                     {bot.isActive ? (
                       <>
-                        <Pause className="h-4 w-4 mr-1" />
-                        Pause
+                        <Pause className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="hidden sm:inline">Pause</span>
                       </>
                     ) : (
                       <>
-                        <Play className="h-4 w-4 mr-1" />
-                        Start
+                        <Play className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="hidden sm:inline">Start</span>
                       </>
                     )}
                   </Button>
@@ -613,9 +614,10 @@ export default function ChatbotPage() {
                     onClick={() => openEditModal(bot)}
                     variant="outline" 
                     size="sm"
+                    className="text-xs sm:text-sm px-2 sm:px-3 py-1"
                   >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
+                    <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                    <span className="hidden sm:inline">Edit</span>
                   </Button>
                   <Button 
                     onClick={() => deleteBot(bot._id)}

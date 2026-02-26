@@ -363,8 +363,15 @@ export const getMyAccount = async (req, res) => {
     
     return res.json({
       success: true,
-      account,
-      phoneNumbers
+      data: {
+        _id: account._id,
+        name: account.name,
+        email: account.email,
+        accountId: account.accountId,
+        phone: account.phone,
+        company: account.company,
+        phoneNumbers
+      }
     });
     
   } catch (error) {

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
   LayoutDashboard, MessageSquare, Users, Megaphone, FileText, Bot, Target, 
-  BarChart3, Users2, CreditCard, Settings, ChevronDown, LogOut, Menu, X, Lock, AlertCircle
+  BarChart3, Users2, CreditCard, Settings, ChevronDown, LogOut, Menu, X, Lock, AlertCircle, User
 } from 'lucide-react'
 import { authService, UserRole } from '@/lib/auth'
 import { getSidebarItems } from '@/lib/rbac'
@@ -21,7 +21,8 @@ const iconMap = {
   BarChart3,
   Users2,
   CreditCard,
-  Settings
+  Settings,
+  User
 }
 
 export default function Sidebar() {
@@ -30,6 +31,14 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false)
 
   if (!user) return null
+
+  // DEBUG: Log the role for debugging
+  console.log('🔍 Sidebar Debug - User role:', { 
+    rawRole: user.role, 
+    roleEnum: UserRole.ADMIN,
+    isAdmin: user.role === UserRole.ADMIN,
+    email: user.email
+  })
 
   // Check if plan is active (not pending payment)
   const isPlanActive = user.status === 'active' && user.plan && user.plan !== 'free'
@@ -111,9 +120,9 @@ export default function Sidebar() {
             const lockedFeatures = ['whatsapp', 'contacts', 'broadcasts', 'campaigns', 'chatbot', 'templates']
             const isFeatureLocked = !isSuperAdmin && !isPlanActive && lockedFeatures.some(feature => item.href.includes(feature))
             
-            // Always show billing/settings/dashboard, even for pending plans
+            // Always show billing/settings/dashboard/account, even for pending plans
             // For paid plans, show all features including chatbot, leads, campaigns
-            const alwaysVisible = ['dashboard', 'billing', 'settings']
+            const alwaysVisible = ['dashboard', 'billing', 'settings', 'account']
             const shouldShow = alwaysVisible.some(v => item.href.includes(v)) || isPlanActive || isSuperAdmin
             
             if (!shouldShow) return null

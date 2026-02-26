@@ -1,326 +1,448 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { authService } from '@/lib/auth'
-import { API_URL } from '@/lib/config/api'
-import { AlertCircle, CheckCircle, Clock, DollarSign, Loader } from 'lucide-react'
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { authService } from '@/lib/auth';
+import BillingBreakdown from '@/components/BillingBreakdown';
+import PaymentMethods from '@/components/PaymentMethods';
 
-interface BillingData {
-  accountId: string
-  plan: string
-  billingCycle: string
-  status: string
-  amount: number
-  createdAt: string
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+interface AccountInfo {
+  _id: string;
+  accountId: string;
+  name: string;
+  email: string;
+  plan: string;
+  billingCycle: string;
+  createdAt: string;
+  status: string;
 }
 
-interface PaymentResponse {
-  success: boolean
-  orderId?: string
-  paymentSessionId?: string
-  amount?: number
-  currency?: string
-  billingCycle?: string
-  message?: string
-  error?: string
+interface BillingStats {
+  activeSubscriptions: number;
+  totalSpent: number;
+  nextRenewal: string;
+  currency: string;
 }
 
-const PLAN_PRICES = {
-  starter: { monthly: 999, quarterly: 2847, annual: 9590 },
-  pro: { monthly: 2999, quarterly: 8547, annual: 28790 },
-  enterprise: { monthly: 9999, quarterly: 28497, annual: 95990 },
-  custom: { monthly: 0, quarterly: 0, annual: 0 }
+interface Invoice {
+  invoiceNumber: string;
+  invoiceId: string;
+  date: string;
+  amount: number;
+  status: 'paid' | 'pending' | 'failed' | 'completed';
+  dueDate: string;
+  paidAmount: number;
+  downloadUrl: string;
 }
 
 export default function BillingPage() {
-  const router = useRouter()
-  const user = authService.getCurrentUser()
-  const [billingData, setBillingData] = useState<BillingData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [retrying, setRetrying] = useState(false)
-  const [error, setError] = useState('')
+  const router = useRouter();
+  const [accountInfo, setAccountInfo] = useState<AccountInfo | null>(null);
+  const [stats, setStats] = useState<BillingStats | null>(null);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [accountAge, setAccountAge] = useState<string>('');
+  const [user, setUser] = useState<any>(null);
+  const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!user) {
-      router.push('/auth/login')
-      return
+    const currentUser = authService.getCurrentUser();
+    setUser(currentUser);
+    
+    // Redirect superadmins to admin invoices page
+    if (currentUser?.type === 'internal' || currentUser?.role === 'SUPERADMIN') {
+      router.push('/dashboard/invoices');
+      return;
     }
 
-    // Prepare billing data from user
-    if (user.status === 'pending' && user.plan && user.billingCycle) {
-      const planPrice = PLAN_PRICES[user.plan.toLowerCase() as keyof typeof PLAN_PRICES]
-      const cycleAmount = planPrice[user.billingCycle.toLowerCase() as keyof typeof planPrice] || 0
-
-      setBillingData({
-        accountId: user.accountId || '',
-        plan: user.plan,
-        billingCycle: user.billingCycle,
-        status: user.status,
-        amount: cycleAmount,
-        createdAt: new Date().toISOString()
-      })
+    // For org admins, load their organizations
+    if (currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER') {
+      fetchUserOrganizations();
     }
 
-    setLoading(false)
-  }, [user, router])
+    fetchAccountInfo();
+    fetchBillingStats();
+    fetchInvoices();
+  }, [router]);
 
-  const handleRetryPayment = async () => {
-    if (!billingData) return
-
-    setRetrying(true)
-    setError('')
-
+  const fetchUserOrganizations = async () => {
     try {
-      // Call subscription endpoint to create/update order for retry
-      const response = await fetch(`${API_URL}/subscriptions/create-order`, {
-        method: 'POST',
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/accounts`, {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authService.getToken()}`
-        },
-        body: JSON.stringify({
-          plan: billingData.plan,
-          billingCycle: billingData.billingCycle
-        })
-      })
-
-      // Check if response is OK before parsing JSON
-      if (!response.ok) {
-        let errorMessage = 'Failed to create payment order'
-        try {
-          const errorData = await response.json()
-          errorMessage = errorData.message || errorMessage
-        } catch (e) {
-          // If response is not JSON, use status text
-          errorMessage = `Server error: ${response.status} ${response.statusText}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-        throw new Error(errorMessage)
-      }
+      });
 
-      // Parse successful response
-      let data: PaymentResponse
-      try {
-        data = await response.json()
-      } catch (e) {
-        console.error('Failed to parse response:', e)
-        throw new Error('Invalid response from server. Please try again.')
-      }
-
-      if (!data.success || !data.paymentSessionId) {
-        throw new Error(data.error || 'Invalid payment session response')
-      }
-
-      // Initialize Cashfree checkout
-      const cashfree = (window as any).Cashfree
-      if (!cashfree) {
-        throw new Error('Payment gateway not available. Please refresh the page.')
-      }
-
-      const checkoutOptions = {
-        paymentSessionId: data.paymentSessionId,
-        redirectTarget: '_self',
-        onSuccess: (response: any) => {
-          // Payment successful - webhook will update account status
-          router.push(`/payment-success?orderId=${data.orderId || ''}&status=success`)
-        },
-        onFailure: (response: any) => {
-          setError('Payment failed. Please try again.')
-          setRetrying(false)
+      if (response.ok) {
+        const data = await response.json();
+        setOrganizations(data.data || []);
+        // Set first org as default
+        if (data.data?.length > 0) {
+          setSelectedOrg(data.data[0]._id);
         }
       }
-
-      cashfree.checkout(checkoutOptions)
-    } catch (err) {
-      console.error('Payment error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to process payment')
-      setRetrying(false)
+    } catch (error) {
+      console.error('Error fetching organizations:', error);
     }
-  }
+  };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader className="w-8 h-8 text-green-600 animate-spin" />
-      </div>
-    )
-  }
+  const fetchAccountInfo = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/accounts/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-  if (user?.status === 'active') {
-    return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto">
-          {/* Success State */}
-          <div className="bg-white rounded-xl shadow-sm border border-green-200 p-8 text-center">
-            <div className="flex justify-center mb-4">
-              <CheckCircle className="h-12 w-12 text-green-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Completed</h2>
-            <p className="text-gray-600 mb-6">
-              Your account is active and all features are unlocked. Thank you for your business!
-            </p>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="inline-flex items-center gap-2 px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
+      if (response.ok) {
+        const data = await response.json();
+        setAccountInfo(data.data);
 
-  if (!billingData || user?.status !== 'pending') {
+        // Calculate account age
+        if (data.data?.createdAt) {
+          const createdDate = new Date(data.data.createdAt);
+          const now = new Date();
+          const diffTime = now.getTime() - createdDate.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          const diffMonths = Math.floor(diffDays / 30);
+          const diffYears = Math.floor(diffMonths / 12);
+
+          if (diffYears > 0) {
+            setAccountAge(`${diffYears} year${diffYears > 1 ? 's' : ''} ${diffMonths % 12} month${(diffMonths % 12) !== 1 ? 's' : ''}`);
+          } else if (diffMonths > 0) {
+            setAccountAge(`${diffMonths} month${diffMonths > 1 ? 's' : ''} ${diffDays % 30} day${(diffDays % 30) !== 1 ? 's' : ''}`);
+          } else {
+            setAccountAge(`${diffDays} day${diffDays !== 1 ? 's' : ''}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching account info:', error);
+    }
+  };
+
+  const fetchBillingStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/billing/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching billing stats:', error);
+    }
+  };
+
+  const fetchInvoices = async () => {
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/billing/invoices`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setInvoices(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDownloadInvoice = async (invoiceId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/billing/invoices/${invoiceId}/download`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.data?.pdfUrl) {
+          window.open(data.data.pdfUrl, '_blank');
+        }
+      }
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      alert('Failed to download invoice');
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'paid':
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'failed':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (isLoading && !accountInfo) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">No Pending Payment</h2>
-            <p className="text-gray-600 mb-6">
-              Your account is already active. Go back to the dashboard to get started.
-            </p>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="inline-flex items-center gap-2 px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
+      <div className="p-3 sm:p-6 flex items-center justify-center min-h-screen">
+        <div className="text-xs sm:text-sm text-gray-600">Loading your billing information...</div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl mx-auto">
-        {/* Payment Pending Banner */}
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 mb-8">
-          <div className="flex gap-4">
-            <div className="flex-shrink-0">
-              <Clock className="h-6 w-6 text-orange-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-orange-900 mb-1">Payment Pending</h3>
-              <p className="text-orange-800">
-                Your account is waiting for payment confirmation. Complete your payment below to unlock all features.
-              </p>
-            </div>
-          </div>
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      {/* Header - Mobile Optimized */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Billing & Account</h1>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">Manage your organization and view transaction history</p>
         </div>
+      </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
-            <div className="flex gap-4">
-              <div className="flex-shrink-0">
-                <AlertCircle className="h-6 w-6 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-red-900 mb-1">Payment Error</h3>
-                <p className="text-red-800">{error}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Billing Details Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Payment Details</h2>
-
-          {/* Plan Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <p className="text-sm font-medium text-gray-600 mb-1">Selected Plan</p>
-              <p className="text-lg font-semibold text-gray-900 capitalize">
-                {billingData.plan}
-              </p>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <p className="text-sm font-medium text-gray-600 mb-1">Billing Cycle</p>
-              <p className="text-lg font-semibold text-gray-900 capitalize">
-                {billingData.billingCycle}
-              </p>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <p className="text-sm font-medium text-gray-600 mb-1">Amount Due</p>
-              <p className="text-2xl font-bold text-orange-600">
-                ₹{billingData.amount.toLocaleString()}
-              </p>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <p className="text-sm font-medium text-gray-600 mb-1">Status</p>
-              <p className="text-lg font-semibold text-orange-600 capitalize">
-                {billingData.status}
-              </p>
-            </div>
-          </div>
-
-          {/* Features That Will Be Unlocked */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Features Unlocked After Payment</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {[
-                'WhatsApp Connection',
-                'Contact Management',
-                'Broadcast Messages',
-                'Campaigns',
-                'Chatbot Setup',
-                'Message Templates'
-              ].map((feature) => (
-                <div key={feature} className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                  <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                  <span className="text-sm font-medium text-gray-900">{feature}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Payment Button */}
-          <button
-            onClick={handleRetryPayment}
-            disabled={retrying}
-            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      {/* Organization Selection for Admins/Managers */}
+      {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && organizations.length > 1 && (
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-3 sm:p-6">
+          <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-3">Select Organization</label>
+          <select
+            value={selectedOrg || ''}
+            onChange={(e) => setSelectedOrg(e.target.value)}
+            className="w-full px-3 sm:px-4 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            {retrying ? (
-              <>
-                <Loader className="w-5 h-5 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <DollarSign className="w-5 h-5" />
-                Complete Payment Now
-              </>
-            )}
-          </button>
+            <option value="">Choose an organization...</option>
+            {organizations.map((org) => (
+              <option key={org._id} value={org._id}>
+                {org.name} ({org.email})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
-          {/* Additional Info */}
-          <p className="text-center text-sm text-gray-600 mt-6">
-            Your payment is secured by Cashfree Payment Gateway. <br />
-            You can view your transaction history in the Transactions section.
-          </p>
+      {/* Account Information Card */}
+      {accountInfo && (
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-3 sm:p-8">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">Account Information</h2>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {/* Organization Name */}
+            <div>
+              <p className="text-xs text-gray-600 uppercase font-semibold mb-2">Organization Name</p>
+              <p className="text-lg font-bold text-gray-900">{accountInfo.name || 'N/A'}</p>
+            </div>
+
+            {/* Email */}
+            <div>
+              <p className="text-xs text-gray-600 uppercase font-semibold mb-2">Email Address</p>
+              <p className="text-sm font-mono text-gray-900">{accountInfo.email || 'N/A'}</p>
+            </div>
+
+            {/* Account ID */}
+            <div>
+              <p className="text-xs text-gray-600 uppercase font-semibold mb-2">Account ID</p>
+              <p className="text-lg font-mono font-bold text-blue-600">{accountInfo.accountId || 'N/A'}</p>
+            </div>
+
+            {/* Plan */}
+            <div>
+              <p className="text-xs text-gray-600 uppercase font-semibold mb-2">Current Plan</p>
+              <p className="text-lg font-bold text-gray-900 capitalize">{accountInfo.plan || 'N/A'}</p>
+            </div>
+
+            {/* Billing Cycle */}
+            <div>
+              <p className="text-xs text-gray-600 uppercase font-semibold mb-2">Billing Cycle</p>
+              <p className="text-lg font-bold text-gray-900 capitalize">{accountInfo.billingCycle || 'Monthly'}</p>
+            </div>
+
+            {/* Account Status */}
+            <div>
+              <p className="text-xs text-gray-600 uppercase font-semibold mb-2">Account Status</p>
+              <span className="inline-block px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800">
+                {accountInfo.status?.charAt(0).toUpperCase() + accountInfo.status?.slice(1) || 'Active'}
+              </span>
+            </div>
+
+            {/* Created Date */}
+            <div>
+              <p className="text-xs text-gray-600 uppercase font-semibold mb-2">Created On</p>
+              <p className="text-sm text-gray-900">
+                {new Date(accountInfo.createdAt).toLocaleDateString('en-IN', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                })}
+              </p>
+            </div>
+
+            {/* Account Age */}
+            <div>
+              <p className="text-xs text-gray-600 uppercase font-semibold mb-2">Account Age</p>
+              <p className="text-sm font-semibold text-gray-900">{accountAge || 'N/A'}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Billing Summary */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Spent */}
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+            <p className="text-xs text-blue-700 uppercase font-semibold mb-2">Total Amount Spent</p>
+            <p className="text-3xl font-bold text-blue-900">
+              ₹{stats.totalSpent?.toLocaleString('en-IN') || '0'}
+            </p>
+            <p className="text-xs text-blue-600 mt-2">All time</p>
+          </div>
+
+          {/* Active Subscriptions */}
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
+            <p className="text-xs text-green-700 uppercase font-semibold mb-2">Active Subscriptions</p>
+            <p className="text-3xl font-bold text-green-900">{stats.activeSubscriptions || 0}</p>
+            <p className="text-xs text-green-600 mt-2">Currently active</p>
+          </div>
+
+          {/* Next Renewal */}
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200">
+            <p className="text-xs text-purple-700 uppercase font-semibold mb-2">Next Renewal</p>
+            <p className="text-lg font-bold text-purple-900">
+              {new Date(stats.nextRenewal).toLocaleDateString('en-IN', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              })}
+            </p>
+            <p className="text-xs text-purple-600 mt-2">
+              {Math.ceil((new Date(stats.nextRenewal).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days from now
+            </p>
+          </div>
+
+          {/* Currency */}
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-6 border border-orange-200">
+            <p className="text-xs text-orange-700 uppercase font-semibold mb-2">Currency</p>
+            <p className="text-3xl font-bold text-orange-900">{stats.currency || 'INR'}</p>
+            <p className="text-xs text-orange-600 mt-2">All transactions</p>
+          </div>
+        </div>
+      )}
+
+      {/* Billing Breakdown Component */}
+      <BillingBreakdown organizationId={selectedOrg || undefined} />
+
+      {/* Payment Methods Component */}
+      <PaymentMethods organizationId={selectedOrg || undefined} />
+
+      {/* Usage Breakdown - Legacy Section */}
+
+      {/* Invoices & Transactions */}
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900">Invoices & Transactions</h2>
+          <p className="text-sm text-gray-600 mt-1">View and download all your invoices</p>
         </div>
 
-        {/* Help Section */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">Need Help?</h3>
-          <p className="text-blue-800 mb-4">
-            If you encounter any issues with payment, please check:
-          </p>
-          <ul className="list-disc list-inside text-blue-800 space-y-2">
-            <li>Your internet connection</li>
-            <li>Your payment method has sufficient funds</li>
-            <li>Contact your bank if payment is declined</li>
-            <li>Email support@pixelswhatsapp.com for assistance</li>
-          </ul>
+        <div className="overflow-x-auto">
+          {invoices.length > 0 ? (
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Invoice #</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Due Date</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Amount</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Paid</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Status</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((invoice, index) => (
+                  <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-mono font-bold text-gray-900">
+                      {invoice.invoiceNumber}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      {new Date(invoice.date).toLocaleDateString('en-IN')}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      {new Date(invoice.dueDate).toLocaleDateString('en-IN')}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-gray-900 text-right">
+                      ₹{invoice.amount?.toLocaleString('en-IN') || '0'}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-green-600 text-right">
+                      ₹{invoice.paidAmount?.toLocaleString('en-IN') || '0'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(invoice.status)}`}>
+                        {invoice.status?.charAt(0).toUpperCase() + invoice.status?.slice(1)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => handleDownloadInvoice(invoice.invoiceId)}
+                        className="text-blue-600 hover:text-blue-800 font-semibold hover:underline"
+                      >
+                        Download
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="p-12 text-center">
+              <p className="text-gray-600">No invoices found</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Help Section */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <h3 className="text-lg font-bold text-blue-900 mb-3">Need Help?</h3>
+        <p className="text-sm text-blue-800 mb-3">
+          For billing inquiries, invoice disputes, or to update payment methods, please contact our support team.
+        </p>
+        <div className="flex gap-4">
+          <a
+            href="mailto:support@replysys.com"
+            className="text-blue-600 hover:text-blue-800 font-semibold underline"
+          >
+            📧 Email Support
+          </a>
+          <a
+            href="tel:9766504856"
+            className="text-blue-600 hover:text-blue-800 font-semibold underline"
+          >
+            📱 Call Us
+          </a>
         </div>
       </div>
     </div>
-  )
+  );
 }

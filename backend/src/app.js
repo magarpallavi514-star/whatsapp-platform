@@ -225,6 +225,7 @@ app.use('/api/crm', requireJWT, requireSubscription, crmRoutes);
 
 // Mount self-service account routes (JWT AUTH - for dashboard users)
 app.use('/api/account', requireJWT, accountRoutes);
+app.use('/api/accounts', requireJWT, accountRoutes); // Alias for Account Dashboard
 
 // Mount organizations admin routes (JWT AUTH - for admin)
 app.use('/api/admin/organizations', requireJWT, organizationsRoutes);

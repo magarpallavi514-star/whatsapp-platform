@@ -53,4 +53,11 @@ router.get('/stats', requireJWT, billingController.getBillingStats);
 router.get('/admin/revenue/summary', requireJWT, billingController.getRevenueSummary);
 router.get('/admin/revenue/monthly', requireJWT, billingController.getMonthlyRevenue);
 
+/**
+ * Account Dashboard - Usage, Payments, Transactions
+ */
+router.get('/usage', requireJWT, billingController.getUsageMetrics);
+router.get('/payment-methods', requireJWT, billingController.getPaymentMethods);
+router.get('/transactions', requireJWT, billingController.getTransactions);
+
 export default router;

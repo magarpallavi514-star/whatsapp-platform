@@ -1100,11 +1100,11 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex bg-[#f0f2f5]">
-      {/* LEFT PANEL - Conversations List (WATI Style) */}
-      <div className="w-[360px] bg-white border-r border-gray-200 flex flex-col">
+    <div className="h-[calc(100vh-4rem)] flex bg-[#f0f2f5] flex-col md:flex-row">
+      {/* LEFT PANEL - Conversations List (Mobile: Toggleable, Desktop: Fixed) */}
+      <div className={`${selectedContact && window.innerWidth < 768 ? 'hidden' : 'flex'} md:flex md:w-[360px] w-full bg-white border-r border-gray-200 flex-col`}>
         {/* Search */}
-        <div className="p-3 bg-white border-b border-gray-200">
+        <div className="p-2 sm:p-3 bg-white border-b border-gray-200">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -1112,7 +1112,7 @@ export default function ChatPage() {
               placeholder="Search or start new chat"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-[#f0f2f5] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm text-gray-900"
+              className="w-full pl-10 pr-4 py-2 sm:py-2.5 bg-[#f0f2f5] border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-xs sm:text-sm text-gray-900"
             />
           </div>
         </div>
@@ -1120,80 +1120,80 @@ export default function ChatPage() {
         {/* Conversation List */}
         <div className="flex-1 overflow-y-auto">
           {filteredConversations.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <MessageSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-              <p>No conversations yet</p>
-              <p className="text-sm mt-1">Start by sending a message</p>
+            <div className="p-4 sm:p-8 text-center text-gray-500">
+              <MessageSquare className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-2 sm:mb-3 text-gray-300" />
+              <p className="text-xs sm:text-sm">No conversations yet</p>
+              <p className="text-xs sm:text-sm mt-1">Start by sending a message</p>
             </div>
           ) : (
             filteredConversations.map((contact) => (
               <button
                 key={contact.id}
                 onClick={() => setSelectedContact(contact)}
-                className={`w-full p-3 flex items-center gap-3 hover:bg-[#f5f6f6] transition border-b border-gray-100 ${
+                className={`w-full p-2 sm:p-3 flex items-center gap-2 sm:gap-3 hover:bg-[#f5f6f6] transition border-b border-gray-100 ${
                   selectedContact?.id === contact.id ? "bg-[#f0f2f5]" : "bg-white"
                 }`}
               >
                 {/* Avatar */}
-                <div className="relative h-12 w-12 flex-shrink-0">
-                  <div className="h-12 w-12 bg-[#dfe5e7] rounded-full flex items-center justify-center">
+                <div className="relative h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 bg-[#dfe5e7] rounded-full flex items-center justify-center">
                     {contact.profilePic ? (
                       <img
                         src={contact.profilePic}
                         alt={contact.name}
-                        className="h-12 w-12 rounded-full object-cover"
+                        className="h-10 w-10 sm:h-12 sm:w-12 rounded-full object-cover"
                       />
                     ) : (
-                      <span className="text-[#54656f] font-medium text-lg">
+                      <span className="text-[#54656f] font-medium text-sm sm:text-lg">
                         {contact.name?.[0]?.toUpperCase() || contact.phone[0]}
                       </span>
                     )}
                   </div>
-                  {/* Online status indicator - show green dot if last message was recent (within 5 min) */}
+                  {/* Online status indicator */}
                   {contact.lastMessageTime && 
                    new Date().getTime() - new Date(contact.lastMessageTime).getTime() < 5 * 60 * 1000 && (
-                    <div className="absolute bottom-0 right-0 h-3 w-3 bg-[#25d366] border-2 border-white rounded-full"></div>
+                    <div className="absolute bottom-0 right-0 h-2.5 w-2.5 sm:h-3 sm:w-3 bg-[#25d366] border-2 border-white rounded-full"></div>
                   )}
                 </div>
 
                 {/* Contact Info */}
                 <div className="flex-1 text-left min-w-0">
-                  <div className="flex justify-between items-baseline mb-1">
-                    <p className="font-medium text-[#111b21] truncate text-[17px]">
+                  <div className="flex justify-between items-baseline mb-0.5 sm:mb-1">
+                    <p className="font-medium text-[#111b21] truncate text-xs sm:text-[17px]">
                       {contact.name || contact.phone}
                     </p>
                     {contact.lastMessageTime && (
-                      <span className="text-xs text-[#667781] ml-2 flex-shrink-0">
+                      <span className="text-[10px] sm:text-xs text-[#667781] ml-2 flex-shrink-0">
                         {formatTime(contact.lastMessageTime)}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1 text-sm text-[#667781] truncate max-w-[200px]">
+                    <div className="flex items-center gap-1 text-[10px] sm:text-sm text-[#667781] truncate max-w-[150px] sm:max-w-[200px]">
                       {/* Show icon for media messages in conversation preview */}
                       {contact.lastMessage?.startsWith('[Media]') || contact.lastMessage?.startsWith('📎') ? (
                         <>
-                          <Paperclip className="h-3.5 w-3.5 flex-shrink-0" />
+                          <Paperclip className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                           <span className="truncate">{contact.lastMessage.replace('[Media]', '').replace('📎', '') || 'Media'}</span>
                         </>
                       ) : contact.lastMessage?.includes('🖼️') || contact.lastMessage?.toLowerCase().includes('image') ? (
                         <>
-                          <ImageIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                          <ImageIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                           <span className="truncate">Photo</span>
                         </>
                       ) : contact.lastMessage?.includes('🎥') || contact.lastMessage?.toLowerCase().includes('video') ? (
                         <>
-                          <Play className="h-3.5 w-3.5 flex-shrink-0" />
+                          <Play className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                           <span className="truncate">Video</span>
                         </>
                       ) : contact.lastMessage?.includes('🎵') || contact.lastMessage?.toLowerCase().includes('audio') ? (
                         <>
-                          <Music className="h-3.5 w-3.5 flex-shrink-0" />
+                          <Music className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                           <span className="truncate">Audio</span>
                         </>
                       ) : contact.lastMessage?.includes('📄') || contact.lastMessage?.toLowerCase().includes('document') ? (
                         <>
-                          <FileText className="h-3.5 w-3.5 flex-shrink-0" />
+                          <FileText className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                           <span className="truncate">Document</span>
                         </>
                       ) : (
@@ -1217,28 +1217,36 @@ export default function ChatPage() {
       </div>
 
       {/* MIDDLE PANEL - Chat Window */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`${!selectedContact && window.innerWidth < 768 ? 'hidden' : 'flex'} flex-1 md:flex flex-col min-w-0`}>
         {selectedContact ? (
           <>
-            {/* Chat Header - WATI Style */}
-            <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="h-12 w-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+            {/* Chat Header - Mobile Responsive */}
+            <div className="bg-white border-b border-gray-200 px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between sticky top-0 z-10">
+              {/* Back Button on Mobile */}
+              <button
+                onClick={() => setSelectedContact(null)}
+                className="md:hidden mr-2 p-1 hover:bg-gray-100 rounded"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              
+              <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                <div className="h-8 w-8 sm:h-12 sm:w-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
                   {selectedContact.profilePic ? (
                     <img
                       src={selectedContact.profilePic}
                       alt={selectedContact.name}
-                      className="h-12 w-12 rounded-full object-cover"
+                      className="h-8 w-8 sm:h-12 sm:w-12 rounded-full object-cover"
                     />
                   ) : (
-                    <span className="text-white font-bold text-lg">
+                    <span className="text-white font-bold text-sm sm:text-lg">
                       {selectedContact.name?.[0]?.toUpperCase() ||
                         selectedContact.phone[0]}
                     </span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="font-semibold text-gray-900">
+                  <h2 className="font-semibold text-xs sm:text-base text-gray-900 truncate">
                     {selectedContact.name || selectedContact.phone}
                   </h2>
                   <div className="flex items-center gap-2">
@@ -1246,7 +1254,7 @@ export default function ChatPage() {
                       <>
                         <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
                         {isTyping ? (
-                          <p className="text-xs text-green-600 font-medium">Typing...</p>
+                          <p className="text-[10px] sm:text-xs text-green-600 font-medium">Typing...</p>
                         ) : (
                           <p className="text-xs text-green-600 font-medium">Active now</p>
                         )}
@@ -1349,11 +1357,11 @@ export default function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input - WATI Style */}
-            <div className="bg-white border-t border-gray-200 px-4 py-3">
-              <div className="flex items-end gap-3">
-                <button className="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
-                  <Smile className="h-6 w-6 text-gray-600" />
+            {/* Message Input - Mobile Responsive */}
+            <div className="bg-white border-t border-gray-200 px-2 sm:px-4 py-2 sm:py-3">
+              <div className="flex items-end gap-1.5 sm:gap-3">
+                <button className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0">
+                  <Smile className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600" />
                 </button>
                 
                 <input
@@ -1365,13 +1373,13 @@ export default function ChatPage() {
                 />
                 <button 
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0"
+                  className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0"
                   title="Attach file (images, videos, documents, audio)"
                 >
-                  <Paperclip className="h-6 w-6 text-gray-600" />
+                  <Paperclip className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600" />
                 </button>
 
-                <div className="flex-1 min-w-0 bg-gray-100 rounded-2xl px-4 py-2">
+                <div className="flex-1 min-w-0 bg-gray-100 rounded-2xl px-3 sm:px-4 py-1.5 sm:py-2">
                   <textarea
                     ref={textareaRef}
                     value={newMessage}
@@ -1379,7 +1387,7 @@ export default function ChatPage() {
                     onKeyPress={handleKeyPress}
                     placeholder="Type a message"
                     rows={1}
-                    className="w-full bg-gray-100 focus:outline-none resize-none text-[15px] text-gray-900 placeholder:text-gray-500"
+                    className="w-full bg-gray-100 focus:outline-none resize-none text-xs sm:text-[15px] text-gray-900 placeholder:text-gray-500"
                     style={{ maxHeight: '100px', overflow: 'auto' }}
                   />
                 </div>
@@ -1387,16 +1395,16 @@ export default function ChatPage() {
                 <button
                   onClick={sendMessage}
                   disabled={!newMessage.trim() || isSending}
-                  className={`p-2 rounded-full transition flex-shrink-0 ${
+                  className={`p-1.5 sm:p-2 rounded-full transition flex-shrink-0 ${
                     newMessage.trim() && !isSending
                       ? 'bg-green-600 hover:bg-green-700'
                       : 'bg-gray-300 cursor-not-allowed'
                   }`}
                 >
                   {isSending ? (
-                    <div className="h-6 w-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="h-4 w-4 sm:h-6 sm:w-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <Send className="h-5 w-5 text-white" />
+                    <Send className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                   )}
                 </button>
               </div>
@@ -1442,29 +1450,29 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* RIGHT PANEL - Customer Context (CRM) - WATI Style */}
+      {/* RIGHT PANEL - Customer Context (CRM) - Mobile Hidden */}
       {selectedContact && showContactPanel && (
-        <div className="w-[380px] bg-white border-l border-gray-200 overflow-y-auto flex flex-col">
+        <div className="hidden lg:flex w-[380px] bg-white border-l border-gray-200 overflow-y-auto flex-col">
           {/* Header with Close Button and Edit Toggle */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 p-4 z-10 flex items-center justify-between">
+          <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-4 z-10 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-1">Contact Details</h3>
-              <p className="text-xs text-gray-500">Customer information & history</p>
+              <h3 className="text-xs sm:text-sm font-semibold text-gray-900 mb-1">Contact Details</h3>
+              <p className="text-[10px] sm:text-xs text-gray-500">Customer information & history</p>
             </div>
             <div className="flex gap-2 items-center">
               <button
                 onClick={() => setEditingContact(!editingContact)}
-                className="p-2 hover:bg-gray-100 rounded-full transition text-gray-600 text-lg"
+                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full transition text-gray-600 text-lg"
                 title={editingContact ? "Save changes" : "Edit contact"}
               >
                 {editingContact ? '💾' : '✏️'}
               </button>
               <button
                 onClick={() => setShowContactPanel(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition text-gray-600"
+                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full transition text-gray-600"
                 title="Close contact panel"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             </div>
           </div>

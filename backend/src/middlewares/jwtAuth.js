@@ -52,10 +52,18 @@ export const requireJWT = async (req, res, next) => {
     let account;
     let accountIdToLookup = decoded.accountId;
     
-    // ✅ FALLBACK: Handle old tokens with 'pixels_internal' -> map to 2600001
+    // ✅ FALLBACK: Handle old tokens with legacy account IDs
     if (accountIdToLookup === 'pixels_internal') {
       console.log('⚠️  Old token with accountId: pixels_internal - redirecting to 2600001');
       accountIdToLookup = '2600001';
+    }
+    
+    // ✅ FALLBACK: Handle old Enromatics temporary ID (from migration)
+    if (accountIdToLookup === 'acc_1769447135387_bwdquusek') {
+      console.log('⚠️  Old Enromatics token with accountId: acc_1769447135387_bwdquusek - redirecting to 2600001');
+      accountIdToLookup = '2600001';
+      req.accountId = '2600001';  // Update request with new ID
+      req.user.accountId = '2600001';
     }
     
     // Check if accountId is a valid MongoDB ObjectId format

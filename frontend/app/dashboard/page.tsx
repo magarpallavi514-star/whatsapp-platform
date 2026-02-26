@@ -98,275 +98,300 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      {/* Complete Payment Card for Pending Clients */}
-      {!isSuperAdmin && user && (
-        <CompletePaymentCard 
-          user={user} 
-          subscription={subscription}
-          onPaymentComplete={handlePaymentComplete}
-        />
-      )}
-
-      {/* Payment Reminder Section for Superadmin */}
-      {isSuperAdmin && (
-        <div className="mb-8">
-          <PendingPaymentReminder />
-        </div>
-      )}
-
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {isSuperAdmin ? "Platform Dashboard" : "Dashboard"}
-        </h1>
-        <p className="text-gray-600">
-          {isSuperAdmin 
-            ? "Monitor all organizations and platform performance" 
-            : "Welcome back! Here's what's happening with your WhatsApp campaigns."}
-        </p>
-      </div>
-
-      {/* DYNAMIC: Subscription Status Card */}
-      {!isSuperAdmin && !loadingSubscription && subscription && (
-        <div className={`mb-8 rounded-xl p-6 border-2 ${
-          subscription.status === 'active' 
-            ? 'bg-green-50 border-green-200' 
-            : 'bg-yellow-50 border-yellow-200'
-        }`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {subscription.status === 'active' ? (
-                <CheckCircle className="h-8 w-8 text-green-600" />
-              ) : (
-                <Clock className="h-8 w-8 text-yellow-600" />
-              )}
-              <div>
-                <h3 className="font-semibold text-gray-900">
-                  {subscription.planId?.name || 'Premium Plan'} - {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
-                </h3>
-                <p className="text-sm text-gray-600">
-                  {subscription.status === 'active' 
-                    ? `Renews on ${new Date(subscription.renewalDate).toLocaleDateString()}`
-                    : 'Your subscription is not active'}
-                </p>
-              </div>
-            </div>
-            <Link href="/dashboard/billing">
-              <button className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
-                Manage Billing
-              </button>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {loadingStats ? (
-          <div className="col-span-full text-center py-8">
-            <p className="text-gray-600">Loading statistics...</p>
-          </div>
-        ) : dashboardStats ? (
-          // Render real stats based on role
-          (isSuperAdmin ? (
-            // Superadmin stats
-            [
-              { name: "Total Organizations", value: dashboardStats.stats?.totalOrganizations || "0", change: "", changeType: "positive" },
-              { name: "Total Accounts", value: dashboardStats.stats?.totalAccounts || "0", change: "", changeType: "positive" },
-              { name: "Platform Revenue", value: `₹${(dashboardStats.stats?.totalRevenue || 0).toLocaleString()}`, change: "", changeType: "positive" },
-              { name: "System Uptime", value: dashboardStats.stats?.systemUptime || "99.8%", change: "Healthy", changeType: "positive" },
-            ]
-          ) : (
-            // Client stats
-            [
-              { name: "Total Contacts", value: dashboardStats.stats?.totalContacts || "0", change: "", changeType: "positive" },
-              { name: "Total Messages", value: dashboardStats.stats?.totalMessages || "0", change: "", changeType: "positive" },
-              { name: "Response Rate", value: `${dashboardStats.stats?.responseRate || "0"}%`, change: "", changeType: "positive" },
-              { name: "Avg Response Time", value: `${dashboardStats.stats?.avgResponseTime || "0"}m`, change: "", changeType: "positive" },
-            ]
-          )).map((stat) => (
-            <div key={stat.name} className="bg-white rounded-xl border border-gray-200 p-6">
-              <p className="text-sm font-medium text-gray-600 mb-1">{stat.name}</p>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-                {stat.change && (
-                  <span className={`text-sm font-medium ${
-                    stat.changeType === "positive" ? "text-green-600" : "text-red-600"
-                  }`}>
-                    {stat.change}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))
-        ) : (
-          // Fallback to hardcoded stats
-          (isSuperAdmin 
-            ? [
-                { name: "Total Organizations", value: "24", change: "+3 this month", changeType: "positive" },
-                { name: "Platform Revenue", value: "₹2.4L", change: "+18%", changeType: "positive" },
-                { name: "Total Users", value: "342", change: "+45", changeType: "positive" },
-                { name: "System Uptime", value: "99.8%", change: "Healthy", changeType: "positive" },
-              ]
-            : [
-                { name: "Total Messages", value: "45,231", change: "+12.5%", changeType: "positive" },
-                { name: "Active Contacts", value: "8,492", change: "+8.2%", changeType: "positive" },
-                { name: "Response Rate", value: "94.3%", change: "+2.1%", changeType: "positive" },
-                { name: "Avg Response Time", value: "2.4m", change: "-18.3%", changeType: "positive" },
-              ]
-          ).map((stat) => (
-            <div key={stat.name} className="bg-white rounded-xl border border-gray-200 p-6">
-              <p className="text-sm font-medium text-gray-600 mb-1">{stat.name}</p>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-                <span className={`text-sm font-medium ${
-                  stat.changeType === "positive" ? "text-green-600" : "text-red-600"
-                }`}>
-                  {stat.change}
-                </span>
-              </div>
-            </div>
-          ))
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8 px-3 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Complete Payment Card for Pending Clients */}
+        {!isSuperAdmin && user && (
+          <CompletePaymentCard 
+            user={user} 
+            subscription={subscription}
+            onPaymentComplete={handlePaymentComplete}
+          />
         )}
-      </div>
 
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Recent Activity */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-          <div className="space-y-4">
-            {dashboardActivity && dashboardActivity.length > 0 ? (
-              dashboardActivity.map((activity, index) => (
-                <div key={index} className="flex items-start gap-3 pb-4 border-b last:border-0">
-                  <div className="h-8 w-8 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <MessageSquare className="h-4 w-4 text-green-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                    <p className="text-sm text-gray-600 truncate">{activity.details}</p>
-                  </div>
-                  <span className="text-xs text-gray-500 flex-shrink-0">
-                    {new Date(activity.time).toLocaleDateString()}
-                  </span>
+        {/* Header Section - Mobile Optimized */}
+        <div className="mb-8 sm:mb-12">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
+            {isSuperAdmin ? "Platform Overview" : "Your Dashboard"}
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-600 mt-2">
+            {isSuperAdmin 
+              ? "Key metrics and platform performance at a glance" 
+              : "Monitor your WhatsApp business metrics"}
+          </p>
+        </div>
+
+        {/* Subscription Status Card - Mobile Optimized */}
+        {!isSuperAdmin && !loadingSubscription && subscription && (
+          <div className={`mb-6 sm:mb-8 rounded-lg p-3 sm:p-6 border ${
+            subscription.status === 'active' 
+              ? 'bg-green-50 border-green-200' 
+              : 'bg-yellow-50 border-yellow-200'
+          }`}>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-start sm:items-center gap-2 sm:gap-4 flex-1 min-w-0">
+                {subscription.status === 'active' ? (
+                  <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 flex-shrink-0" />
+                ) : (
+                  <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600 flex-shrink-0" />
+                )}
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">
+                    {subscription.planId?.name || 'Premium Plan'} • {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-600 mt-1 truncate">
+                    {subscription.status === 'active' 
+                      ? `Next billing on ${new Date(subscription.renewalDate).toLocaleDateString()}`
+                      : 'Your subscription is inactive'}
+                  </p>
                 </div>
-              ))
-            ) : (
-              // Fallback demo data
+              </div>
+              <Link href="/dashboard/billing">
+                <button className="px-3 sm:px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs sm:text-sm font-semibold transition whitespace-nowrap flex-shrink-0">
+                  Manage Billing
+                </button>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Main Metrics Grid - Mobile Optimized */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12">
+          {loadingStats ? (
+            <div className="col-span-full text-center py-12">
+              <p className="text-gray-600">Loading metrics...</p>
+            </div>
+          ) : dashboardStats ? (
+            (isSuperAdmin ? (
               [
-                { action: "Broadcast sent", details: "Summer Sale Campaign", time: "2 hours ago" },
-                { action: "New contact added", details: "+91 98765 43210", time: "4 hours ago" },
-                { action: "Template approved", details: "Order Confirmation", time: "6 hours ago" },
-                { action: "Chat message received", details: "From: John Doe", time: "8 hours ago" },
-              ].map((activity, index) => (
-                <div key={index} className="flex items-start gap-3 pb-4 border-b last:border-0">
-                  <div className="h-8 w-8 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <MessageSquare className="h-4 w-4 text-green-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                    <p className="text-sm text-gray-600 truncate">{activity.details}</p>
-                  </div>
-                  <span className="text-xs text-gray-500 flex-shrink-0">{activity.time}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-2 gap-4">
-            {isSuperAdmin ? (
-              <>
-                <Link href="/dashboard/organizations" className="p-4 border border-gray-200 rounded-lg hover:border-green-600 hover:bg-green-50 transition group">
-                  <Building2 className="h-8 w-8 text-gray-600 group-hover:text-green-600 mb-2" />
-                  <p className="text-sm font-medium text-gray-900">Manage Organizations</p>
-                </Link>
-                <Link href="/dashboard/system-health" className="p-4 border border-gray-200 rounded-lg hover:border-green-600 hover:bg-green-50 transition group">
-                  <Activity className="h-8 w-8 text-gray-600 group-hover:text-green-600 mb-2" />
-                  <p className="text-sm font-medium text-gray-900">System Health</p>
-                </Link>
-                <Link href="/dashboard/platform-billing" className="p-4 border border-gray-200 rounded-lg hover:border-green-600 hover:bg-green-50 transition group">
-                  <DollarSign className="h-8 w-8 text-gray-600 group-hover:text-green-600 mb-2" />
-                  <p className="text-sm font-medium text-gray-900">Platform Billing</p>
-                </Link>
-                <Link href="/dashboard/analytics" className="p-4 border border-gray-200 rounded-lg hover:border-green-600 hover:bg-green-50 transition group">
-                  <MessageSquare className="h-8 w-8 text-gray-600 group-hover:text-green-600 mb-2" />
-                  <p className="text-sm font-medium text-gray-900">Platform Analytics</p>
-                </Link>
-              </>
+                { 
+                  name: "Organizations", 
+                  value: dashboardStats.stats?.totalOrganizations || "0", 
+                  icon: Building2,
+                  color: "blue"
+                },
+                { 
+                  name: "Active Accounts", 
+                  value: dashboardStats.stats?.totalAccounts || "0", 
+                  icon: Users,
+                  color: "green"
+                },
+                { 
+                  name: "Total Revenue", 
+                  value: `₹${(dashboardStats.stats?.totalRevenue || 0).toLocaleString()}`, 
+                  icon: DollarSign,
+                  color: "emerald"
+                },
+                { 
+                  name: "System Health", 
+                  value: dashboardStats.stats?.systemUptime || "99.8%", 
+                  icon: Activity,
+                  color: "purple"
+                },
+              ]
             ) : (
-              <>
-                <button className="p-4 border border-gray-200 rounded-lg hover:border-green-600 hover:bg-green-50 transition group">
-                  <Megaphone className="h-8 w-8 text-gray-600 group-hover:text-green-600 mb-2" />
-                  <p className="text-sm font-medium text-gray-900">New Broadcast</p>
-                </button>
-                <button className="p-4 border border-gray-200 rounded-lg hover:border-green-600 hover:bg-green-50 transition group">
-                  <Users className="h-8 w-8 text-gray-600 group-hover:text-green-600 mb-2" />
-                  <p className="text-sm font-medium text-gray-900">Add Contact</p>
-                </button>
-                <button className="p-4 border border-gray-200 rounded-lg hover:border-green-600 hover:bg-green-50 transition group">
-                  <FileText className="h-8 w-8 text-gray-600 group-hover:text-green-600 mb-2" />
-                  <p className="text-sm font-medium text-gray-900">Create Template</p>
-                </button>
-                <button className="p-4 border border-gray-200 rounded-lg hover:border-green-600 hover:bg-green-50 transition group">
-                  <Bot className="h-8 w-8 text-gray-600 group-hover:text-green-600 mb-2" />
-                  <p className="text-sm font-medium text-gray-900">Build Chatbot</p>
-                </button>
-              </>
-            )}
-          </div>
+              [
+                { 
+                  name: "Contacts", 
+                  value: dashboardStats.stats?.totalContacts || "0", 
+                  icon: Users,
+                  color: "blue"
+                },
+                { 
+                  name: "Messages Sent", 
+                  value: dashboardStats.stats?.totalMessages || "0", 
+                  icon: MessageSquare,
+                  color: "green"
+                },
+                { 
+                  name: "Response Rate", 
+                  value: `${dashboardStats.stats?.responseRate || "0"}%`, 
+                  icon: CheckCircle,
+                  color: "emerald"
+                },
+                { 
+                  name: "Avg Response Time", 
+                  value: `${dashboardStats.stats?.avgResponseTime || "0"}m`, 
+                  icon: Clock,
+                  color: "orange"
+                },
+              ]
+            )).map((stat) => {
+              const Icon = stat.icon
+              const colorStyles = {
+                blue: "bg-blue-50 text-blue-600 border-blue-100",
+                green: "bg-green-50 text-green-600 border-green-100",
+                emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
+                purple: "bg-purple-50 text-purple-600 border-purple-100",
+                orange: "bg-orange-50 text-orange-600 border-orange-100",
+              }
+              return (
+                <div key={stat.name} className={`bg-white rounded-lg border p-3 sm:p-6 ${colorStyles[stat.color as keyof typeof colorStyles]}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{stat.name}</p>
+                      <p className="text-lg sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2 truncate">{stat.value}</p>
+                    </div>
+                    <Icon className="h-8 w-8 sm:h-10 sm:w-10 opacity-20 flex-shrink-0" />
+                  </div>
+                </div>
+              )
+            })
+          ) : (
+            (isSuperAdmin 
+              ? [
+                  { name: "Organizations", value: "2", icon: Building2, color: "blue" },
+                  { name: "Active Accounts", value: "2", icon: Users, color: "green" },
+                  { name: "Total Revenue", value: "₹9,246", icon: DollarSign, color: "emerald" },
+                  { name: "System Health", value: "99.8%", icon: Activity, color: "purple" },
+                ]
+              : [
+                  { name: "Contacts", value: "0", icon: Users, color: "blue" },
+                  { name: "Messages Sent", value: "0", icon: MessageSquare, color: "green" },
+                  { name: "Response Rate", value: "0%", icon: CheckCircle, color: "emerald" },
+                  { name: "Avg Response Time", value: "0m", icon: Clock, color: "orange" },
+                ]
+            ).map((stat) => {
+              const Icon = stat.icon
+              const colorStyles = {
+                blue: "bg-blue-50 text-blue-600 border-blue-100",
+                green: "bg-green-50 text-green-600 border-green-100",
+                emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
+                purple: "bg-purple-50 text-purple-600 border-purple-100",
+                orange: "bg-orange-50 text-orange-600 border-orange-100",
+              }
+              return (
+                <div key={stat.name} className={`bg-white rounded-lg border p-3 sm:p-6 ${colorStyles[stat.color as keyof typeof colorStyles]}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{stat.name}</p>
+                      <p className="text-lg sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2 truncate">{stat.value}</p>
+                    </div>
+                    <Icon className="h-8 w-8 sm:h-10 sm:w-10 opacity-20 flex-shrink-0" />
+                  </div>
+                </div>
+              )
+            })
+          )}
         </div>
-      </div>
 
-      {/* Recent Campaigns */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Campaigns</h2>
-          <Link href="/dashboard/campaigns" className="text-sm text-green-600 hover:text-green-700 font-medium">
-            View All
-          </Link>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Campaign Name</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Status</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Sent</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Delivered</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Read Rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { name: "Summer Sale", status: "Completed", sent: "5,420", delivered: "5,380", rate: "87.5%" },
-                { name: "Product Launch", status: "Active", sent: "3,200", delivered: "3,180", rate: "92.1%" },
-                { name: "Welcome Series", status: "Scheduled", sent: "-", delivered: "-", rate: "-" },
-              ].map((campaign, index) => (
-                <tr key={index} className="border-b last:border-0">
-                  <td className="py-4 px-4 text-sm font-medium text-gray-900">{campaign.name}</td>
-                  <td className="py-4 px-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      campaign.status === "Completed"
-                        ? "bg-green-100 text-green-700"
-                        : campaign.status === "Active"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}>
-                      {campaign.status}
+        {/* Content Grid - Mobile Optimized */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          {/* Recent Activity - Left Side (Larger) */}
+          <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-4 sm:p-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-2">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Recent Activity</h2>
+              <Link href={isSuperAdmin ? "/dashboard/transactions" : "/dashboard/messages"} className="text-xs sm:text-sm font-semibold text-green-600 hover:text-green-700 whitespace-nowrap">
+                View All →
+              </Link>
+            </div>
+            <div className="space-y-3 sm:space-y-4">
+              {dashboardActivity && dashboardActivity.length > 0 ? (
+                dashboardActivity.slice(0, 5).map((activity, index) => (
+                  <div key={index} className="flex items-start gap-2 sm:gap-4 pb-3 sm:pb-4 border-b last:border-0 last:pb-0">
+                    <div className="h-8 w-8 sm:h-10 sm:w-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{activity.action}</p>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-1 sm:line-clamp-none">{activity.details}</p>
+                    </div>
+                    <span className="text-[10px] sm:text-xs text-gray-500 flex-shrink-0 whitespace-nowrap ml-2 sm:ml-4">
+                      {new Date(activity.time).toLocaleDateString()}
                     </span>
-                  </td>
-                  <td className="py-4 px-4 text-sm text-gray-600">{campaign.sent}</td>
-                  <td className="py-4 px-4 text-sm text-gray-600">{campaign.delivered}</td>
-                  <td className="py-4 px-4 text-sm font-medium text-gray-900">{campaign.rate}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No recent activity</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Shortcuts Section - Right Side */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-8">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">Quick Shortcuts</h2>
+            <div className="space-y-2">
+              {isSuperAdmin ? (
+                <>
+                  <Link href="/dashboard/organizations" className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-600 transition group">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 group-hover:text-blue-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-900 truncate">Organizations</span>
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">→</span>
+                  </Link>
+                  <Link href="/dashboard/invoices" className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-600 transition group">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 group-hover:text-green-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-900 truncate">Invoices</span>
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">→</span>
+                  </Link>
+                  <Link href="/dashboard/transactions" className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-emerald-50 hover:border-emerald-600 transition group">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 group-hover:text-emerald-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-900 truncate">Transactions</span>
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">→</span>
+                  </Link>
+                  <Link href="/dashboard/system-health" className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-600 transition group">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 group-hover:text-purple-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-900 truncate">System Health</span>
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">→</span>
+                  </Link>
+                  <Link href="/dashboard/broadcasts" className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-orange-50 hover:border-orange-600 transition group">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <Megaphone className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 group-hover:text-orange-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-900 truncate">Broadcasts</span>
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">→</span>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/dashboard/messages" className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-600 transition group">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 group-hover:text-blue-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-900 truncate">Messages</span>
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">→</span>
+                  </Link>
+                  <Link href="/dashboard/campaigns" className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-green-50 hover:border-green-600 transition group">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <Megaphone className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 group-hover:text-green-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-900 truncate">Campaigns</span>
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">→</span>
+                  </Link>
+                  <Link href="/dashboard/contacts" className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-emerald-50 hover:border-emerald-600 transition group">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <Users className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 group-hover:text-emerald-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-900 truncate">Contacts</span>
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">→</span>
+                  </Link>
+                  <Link href="/dashboard/templates" className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-purple-50 hover:border-purple-600 transition group">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 group-hover:text-purple-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-900 truncate">Templates</span>
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">→</span>
+                  </Link>
+                  <Link href="/dashboard/live-chat" className="flex items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-orange-50 hover:border-orange-600 transition group">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600 group-hover:text-orange-600 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-medium text-gray-900 truncate">Live Chat</span>
+                    </div>
+                    <span className="text-xs text-gray-400 flex-shrink-0">→</span>
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

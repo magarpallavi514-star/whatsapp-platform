@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { ErrorToast } from "@/components/ErrorToast"
 import { API_URL } from "@/lib/config/api"
+import AccountDrawer from "@/components/AccountDrawer"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
@@ -21,6 +22,7 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [user, setUser] = useState<UserType | null>(null)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [accountDrawerOpen, setAccountDrawerOpen] = useState(false)
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [error, setError] = useState("")
@@ -157,8 +159,9 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="fixed inset-0 bg-gray-900/50" onClick={() => setSidebarOpen(false)} />
-          <div className="fixed inset-y-0 left-0 w-64 bg-gray-900">
-            <div className="flex items-center justify-between p-4 border-b border-gray-800">
+          <div className="fixed inset-y-0 left-0 w-64 bg-gray-900 flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-800 flex-shrink-0">
               <Link href="/" className="flex items-center gap-2">
                 <div className="h-8 w-8 bg-green-600 rounded-lg flex items-center justify-center">
                   <MessageSquare className="h-5 w-5 text-white" />
@@ -169,7 +172,9 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <X className="h-6 w-6 text-gray-400" />
               </button>
             </div>
-            <nav className="p-4 space-y-1">
+            
+            {/* Scrollable Navigation */}
+            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
               {filteredNavigation.map((item) => (
                 <Link
                   key={item.name}
@@ -181,11 +186,33 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
                   }`}
                   onClick={() => setSidebarOpen(false)}
                 >
-                  <item.icon className="h-5 w-5" />
+                  <item.icon className="h-5 w-5 flex-shrink-0" />
                   {item.name}
                 </Link>
               ))}
             </nav>
+            
+            {/* Bottom Actions */}
+            <div className="p-4 border-t border-gray-800 space-y-2 flex-shrink-0">
+              <Link
+                href="/dashboard/settings"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-100 hover:bg-gray-800 transition"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <Settings className="h-5 w-5 flex-shrink-0" />
+                <span>Settings</span>
+              </Link>
+              <button
+                onClick={() => {
+                  handleLogout()
+                  setSidebarOpen(false)
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-100 hover:bg-gray-800 transition"
+              >
+                <LogOut className="h-5 w-5 flex-shrink-0" />
+                <span>Logout</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -371,7 +398,10 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
                 )}
               </div>
               
-              <button className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+              <button 
+                onClick={() => setAccountDrawerOpen(true)}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+              >
                 <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
                   <User className="h-5 w-5 text-green-600" />
                 </div>
@@ -384,6 +414,12 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
         {/* Main Content Area */}
         <main>{children}</main>
       </div>
+
+      {/* Account Drawer */}
+      <AccountDrawer 
+        isOpen={accountDrawerOpen} 
+        onClose={() => setAccountDrawerOpen(false)} 
+      />
     </div>
   )
 }

@@ -468,70 +468,70 @@ export default function ContactsPage() {
           <p className="text-2xl font-bold text-gray-900">{stats.newThisMonth}</p>
           <p className="text-xs text-green-600 mt-1">Added recently</p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <p className="text-sm text-gray-600">Opted In</p>
-          <p className="text-2xl font-bold text-gray-900">{stats.optedIn}</p>
+        <div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-gray-600">Opted In</p>
+          <p className="text-lg sm:text-2xl font-bold text-gray-900">{stats.optedIn}</p>
           <p className="text-xs text-gray-600 mt-1">Active subscriptions</p>
         </div>
       </div>
 
       {/* Contacts Table */}
       <div className="bg-white rounded-lg border border-gray-200">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">All Contacts ({filteredContacts.length})</h2>
-            <div className="flex items-center gap-3">
+        <div className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900">All Contacts ({filteredContacts.length})</h2>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700 transition"
+                className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-xs sm:text-sm font-medium text-gray-700 transition whitespace-nowrap"
               >
                 🔍 {showFilters ? 'Hide' : 'Show'} Filters
               </button>
-              <div className="relative">
+              <div className="relative flex-1 sm:flex-none">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search contacts..."
+                  placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent w-64"
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent w-full sm:w-64 text-xs sm:text-sm"
                 />
               </div>
             </div>
           </div>
 
-          {/* Filter Panel */}
+          {/* Filter Panel - Mobile Optimized */}
           {showFilters && (
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+            <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Filter by City</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Filter by City</label>
                   <input
                     type="text"
-                    placeholder="e.g., Mumbai, Delhi..."
+                    placeholder="e.g., Mumbai..."
                     value={filterCity}
                     onChange={(e) => setFilterCity(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-xs sm:text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Business Name</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Filter by Business</label>
                   <input
                     type="text"
                     placeholder="e.g., ABC Corp..."
                     value={filterBusinessName}
                     onChange={(e) => setFilterBusinessName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-xs sm:text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Mobile</label>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Filter by Mobile</label>
                   <input
                     type="text"
-                    placeholder="e.g., 9876543210..."
+                    placeholder="e.g., 987654..."
                     value={filterMobile}
                     onChange={(e) => setFilterMobile(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-xs sm:text-sm"
                   />
                 </div>
               </div>
@@ -542,7 +542,7 @@ export default function ContactsPage() {
                     setFilterBusinessName('')
                     setFilterMobile('')
                   }}
-                  className="px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-white transition"
+                  className="px-3 py-1 text-xs sm:text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-white transition"
                 >
                   Clear All Filters
                 </button>
@@ -564,91 +564,72 @@ export default function ContactsPage() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Name</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">WhatsApp</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Business</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">City</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Email</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Type</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Tags</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Last Message</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredContacts.map((contact) => (
-                    <tr key={contact._id} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                            <span className="text-green-700 font-medium text-sm">
-                              {contact.name[0]?.toUpperCase()}
-                            </span>
-                          </div>
-                          <span className="text-sm font-medium text-gray-900">{contact.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{contact.whatsappNumber}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{contact.businessName || '-'}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{contact.city || '-'}</td>
-                      <td className="py-4 px-4 text-sm text-gray-600">{contact.email || '-'}</td>
-                      <td className="py-4 px-4">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          contact.type === 'customer' ? 'bg-blue-100 text-blue-700' :
-                          contact.type === 'lead' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {contact.type}
+            <div className="space-y-3">
+              {filteredContacts.map((contact) => (
+                <div key={contact._id} className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition">
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-green-700 font-medium text-sm">
+                          {contact.name[0]?.toUpperCase()}
                         </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex gap-1 flex-wrap">
-                          {contact.tags?.length > 0 ? contact.tags.map((tag, index) => (
-                            <span key={index} className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
-                              {tag}
-                            </span>
-                          )) : <span className="text-xs text-gray-400">No tags</span>}
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600">
-                        <div>
-                          <div>{formatDate(contact.lastMessageAt)}</div>
-                          <div className="text-xs text-gray-400">{contact.messageCount} messages</div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => openContactChat(contact)}
-                            className="text-green-600 hover:text-green-700"
-                            title="Send Message"
-                          >
-                            <MessageCircle className="h-4 w-4" />
-                          </button>
-                          <button 
-                            onClick={() => openEditModal(contact)}
-                            className="text-blue-600 hover:text-blue-700"
-                            title="Edit"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button 
-                            onClick={() => deleteContact(contact._id)}
-                            className="text-red-600 hover:text-red-700"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{contact.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{contact.whatsappNumber}</p>
+                      </div>
+                    </div>
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full flex-shrink-0 ${
+                      contact.type === 'customer' ? 'bg-blue-100 text-blue-700' :
+                      contact.type === 'lead' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {contact.type}
+                    </span>
+                  </div>
+
+                  {contact.businessName && (
+                    <p className="text-xs text-gray-600 mb-2 truncate"><span className="font-medium">Business:</span> {contact.businessName}</p>
+                  )}
+                  
+                  {contact.tags && contact.tags.length > 0 && (
+                    <div className="flex gap-1 flex-wrap mb-2">
+                      {contact.tags.map((tag, index) => (
+                        <span key={index} className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs text-gray-600">
+                    <div>{contact.messageCount} messages</div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => openContactChat(contact)}
+                        className="text-green-600 hover:text-green-700 p-1 hover:bg-green-50 rounded"
+                        title="Send Message"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                      </button>
+                      <button 
+                        onClick={() => openEditModal(contact)}
+                        className="text-blue-600 hover:text-blue-700 p-1 hover:bg-blue-50 rounded"
+                        title="Edit"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button 
+                        onClick={() => deleteContact(contact._id)}
+                        className="text-red-600 hover:text-red-700 p-1 hover:bg-red-50 rounded"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

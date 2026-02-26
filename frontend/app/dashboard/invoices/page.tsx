@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { FileText, Download, Eye, Search, Filter, Calendar, DollarSign, CheckCircle, Clock, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ErrorToast } from "@/components/ErrorToast"
+import InvoiceTemplate from "@/components/InvoiceTemplate"
 import { API_URL } from "@/lib/config/api"
 import { authService, UserRole } from "@/lib/auth"
 
@@ -65,7 +66,17 @@ export default function InvoicesPage() {
 
       if (response.ok) {
         const data = await response.json()
-        const invoiceList = data.data || data.invoices || []
+        let invoiceList = data.data || data.invoices || []
+        
+        // Map API response to match expected format
+        // API returns 'amount' as totalAmount
+        invoiceList = invoiceList.map((inv: any) => ({
+          ...inv,
+          totalAmount: inv.amount || inv.totalAmount || 0,
+          invoiceDate: inv.date || inv.invoiceDate,
+          paidAmount: inv.paidAmount || 0
+        }))
+        
         setInvoices(invoiceList)
         
         // ✅ CLIENT ONBOARDING: Fetch revenue from proper endpoint (NEW)
@@ -334,114 +345,26 @@ export default function InvoicesPage() {
         )}
       </div>
 
-      {/* Invoice Details Modal */}
+      {/* Invoice Details Modal - Professional Template */}
       {isDetailsOpen && selectedInvoice && (
-        <div className="fixed inset-0 z-50">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-            onClick={() => {
-              setIsDetailsOpen(false)
-              setSelectedInvoice(null)
-            }}
-          />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            {/* Close Button */}
+            <div className="sticky top-0 right-0 p-4 flex justify-end bg-white border-b border-gray-200 z-10">
+              <button
+                onClick={() => {
+                  setIsDetailsOpen(false)
+                  setSelectedInvoice(null)
+                }}
+                className="text-gray-600 hover:text-gray-900 p-2"
+              >
+                ✕
+              </button>
+            </div>
 
-          {/* Modal */}
-          <div className="absolute inset-0 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Header */}
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-6 flex items-center justify-between sticky top-0">
-                <div>
-                  <h2 className="text-2xl font-bold">Invoice Details</h2>
-                  <p className="text-blue-100 mt-1">{selectedInvoice.invoiceNumber}</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setIsDetailsOpen(false)
-                    setSelectedInvoice(null)
-                  }}
-                  className="text-white hover:text-blue-100 transition"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="p-8 space-y-6">
-                {/* Invoice Info */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Invoice Date</p>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {new Date(selectedInvoice.invoiceDate).toLocaleDateString('en-IN')}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Due Date</p>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {new Date(selectedInvoice.dueDate).toLocaleDateString('en-IN')}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Bill To */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-600 uppercase mb-3">Bill To</p>
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <p className="font-semibold text-gray-900">{selectedInvoice.billTo?.name || 'N/A'}</p>
-                    <p className="text-sm text-gray-600">{selectedInvoice.billTo?.email || 'N/A'}</p>
-                  </div>
-                </div>
-
-                {/* Amounts */}
-                <div className="space-y-2 border-t pt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Total Amount:</span>
-                    <span className="text-lg font-semibold text-gray-900">₹{(selectedInvoice.totalAmount ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Paid Amount:</span>
-                    <span className="text-lg font-semibold text-gray-900">₹{(selectedInvoice.paidAmount ?? 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                  </div>
-                  {(selectedInvoice.totalAmount ?? 0) > (selectedInvoice.paidAmount ?? 0) && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Due Amount:</span>
-                      <span className="text-lg font-semibold text-gray-900">
-                        ₹{(((selectedInvoice.totalAmount ?? 0) - (selectedInvoice.paidAmount ?? 0))).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Status */}
-                <div className="flex items-center gap-2 border-t pt-4">
-                  <span className="text-gray-600">Status:</span>
-                  <span className="inline-block text-sm font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-800">
-                    {selectedInvoice.status.charAt(0).toUpperCase() + selectedInvoice.status.slice(1)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="border-t border-gray-200 px-8 py-4 flex gap-3 sticky bottom-0 bg-white">
-                <Button
-                  onClick={() => handleDownloadInvoice(selectedInvoice)}
-                  className="flex-1 bg-gray-900 hover:bg-gray-800 text-white"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsDetailsOpen(false)
-                    setSelectedInvoice(null)
-                  }}
-                  className="flex-1"
-                >
-                  Close
-                </Button>
-              </div>
+            {/* Invoice Template */}
+            <div className="p-8">
+              <InvoiceTemplate invoice={selectedInvoice} organization={selectedInvoice.billTo} />
             </div>
           </div>
         </div>
