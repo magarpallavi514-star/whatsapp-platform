@@ -89,7 +89,7 @@ const fetchAndCreatePhoneNumbers = async (wabaId, accountId, accessToken) => {
           accessToken,
           displayPhone: phone.display_phone_number || phoneNumberId,
           displayName: phone.name || 'WhatsApp Business',
-          qualityRating: phone.quality_rating || 'unknown',
+          qualityRating: (phone.quality_rating || 'unknown').toLowerCase(), // Meta returns uppercase (GREEN, YELLOW, RED)
           verifiedName: phone.name_status || 'Not verified',
           isActive: createdPhones.length === 0, // First phone is active by default
           verifiedAt: new Date()
