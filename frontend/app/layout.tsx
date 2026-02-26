@@ -103,7 +103,7 @@ export default function RootLayout({
                 }
                 
                 FB.login(window.fbLoginCallback, {
-                  config_id: '930769915977028',
+                  config_id: '1567923197597440',
                   response_type: 'code',
                   override_default_response_type: true,
                   extras: { 'version': 'v3' }
