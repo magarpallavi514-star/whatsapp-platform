@@ -701,12 +701,16 @@ export const handleWebhook = async (req, res) => {
                   console.log(`   - ${acc.accountId} (${acc.role}/${acc.type}): metaSync.accountId=${acc.metaSync?.accountId}`);
                 });
                 
+                // Track if account was found via OAuth match
+                let oauthInitiated = false;
+                
                 // Look for exact match where metaSync.accountId was stored during OAuth
                 // Try exact match first
                 for (const candidate of recentOAuthAccounts) {
                   if (candidate.metaSync?.accountId === candidate.accountId) {
                     // This account stored itself during OAuth - it's the RIGHT one
                     account = candidate;
+                    oauthInitiated = true;  // Mark that OAuth initiated this
                     console.log(`\n   ✅ FOUND EXACT MATCH: Account ${account.accountId} is awaiting THIS webhook!`);
                     console.log(`      Proof: metaSync.accountId=${account.metaSync?.accountId}, status=${account.metaSync?.status}`);
                     break;
@@ -716,6 +720,7 @@ export const handleWebhook = async (req, res) => {
                 // If only ONE account in recent OAuth, use it (for fallback)
                 if (!account && recentOAuthAccounts.length === 1) {
                   account = recentOAuthAccounts[0];
+                  oauthInitiated = true;  // Single account in recent OAuth
                   console.log(`\n   ✅ FOUND (single account): Account ${account.accountId} was only one awaiting webhook`);
                   console.log(`      metaSync.accountId=${account.metaSync?.accountId}`);
                 }
