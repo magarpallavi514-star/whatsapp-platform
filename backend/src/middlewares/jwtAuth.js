@@ -48,21 +48,14 @@ export const requireJWT = async (req, res, next) => {
     };
 
     // Look up account in database
-    // Try findById first if accountId looks like ObjectId, otherwise use findOne
     let account;
     let accountIdToLookup = decoded.accountId;
     
-    // ✅ FALLBACK: Handle old tokens with legacy account IDs
+    // ✅ FALLBACK: Handle old tokens with legacy account IDs (only for pixels_internal)
     if (accountIdToLookup === 'pixels_internal') {
       console.log('⚠️  Old token with accountId: pixels_internal - redirecting to 2600001');
       accountIdToLookup = '2600001';
-    }
-    
-    // ✅ FALLBACK: Handle old Enromatics temporary ID (from migration)
-    if (accountIdToLookup === 'acc_1769447135387_bwdquusek') {
-      console.log('⚠️  Old Enromatics token with accountId: acc_1769447135387_bwdquusek - redirecting to 2600001');
-      accountIdToLookup = '2600001';
-      req.accountId = '2600001';  // Update request with new ID
+      req.accountId = '2600001';
       req.user.accountId = '2600001';
     }
     
@@ -73,7 +66,7 @@ export const requireJWT = async (req, res, next) => {
       // accountId is a valid ObjectId - use findById
       account = await Account.findById(accountIdToLookup);
     } else {
-      // accountId is a custom string (like "2600001") - use findOne with accountId field
+      // accountId is a custom string (like "acc_xxx_yyy" or "2600001") - use findOne with accountId field
       account = await Account.findOne({ accountId: accountIdToLookup });
     }
     

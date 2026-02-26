@@ -119,9 +119,18 @@ function DashboardLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user?.accountId])
 
-  const handleLogout = () => {
-    authService.logout()
-    router.push("/login")
+  const handleLogout = async () => {
+    try {
+      await authService.logout()
+      // Ensure clear before redirect
+      setTimeout(() => {
+        router.push("/auth/login")
+      }, 100)
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Still redirect even if logout fails
+      router.push("/auth/login")
+    }
   }
 
   const navigation = [

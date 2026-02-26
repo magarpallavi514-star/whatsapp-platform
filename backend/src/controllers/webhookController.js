@@ -681,11 +681,21 @@ export const handleWebhook = async (req, res) => {
                 // 🔥 PRIORITY 1: Check if OAuth stored which account this belongs to
                 // OAuth endpoint sets metaSync.accountId when it starts OAuth flow
                 console.log('🔍 Step 1: Searching for account that initiated this OAuth flow...');
-                const oauthInitiated = await Account.findOne({ 
+                let oauthInitiated = await Account.findOne({ 
                   'metaSync.accountId': { $exists: true },
                   'metaSync.status': 'oauth_completed_awaiting_webhook',
                   'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 10 * 60 * 1000) }  // Last 10 minutes
                 }).sort({ 'metaSync.oauth_timestamp': -1 });
+                
+                // If not found in last 10 mins, try broader time window (30 mins)
+                if (!oauthInitiated) {
+                  console.log('   ⏱️ Not found in last 10 mins, checking last 30 mins...');
+                  oauthInitiated = await Account.findOne({ 
+                    'metaSync.accountId': { $exists: true },
+                    'metaSync.status': 'oauth_completed_awaiting_webhook',
+                    'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 30 * 60 * 1000) }  // Last 30 minutes
+                  }).sort({ 'metaSync.oauth_timestamp': -1 });
+                }
                 
                 if (oauthInitiated) {
                   account = oauthInitiated;
@@ -693,6 +703,8 @@ export const handleWebhook = async (req, res) => {
                   console.log('      This is the CORRECT account for this webhook!');
                   console.log('      Business ID from webhook:', businessId);
                   console.log('      WABA ID from webhook:', wabaId);
+                } else {
+                  console.log('   ❌ No account found with metaSync.accountId in last 30 mins');
                 }
                 
                 // 1. Try finding by WABA ID (if already in system)
@@ -727,7 +739,7 @@ export const handleWebhook = async (req, res) => {
                   console.log('🔍 Step 5: Searching for account pending OAuth webhook...');
                   account = await Account.findOne({ 
                     'metaSync.status': 'oauth_completed_awaiting_webhook',
-                    'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 5 * 60 * 1000) }  // Last 5 minutes
+                    'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 30 * 60 * 1000) }  // Last 30 minutes (extended window)
                   }).sort({ 'metaSync.oauth_timestamp': -1 });
                   
                   if (account) {
@@ -736,7 +748,7 @@ export const handleWebhook = async (req, res) => {
                     console.log(`      Webhook WABA ID: ${wabaId}`);
                     console.log(`      → Will UPDATE this account's WABA ID!`);
                   } else {
-                    console.log('   ❌ No accounts pending OAuth webhook found');
+                    console.log('   ❌ No accounts pending OAuth webhook found (within 30 mins)');
                   }
                 }
                 

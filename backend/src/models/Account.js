@@ -75,8 +75,32 @@ const accountSchema = new mongoose.Schema({
     sparse: true  // Optional - only for accounts with Business ID
   },
   
-  // Meta Sync Details (from webhook account_update)
+  // Meta Sync Details (from webhook account_update and OAuth flow)
   metaSync: {
+    // OAuth flow tracking
+    status: {
+      type: String,
+      enum: ['oauth_pending', 'oauth_completed_awaiting_webhook', 'fully_synced', 'error'],
+      default: null,
+      index: true, // Index for faster webhook lookups
+      sparse: true
+    },
+    oauth_timestamp: {
+      type: Date,
+      index: true,
+      sparse: true
+    },
+    oauthAccessToken: {
+      type: String,
+      select: false // Don't return in queries by default (security)
+    },
+    accountId: {
+      type: String,
+      index: true,
+      sparse: true
+    },
+    note: String,
+    
     // Raw webhook data from Meta account_update event
     webhookData: mongoose.Schema.Types.Mixed,
     // Last time Meta sent account_update webhook

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { authService } from '@/lib/auth';
+import { authService, UserRole } from '@/lib/auth';
 import { CreditCard, MessageSquare, TrendingUp, Zap, Download, Plus, Eye, EyeOff } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -82,7 +82,7 @@ export default function AccountPage() {
     setUser(currentUser);
 
     // Check access - only admins/managers
-    if (!currentUser || !['admin', 'manager'].includes(currentUser?.role?.toLowerCase())) {
+    if (!currentUser || ![UserRole.ADMIN, UserRole.MANAGER].includes(currentUser?.role)) {
       router.push('/dashboard');
       return;
     }

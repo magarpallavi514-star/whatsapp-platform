@@ -47,9 +47,25 @@ export default function Sidebar() {
 
   const items = getSidebarItems(user.role as UserRole)
 
+  // DEBUG: Log sidebar items
+  console.log('📋 Sidebar Items Debug:', { 
+    itemsCount: items.length,
+    items: items.map(i => ({ label: i.label, href: i.href })),
+    userRole: user.role
+  })
+
   const handleLogout = async () => {
-    await authService.logout()
-    window.location.href = '/login'
+    try {
+      await authService.logout()
+      // Ensure clear before redirect
+      setTimeout(() => {
+        window.location.href = '/auth/login'
+      }, 100)
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Still redirect even if logout fails
+      window.location.href = '/auth/login'
+    }
   }
 
   return (
@@ -124,6 +140,17 @@ export default function Sidebar() {
             // For paid plans, show all features including chatbot, leads, campaigns
             const alwaysVisible = ['dashboard', 'billing', 'settings', 'account']
             const shouldShow = alwaysVisible.some(v => item.href.includes(v)) || isPlanActive || isSuperAdmin
+            
+            // DEBUG: Log each item
+            if (item.label === 'Account' || item.label === 'Settings') {
+              console.log(`🔗 Item: ${item.label}`, { 
+                href: item.href, 
+                shouldShow, 
+                isPlanActive,
+                isSuperAdmin,
+                alwaysVisibleMatch: alwaysVisible.some(v => item.href.includes(v))
+              })
+            }
             
             if (!shouldShow) return null
             
