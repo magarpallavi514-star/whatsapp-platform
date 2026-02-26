@@ -34,7 +34,6 @@ export const getPhoneNumbers = async (req, res) => {
     }
     
     // Get account info to return WABA/Business ID status
-    const Account = req.app.get('Account');
     const account = await Account.findOne({ accountId }).select('wabaId businessId metaSync');
     
     // Query using ObjectId accountId - PhoneNumber stores accountId as ObjectId
