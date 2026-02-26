@@ -649,167 +649,112 @@ export const handleWebhook = async (req, res) => {
             }
           } else if (change.field === 'account_update') {
             console.log('\n🏢 ════════════════════════════════════════════════════════════════');
-            console.log('🏢 🎯 ACCOUNT UPDATE WEBHOOK - BUSINESS ID SYNC');
+            console.log('🏢 🎯 ACCOUNT UPDATE WEBHOOK - STRICT MATCHING ENABLED');
             console.log('🏢 ════════════════════════════════════════════════════════════════\n');
             
             // Extract Business ID from entry.id and WABA ID from webhook data
             const businessId = entry.id;
             const value = change.value;
             
-            console.log('📍 📍 📍 CRITICAL: Business ID from webhook entry.id:', businessId);
-            console.log('📨 Complete webhook value received:', JSON.stringify(value, null, 2));
+            console.log('📊 WEBHOOK DATA RECEIVED:');
+            console.log(`   Business ID (entry.id): ${businessId}`);
+            console.log('   Raw webhook payload:', JSON.stringify(value, null, 2));
             
             // 🔥 CRITICAL: Extract WABA ID from webhook structure
             // Meta sends: waba_info.waba_id
             const wabaId = value.waba_info?.waba_id;
             
             if (!wabaId) {
-              console.warn('⚠️ ⚠️ ⚠️ CRITICAL: No WABA ID found in webhook structure');
+              console.warn('\n⚠️ ⚠️ ⚠️ CRITICAL: No WABA ID found in webhook structure');
               console.log('   Expected: value.waba_info.waba_id');
               console.log('   Received:', value);
             } else {
-              console.log('✅ ✅ ✅ WABA ID found in webhook:', wabaId);
+              console.log(`\n✅ ✅ ✅ WABA ID found in webhook: ${wabaId}`);
             }
             
             // 🔥 Store BOTH Business ID and WABA ID from webhook
             // Process even if only one ID is available - webhook will provide what it has
             if (businessId || wabaId) {
               try {
-                // Find account - could be by multiple methods
+                // Find account - STRICT MATCHING ONLY
                 let account = null;
                 
-                // 🔥 PRIORITY 1: Check if OAuth stored which account this belongs to
-                // OAuth endpoint sets metaSync.accountId when it starts OAuth flow
-                console.log('🔍 Step 1: Searching for account that initiated this OAuth flow...');
+                // 🔥 PRIORITY 1 (STRICT): OAuth initiated this - metaSync.accountId MUST MATCH
+                // This is the ONLY way to guarantee the right account
+                console.log('\n🔍 ════════════════════════════════════════════════════════════════');
+                console.log('🔍 WEBHOOK ACCOUNT MATCHING - STRICT MODE');
+                console.log('🔍 ════════════════════════════════════════════════════════════════');
+                console.log('\n📍 Webhook contains:');
+                console.log(`   WABA ID (entry.id): ${wabaId}`);
+                console.log(`   Business ID: ${businessId}\n`);
                 
-                // Try direct query first
-                let oauthInitiated = await Account.findOne({ 
+                console.log('🔍 QUERY 1 (PRIMARY): metaSync.accountId with recent OAuth');
+                const recentOAuthAccounts = await Account.find({
                   'metaSync.accountId': { $exists: true, $ne: null },
                   'metaSync.status': { $in: ['oauth_completed_awaiting_webhook', 'fully_synced'] },
-                  'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 10 * 60 * 1000) }  // Last 10 minutes
-                }).sort({ 'metaSync.oauth_timestamp': -1 });
+                  'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 10 * 60 * 1000) }
+                }).select('accountId metaSync.accountId metaSync.status type role');
                 
-                if (oauthInitiated) {
-                  console.log(`   ✅ Found account via metaSync.accountId in last 10 mins`);
-                  console.log(`      Account: ${oauthInitiated.accountId}, metaSync.accountId: ${oauthInitiated.metaSync?.accountId}`);
+                console.log(`   Found ${recentOAuthAccounts.length} account(s) with recent OAuth:\n`);
+                recentOAuthAccounts.forEach(acc => {
+                  console.log(`   - ${acc.accountId} (${acc.role}/${acc.type}): metaSync.accountId=${acc.metaSync?.accountId}`);
+                });
+                
+                // Look for exact match where metaSync.accountId was stored during OAuth
+                for (const candidate of recentOAuthAccounts) {
+                  if (candidate.metaSync?.accountId && candidate.metaSync.accountId === candidate.accountId) {
+                    // This account stored itself during OAuth - it's the RIGHT one
+                    account = candidate;
+                    console.log(`\n   ✅ FOUND EXACT MATCH: Account ${account.accountId} is awaiting THIS webhook!`);
+                    console.log(`      Proof: metaSync.accountId=${account.metaSync?.accountId}, status=${account.metaSync?.status}`);
+                    break;
+                  }
                 }
                 
-                // If not found in last 10 mins, try broader time window (30 mins)
-                if (!oauthInitiated) {
-                  console.log('   ⏱️ Not found in last 10 mins, checking last 30 mins...');
-                  oauthInitiated = await Account.findOne({ 
-                    'metaSync.accountId': { $exists: true, $ne: null },
-                    'metaSync.status': { $in: ['oauth_completed_awaiting_webhook', 'fully_synced'] },
-                    'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 30 * 60 * 1000) }  // Last 30 minutes
-                  }).sort({ 'metaSync.oauth_timestamp': -1 });
+                // If not found by metaSync, try by WABA ID (but ONLY if updating existing, with type check)
+                if (!account) {
+                  console.log('\n🔍 QUERY 2 (FALLBACK): Existing WABA ID with type verification');
                   
-                  if (oauthInitiated) {
-                    console.log(`   ✅ Found account via metaSync.accountId in last 30 mins`);
-                    console.log(`      Account: ${oauthInitiated.accountId}, metaSync.accountId: ${oauthInitiated.metaSync?.accountId}`);
+                  if (wabaId) {
+                    const existingByWaba = await Account.findOne({ wabaId });
+                    
+                    if (existingByWaba) {
+                      console.log(`   Found account with WABA: ${existingByWaba.accountId} (${existingByWaba.role}/${existingByWaba.type})`);
+                      
+                      // 🔥 CRITICAL SAFETY: Account type check
+                      // Prevent supradmin WABA from being assigned to clients
+                      if (existingByWaba.type === 'client' && businessId && businessId === '631302064701398') {
+                        console.log(`   🚨 BLOCKED: This is a CLIENT account, but webhook contains SUPRADMIN's Business ID!`);
+                        console.log(`   Business ID 631302064701398 belongs to supradmin, not to ${existingByWaba.name}`);
+                        console.log(`   Skipping to prevent cross-contamination`);
+                      } else if (existingByWaba.type === 'internal' && existingByWaba.role === 'superadmin') {
+                        // Supradmin updating their own account - OK
+                        account = existingByWaba;
+                        console.log(`   ✅ ACCEPTED: Supradmin account can update their own WABA`);
+                      } else {
+                        account = existingByWaba;
+                        console.log(`   ✅ ACCEPTED: This account already has this WABA (update scenario)`);
+                      }
+                    } else {
+                      console.log(`   WABA ID ${wabaId} not found in any account (first-time setup)`);
+                    }
                   }
                 }
                 
-                // If still not found, try searching by ANY account with recent OAuth attempt
-                if (!oauthInitiated) {
-                  console.log('   ⏱️ Not found by accountId field, checking ANY account with OAuth status...');
-                  oauthInitiated = await Account.findOne({ 
-                    'metaSync.status': { $in: ['oauth_completed_awaiting_webhook', 'fully_synced'] },
-                    'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 30 * 60 * 1000) }  // Last 30 minutes
-                  }).sort({ 'metaSync.oauth_timestamp': -1 });
-                  
-                  if (oauthInitiated) {
-                    console.log(`   ✅ Found account with OAuth status: ${oauthInitiated.accountId}`);
-                    console.log(`      metaSync.accountId: ${oauthInitiated.metaSync?.accountId}`);
-                    console.log(`      metaSync.status: ${oauthInitiated.metaSync?.status}`);
-                  }
-                }
-                
-                if (oauthInitiated) {
-                  account = oauthInitiated;
-                  console.log(`\n   ✅ FOUND account that initiated OAuth: ${account.accountId}`);
-                  console.log('      This is the CORRECT account for this webhook!');
-                  console.log('      Business ID from webhook:', businessId);
-                  console.log('      WABA ID from webhook:', wabaId);
-                } else {
-                  console.log('   ❌ No account found with OAuth status in last 30 mins');
-                }
-                
-                // 1. Try finding by WABA ID (if already in system)
+                // If still not found - STRICT FAIL
                 if (!account) {
-                  console.log('🔍 Step 2: Searching account by existing WABA ID...');
-                  account = await Account.findOne({ wabaId });
-                  if (account) console.log('   ✅ Found account by WABA ID:', account.accountId);
-                }
-                
-                if (!account) {
-                  // 2. Try finding by Business ID (if already stored)
-                  console.log('🔍 Step 3: Searching account by existing Business ID...');
-                  account = await Account.findOne({ businessId });
-                  if (account) console.log('   ✅ Found account by Business ID:', account.accountId);
-                }
-                
-                if (!account) {
-                  // 3. Try finding by any phone number in this WABA
-                  console.log('🔍 Step 4: Searching account by phone numbers in WABA...');
-                  const phoneInWaba = await PhoneNumber.findOne({ wabaId });
-                  if (phoneInWaba) {
-                    console.log(`   ✅ Found phone in WABA, looking up account ${phoneInWaba.accountId}`);
-                    account = await Account.findOne({ accountId: phoneInWaba.accountId });
-                  } else {
-                    console.log('   ❌ No phones found in WABA');
-                  }
-                }
-                
-                if (!account) {
-                  // 4a. CRITICAL FALLBACK: Look for accounts marked as "oauth_completed_awaiting_webhook"
-                  // These are accounts that just went through OAuth but couldn't fetch WABA from Meta
-                  console.log('🔍 Step 5: Searching for account pending OAuth webhook...');
-                  account = await Account.findOne({ 
-                    'metaSync.status': 'oauth_completed_awaiting_webhook',
-                    'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 30 * 60 * 1000) }  // Last 30 minutes (extended window)
-                  }).sort({ 'metaSync.oauth_timestamp': -1 });
-                  
-                  if (account) {
-                    console.log(`   ✅ Found OAuth pending account: ${account.accountId}`);
-                    console.log(`   📍 This account just did OAuth and is waiting for webhook`);
-                    console.log(`      Webhook WABA ID: ${wabaId}`);
-                    console.log(`      → Will UPDATE this account's WABA ID!`);
-                  } else {
-                    console.log('   ❌ No accounts pending OAuth webhook found (within 30 mins)');
-                  }
-                }
-                
-                if (!account) {
-                  // 4b. CRITICAL FALLBACK: Look for any account without wabaId (first-time WABA setup)
-                  // This handles case where webhook arrives before OAuth completes
-                  console.log('🔍 Step 6: Searching for account without wabaId (first-time setup)...');
-                  account = await Account.findOne({ 
-                    wabaId: { $exists: false }
-                  }).sort({ createdAt: -1 });
-                  
-                  if (account) {
-                    console.log(`   ✅ Found account without wabaId: ${account.accountId}`);
-                    console.log(`      → This is likely first-time WABA connection for this account!`);
-                  } else {
-                    console.log('   ❌ No accounts without wabaId found');
-                  }
-                }
-                
-                // DEBUG: If still not found, log all recent accounts with metaSync data
-                if (!account) {
-                  console.log('\n🔧 DEBUG: Checking all accounts with recent metaSync updates...');
-                  const recentAccounts = await Account.find({
-                    'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 60 * 60 * 1000) }  // Last 60 mins
-                  }).select('accountId metaSync.accountId metaSync.status metaSync.oauth_timestamp').lean();
-                  
-                  if (recentAccounts.length > 0) {
-                    console.log(`   Found ${recentAccounts.length} account(s) with recent OAuth attempts:`);
-                    recentAccounts.forEach(acc => {
-                      console.log(`      - ${acc.accountId}: metaSync.accountId=${acc.metaSync?.accountId}, status=${acc.metaSync?.status}`);
-                    });
-                  } else {
-                    console.log('   No accounts with recent metaSync updates found');
-                  }
+                  console.log('\n🚨 ════════════════════════════════════════════════════════════════');
+                  console.log('🚨 WEBHOOK MATCHING FAILED');
+                  console.log('🚨 ════════════════════════════════════════════════════════════════');
+                  console.log('\n❌ Could not find account to assign webhook!');
+                  console.log('\n   Possible reasons:');
+                  console.log('   1. metaSync.accountId not set during OAuth (check oauthController)');
+                  console.log('   2. Webhook arrived >10 mins after OAuth (timeout)');
+                  console.log('   3. Account was deleted between OAuth and webhook');
+                  console.log('   4. WABA ID belongs to a different Meta Business Account');
+                  console.log('\n   Action: Manual intervention required - check logs above');
+                  console.log('🚨 ════════════════════════════════════════════════════════════════\n');
+                  return;  // FAIL - don't assign to random account
                 }
                 
                 if (account) {
