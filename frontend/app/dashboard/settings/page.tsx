@@ -169,6 +169,7 @@ export default function SettingsPage() {
         console.log('✅ RESPONSE DATA:', {
           success: data.success,
           phoneNumbersCount: data.phoneNumbers?.length || 0,
+          wabaConnected: data.wabaConnected,
           phoneNumbers: data.phoneNumbers
         })
         
@@ -176,9 +177,15 @@ export default function SettingsPage() {
         setError("") // Clear any previous errors
         console.log('✅ State updated with', (data.phoneNumbers || []).length, 'phone numbers')
         
-        // If no phones, show helpful message
-        if (!data.phoneNumbers || data.phoneNumbers.length === 0) {
-          setError("⚠️ No WhatsApp Business Account connected\n\nPlease connect your WhatsApp account to start sending messages\n\nSteps:\n1. Go to Meta Business Dashboard\n2. Get your Phone Number ID\n3. Get your WABA ID\n4. Get your Access Token\n5. Click 'Add Phone Number' below and enter the details")
+        // ✅ NEW: Check if WABA is connected even if no phone numbers exist yet
+        if (data.wabaConnected && data.message) {
+          // WABA is connected but no phone numbers yet - show helpful info
+          setError(data.message)
+        } else if (!data.phoneNumbers || data.phoneNumbers.length === 0) {
+          // No WABA connected and no phones - show connection instructions
+          if (!data.wabaConnected) {
+            setError("⚠️ No WhatsApp Business Account connected\n\nPlease connect your WhatsApp account to start sending messages\n\nSteps:\n1. Go to Meta Business Dashboard\n2. Get your Phone Number ID\n3. Get your WABA ID\n4. Get your Access Token\n5. Click 'Add Phone Number' below and enter the details")
+          }
         }
       } else {
         let errorMessage = ""

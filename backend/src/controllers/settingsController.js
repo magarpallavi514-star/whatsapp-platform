@@ -33,6 +33,10 @@ export const getPhoneNumbers = async (req, res) => {
       });
     }
     
+    // Get account info to return WABA/Business ID status
+    const Account = req.app.get('Account');
+    const account = await Account.findOne({ accountId }).select('wabaId businessId metaSync');
+    
     // Query using ObjectId accountId - PhoneNumber stores accountId as ObjectId
     const query = { accountId };
     console.log('  Query object:', JSON.stringify(query, null, 2));
@@ -65,9 +69,21 @@ export const getPhoneNumbers = async (req, res) => {
       console.log(`  [${i+1}] ${p.displayPhoneNumber} - Active: ${p.isActive}, Quality: ${p.qualityRating}`);
     });
     
+    // ✅ NEW: Include WABA connection status even if no phone numbers exist yet
+    const wabaConnected = !!(account?.wabaId && account?.businessId);
+    const syncStatus = account?.metaSync?.status || 'not_synced';
+    
     res.json({
       success: true,
-      phoneNumbers: phoneNumbersWithStatus
+      phoneNumbers: phoneNumbersWithStatus,
+      // ✅ NEW FIELDS: Account's WABA connection status
+      wabaConnected,
+      wabaId: account?.wabaId || null,
+      businessId: account?.businessId || null,
+      metaSyncStatus: syncStatus,
+      message: wabaConnected && phoneNumbersWithStatus.length === 0 
+        ? '✅ WhatsApp Business Account connected. Phone numbers will be fetched automatically. You can also manually add phone numbers below.' 
+        : null
     });
     
   } catch (error) {
@@ -224,6 +240,15 @@ export const updatePhoneNumber = async (req, res) => {
     const { id } = req.params;
     const { displayName, displayPhone, accessToken, isActive } = req.body;
     
+    // ✅ CRITICAL: Validate ObjectId before querying
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number ID format'
+      });
+    }
+    
     const phoneNumber = await PhoneNumber.findOne({ _id: id, accountId });
     
     if (!phoneNumber) {
@@ -285,6 +310,15 @@ export const deletePhoneNumber = async (req, res) => {
     const accountId = req.account?.accountId; // Use String accountId
     const { id } = req.params;
     
+    // ✅ CRITICAL: Validate ObjectId before querying
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number ID format'
+      });
+    }
+    
     const phoneNumber = await PhoneNumber.findOne({ _id: id, accountId });
     
     if (!phoneNumber) {
@@ -333,6 +367,15 @@ export const testPhoneNumber = async (req, res) => {
     const { id } = req.params;
     
     console.log('🧪 Testing phone number:', { id, accountId });
+    
+    // ✅ CRITICAL: Validate ObjectId before querying
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number ID format'
+      });
+    }
     
     // ✅ CRITICAL FIX: Fetch full phone config with access token
     phoneNumber = await PhoneNumber.findOne({ _id: id, accountId }).select('+accessToken');
