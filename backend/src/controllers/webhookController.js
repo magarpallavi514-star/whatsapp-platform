@@ -681,30 +681,57 @@ export const handleWebhook = async (req, res) => {
                 // 🔥 PRIORITY 1: Check if OAuth stored which account this belongs to
                 // OAuth endpoint sets metaSync.accountId when it starts OAuth flow
                 console.log('🔍 Step 1: Searching for account that initiated this OAuth flow...');
+                
+                // Try direct query first
                 let oauthInitiated = await Account.findOne({ 
-                  'metaSync.accountId': { $exists: true },
-                  'metaSync.status': 'oauth_completed_awaiting_webhook',
+                  'metaSync.accountId': { $exists: true, $ne: null },
+                  'metaSync.status': { $in: ['oauth_completed_awaiting_webhook', 'fully_synced'] },
                   'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 10 * 60 * 1000) }  // Last 10 minutes
                 }).sort({ 'metaSync.oauth_timestamp': -1 });
+                
+                if (oauthInitiated) {
+                  console.log(`   ✅ Found account via metaSync.accountId in last 10 mins`);
+                  console.log(`      Account: ${oauthInitiated.accountId}, metaSync.accountId: ${oauthInitiated.metaSync?.accountId}`);
+                }
                 
                 // If not found in last 10 mins, try broader time window (30 mins)
                 if (!oauthInitiated) {
                   console.log('   ⏱️ Not found in last 10 mins, checking last 30 mins...');
                   oauthInitiated = await Account.findOne({ 
-                    'metaSync.accountId': { $exists: true },
-                    'metaSync.status': 'oauth_completed_awaiting_webhook',
+                    'metaSync.accountId': { $exists: true, $ne: null },
+                    'metaSync.status': { $in: ['oauth_completed_awaiting_webhook', 'fully_synced'] },
                     'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 30 * 60 * 1000) }  // Last 30 minutes
                   }).sort({ 'metaSync.oauth_timestamp': -1 });
+                  
+                  if (oauthInitiated) {
+                    console.log(`   ✅ Found account via metaSync.accountId in last 30 mins`);
+                    console.log(`      Account: ${oauthInitiated.accountId}, metaSync.accountId: ${oauthInitiated.metaSync?.accountId}`);
+                  }
+                }
+                
+                // If still not found, try searching by ANY account with recent OAuth attempt
+                if (!oauthInitiated) {
+                  console.log('   ⏱️ Not found by accountId field, checking ANY account with OAuth status...');
+                  oauthInitiated = await Account.findOne({ 
+                    'metaSync.status': { $in: ['oauth_completed_awaiting_webhook', 'fully_synced'] },
+                    'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 30 * 60 * 1000) }  // Last 30 minutes
+                  }).sort({ 'metaSync.oauth_timestamp': -1 });
+                  
+                  if (oauthInitiated) {
+                    console.log(`   ✅ Found account with OAuth status: ${oauthInitiated.accountId}`);
+                    console.log(`      metaSync.accountId: ${oauthInitiated.metaSync?.accountId}`);
+                    console.log(`      metaSync.status: ${oauthInitiated.metaSync?.status}`);
+                  }
                 }
                 
                 if (oauthInitiated) {
                   account = oauthInitiated;
-                  console.log(`   ✅ Found account that initiated OAuth: ${account.accountId}`);
+                  console.log(`\n   ✅ FOUND account that initiated OAuth: ${account.accountId}`);
                   console.log('      This is the CORRECT account for this webhook!');
                   console.log('      Business ID from webhook:', businessId);
                   console.log('      WABA ID from webhook:', wabaId);
                 } else {
-                  console.log('   ❌ No account found with metaSync.accountId in last 30 mins');
+                  console.log('   ❌ No account found with OAuth status in last 30 mins');
                 }
                 
                 // 1. Try finding by WABA ID (if already in system)
@@ -765,6 +792,23 @@ export const handleWebhook = async (req, res) => {
                     console.log(`      → This is likely first-time WABA connection for this account!`);
                   } else {
                     console.log('   ❌ No accounts without wabaId found');
+                  }
+                }
+                
+                // DEBUG: If still not found, log all recent accounts with metaSync data
+                if (!account) {
+                  console.log('\n🔧 DEBUG: Checking all accounts with recent metaSync updates...');
+                  const recentAccounts = await Account.find({
+                    'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 60 * 60 * 1000) }  // Last 60 mins
+                  }).select('accountId metaSync.accountId metaSync.status metaSync.oauth_timestamp').lean();
+                  
+                  if (recentAccounts.length > 0) {
+                    console.log(`   Found ${recentAccounts.length} account(s) with recent OAuth attempts:`);
+                    recentAccounts.forEach(acc => {
+                      console.log(`      - ${acc.accountId}: metaSync.accountId=${acc.metaSync?.accountId}, status=${acc.metaSync?.status}`);
+                    });
+                  } else {
+                    console.log('   No accounts with recent metaSync updates found');
                   }
                 }
                 

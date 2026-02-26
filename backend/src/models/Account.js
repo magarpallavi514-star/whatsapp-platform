@@ -91,8 +91,9 @@ const accountSchema = new mongoose.Schema({
       sparse: true
     },
     oauthAccessToken: {
-      type: String,
-      select: false // Don't return in queries by default (security)
+      type: String
+      // Note: NOT selecting false here because webhook NEEDS this token to fetch phone numbers
+      // Access token is only used internally for Meta API calls, not exposed to users
     },
     accountId: {
       type: String,
