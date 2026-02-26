@@ -289,7 +289,9 @@ export default function ChatPage() {
         // This prevents stale data from WebSocket broadcasts
         setTimeout(() => {
           console.log('🔄 Refreshing conversation list after mark as read...');
-          fetchConversations(selectedPhoneId);
+          if (selectedPhoneId) {
+            fetchConversations(selectedPhoneId);
+          }
         }, 500);
       } else {
         console.warn('⚠️ Mark as read failed:', data);

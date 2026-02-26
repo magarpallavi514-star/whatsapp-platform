@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { authService } from '@/lib/auth';
+import { authService, UserRole } from '@/lib/auth';
 import BillingBreakdown from '@/components/BillingBreakdown';
 import PaymentMethods from '@/components/PaymentMethods';
 
@@ -53,13 +53,13 @@ export default function BillingPage() {
     setUser(currentUser);
     
     // Redirect superadmins to admin invoices page
-    if (currentUser?.type === 'internal' || currentUser?.role === 'SUPERADMIN') {
+    if (currentUser?.type === 'internal' || currentUser?.role === 'superadmin') {
       router.push('/dashboard/invoices');
       return;
     }
 
     // For org admins, load their organizations
-    if (currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER') {
+    if (currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MANAGER) {
       fetchUserOrganizations();
     }
 

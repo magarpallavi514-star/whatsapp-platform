@@ -1,3 +1,4 @@
+import axios from 'axios';
 import PhoneNumber from '../models/PhoneNumber.js';
 import Account from '../models/Account.js';
 import ApiKey from '../models/ApiKey.js';
@@ -816,6 +817,170 @@ export const changePassword = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/settings/phone-numbers/sync
+ * Manually sync phone numbers from Meta API
+ * Fallback if automatic sync during OAuth failed
+ */
+export const syncPhoneNumbersFromMeta = async (req, res) => {
+  try {
+    const accountId = req.account?.accountId;
+    
+    if (!accountId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Account ID not found. Authentication failed.'
+      });
+    }
+    
+    console.log('\n🔄 MANUAL PHONE NUMBER SYNC - Account:', accountId);
+    
+    // Get account details
+    const account = await Account.findOne({ accountId });
+    
+    if (!account) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found'
+      });
+    }
+    
+    // Get WABA ID and access token
+    const wabaId = account.wabaId;
+    const accessToken = account.metaSync?.oauthAccessToken;
+    
+    if (!wabaId) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp Business Account (WABA ID) not found. Please reconnect WhatsApp OAuth first.'
+      });
+    }
+    
+    if (!accessToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Access token not found. Please reconnect WhatsApp OAuth first.'
+      });
+    }
+    
+    console.log('WABA ID:', wabaId);
+    console.log('Access Token:', accessToken ? '✅ Present' : '❌ Missing');
+    
+    try {
+      // Fetch phone numbers from Meta API
+      const response = await axios.get(
+        `https://graph.facebook.com/v21.0/${wabaId}/phone_numbers`,
+        {
+          params: {
+            access_token: accessToken,
+            fields: 'id,phone_number,quality_rating,name_status,display_phone_number'
+          }
+        }
+      );
+      
+      const phones = response.data?.data || [];
+      console.log(`✅ Fetched ${phones.length} phone number(s) from Meta`);
+      
+      if (phones.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No phone numbers found in your WhatsApp Business Account on Meta.',
+          hint: 'Please check your Meta Business Account and ensure you have phone numbers linked.'
+        });
+      }
+      
+      // Create or update PhoneNumber entries
+      const createdPhones = [];
+      const existingPhones = [];
+      
+      for (const phone of phones) {
+        try {
+          const phoneNumberId = phone.id;
+          
+          console.log(`\n  📱 Processing phone: ${phone.display_phone_number || phone.id}`);
+          
+          // Check if phone already exists
+          const existing = await PhoneNumber.findOne({
+            accountId,
+            phoneNumberId
+          });
+          
+          if (existing) {
+            console.log(`     ⚠️ Phone already exists, skipping creation`);
+            existingPhones.push(existing);
+            continue;
+          }
+          
+          // Create new PhoneNumber entry
+          const phoneNumber = await PhoneNumber.create({
+            accountId,
+            phoneNumberId,
+            wabaId,
+            accessToken,
+            displayPhone: phone.display_phone_number || phoneNumberId,
+            displayName: phone.name || 'WhatsApp Business',
+            qualityRating: phone.quality_rating || 'unknown',
+            verifiedName: phone.name_status || 'Not verified',
+            isActive: createdPhones.length === 0, // First phone is active by default
+            verifiedAt: new Date()
+          });
+          
+          console.log(`     ✅ Phone number created: ${phoneNumber._id}`);
+          createdPhones.push(phoneNumber);
+        } catch (phoneError) {
+          console.error(`     ❌ Error creating phone number:`, phoneError.message);
+          // Continue with next phone
+          continue;
+        }
+      }
+      
+      const totalAdded = createdPhones.length + existingPhones.length;
+      
+      return res.json({
+        success: true,
+        message: `Phone number sync complete! Found ${totalAdded} phone number(s).`,
+        newPhones: createdPhones.length,
+        existingPhones: existingPhones.length,
+        phoneNumbers: [...createdPhones, ...existingPhones].map(p => ({
+          _id: p._id,
+          phoneNumberId: p.phoneNumberId,
+          wabaId: p.wabaId,
+          displayPhone: p.displayPhone,
+          displayName: p.displayName,
+          isActive: p.isActive,
+          qualityRating: p.qualityRating,
+          verifiedName: p.verifiedName
+        }))
+      });
+      
+    } catch (error) {
+      console.error('❌ Error fetching from Meta API:', error.message);
+      
+      if (error.response?.data?.error) {
+        const metaError = error.response.data.error;
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to fetch phone numbers from Meta',
+          error: metaError.message,
+          code: metaError.code
+        });
+      }
+      
+      return res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Sync phone numbers error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 export default {
   getPhoneNumbers,
   addPhoneNumber,
@@ -827,5 +992,6 @@ export default {
   getApiKeys,
   generateApiKey,
   deleteApiKey,
-  changePassword
+  changePassword,
+  syncPhoneNumbersFromMeta
 };

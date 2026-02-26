@@ -12,6 +12,7 @@ const router = express.Router();
 
 // Phone Number Management (JWT Auth - from app.js)
 router.get('/phone-numbers', settingsController.getPhoneNumbers);
+router.post('/phone-numbers/sync', settingsController.syncPhoneNumbersFromMeta); // NEW: Manual sync - MUST be before /:id routes
 router.post('/phone-numbers', settingsController.addPhoneNumber);
 router.put('/phone-numbers/:id', settingsController.updatePhoneNumber);
 router.delete('/phone-numbers/:id', settingsController.deletePhoneNumber);

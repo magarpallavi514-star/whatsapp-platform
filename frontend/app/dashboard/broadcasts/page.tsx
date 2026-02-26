@@ -617,6 +617,7 @@ export default function BroadcastsPage() {
                                     <CheckCircle className="h-4 w-4" />
                                   )}
                                   <span>{actionLoading === broadcast.id ? "Sending..." : "Send Again"}</span>
+                                </button>
                               )}
 
                               {broadcast.status === "scheduled" && (
@@ -649,11 +650,12 @@ export default function BroadcastsPage() {
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              
+                      </div>
+                    ))}
+                  </div>
+            )}
+          </div>
+        </div>
 
       {/* View Details Modal */}
       {viewingBroadcast && (

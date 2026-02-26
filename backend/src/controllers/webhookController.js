@@ -1,3 +1,4 @@
+import axios from 'axios';
 import whatsappService from '../services/whatsappService.js';
 import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
@@ -17,6 +18,103 @@ let io = null;
 
 export const setSocketIO = (socketIOInstance) => {
   io = socketIOInstance;
+};
+
+/**
+ * Fetch phone numbers from Meta API and create PhoneNumber entries
+ * Called after OAuth webhook is received with WABA ID
+ */
+const fetchAndCreatePhoneNumbers = async (wabaId, accountId, accessToken) => {
+  try {
+    console.log('\n📱 ========== FETCHING PHONE NUMBERS FROM META ==========');
+    console.log('WABA ID:', wabaId);
+    console.log('Account ID:', accountId);
+    console.log('Access Token:', accessToken ? '✅ Present' : '❌ Missing');
+    
+    if (!accessToken) {
+      console.warn('⚠️ No access token available - cannot fetch phone numbers');
+      console.warn('   Skipping phone number fetch. User may need to reconnect.');
+      return false;
+    }
+    
+    if (!wabaId) {
+      console.warn('⚠️ No WABA ID available - cannot fetch phone numbers');
+      return false;
+    }
+    
+    // Fetch phone numbers from Meta's /me/phone_numbers endpoint
+    const response = await axios.get(
+      `https://graph.facebook.com/v21.0/${wabaId}/phone_numbers`,
+      {
+        params: {
+          access_token: accessToken,
+          fields: 'id,phone_number,quality_rating,name_status,display_phone_number'
+        }
+      }
+    );
+    
+    const phones = response.data?.data || [];
+    console.log(`✅ Fetched ${phones.length} phone number(s) from Meta`);
+    
+    if (phones.length === 0) {
+      console.warn('⚠️ No phone numbers found in Meta for WABA:', wabaId);
+      return false;
+    }
+    
+    // Create PhoneNumber entries for each phone
+    const createdPhones = [];
+    for (const phone of phones) {
+      try {
+        const phoneNumberId = phone.id;
+        
+        console.log(`\n  📱 Processing phone: ${phone.display_phone_number || phone.id}`);
+        
+        // Check if phone already exists for this account
+        const existing = await PhoneNumber.findOne({
+          accountId,
+          phoneNumberId
+        });
+        
+        if (existing) {
+          console.log(`     ⚠️ Phone already exists in DB, skipping creation`);
+          createdPhones.push(existing);
+          continue;
+        }
+        
+        // Create new PhoneNumber entry
+        const phoneNumber = await PhoneNumber.create({
+          accountId,
+          phoneNumberId,
+          wabaId,
+          accessToken,
+          displayPhone: phone.display_phone_number || phoneNumberId,
+          displayName: phone.name || 'WhatsApp Business',
+          qualityRating: phone.quality_rating || 'unknown',
+          verifiedName: phone.name_status || 'Not verified',
+          isActive: createdPhones.length === 0, // First phone is active by default
+          verifiedAt: new Date()
+        });
+        
+        console.log(`     ✅ Phone number created: ${phoneNumber._id}`);
+        createdPhones.push(phoneNumber);
+      } catch (phoneError) {
+        console.error(`     ❌ Error creating phone number:`, phoneError.message);
+        // Continue with next phone instead of failing entire process
+        continue;
+      }
+    }
+    
+    console.log(`\n✅ Successfully created ${createdPhones.length} phone number entries`);
+    console.log('📱 ========== PHONE NUMBER FETCH COMPLETE ==========\n');
+    
+    return createdPhones.length > 0;
+  } catch (error) {
+    console.error('❌ Error fetching phone numbers from Meta:', error.message);
+    if (error.response?.data) {
+      console.error('   Meta API Error:', error.response.data);
+    }
+    return false;
+  }
 };
 
 /**
@@ -747,6 +845,28 @@ export const handleWebhook = async (req, res) => {
                     metaStatus: saved.metaSync.metaStatus,
                     syncedAt: saved.metaSync.lastWebhookAt
                   });
+                  
+                  // 🚀 NEW: Fetch phone numbers from Meta API
+                  console.log('\n🚀 NOW FETCHING PHONE NUMBERS FROM META API...');
+                  const accessToken = saved.metaSync?.oauthAccessToken;
+                  const phonesFetched = await fetchAndCreatePhoneNumbers(
+                    saved.wabaId,
+                    saved.accountId,
+                    accessToken
+                  );
+                  
+                  if (phonesFetched) {
+                    console.log('\n🟢 ✅ PHONE NUMBERS AUTOMATICALLY FETCHED AND CREATED!');
+                    console.log('   User will see phone numbers immediately when refreshing Settings page');
+                  } else {
+                    console.warn('\n⚠️ Phone numbers could not be fetched automatically');
+                    console.warn('   Possible reasons:');
+                    console.warn('   - No access token stored (OAuth might be incomplete)');
+                    console.warn('   - Meta API temporarily unavailable');
+                    console.warn('   - No phone numbers in this WABA yet');
+                    console.warn('\n   User can manually add phone numbers in Settings > Add Phone Number');
+                  }
+                  
                   console.log('\n🟢 BUSINESS ID SYNC COMPLETE - READY FOR REALTIME!\n');
                   
                 } else {

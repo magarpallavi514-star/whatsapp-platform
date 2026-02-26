@@ -273,6 +273,60 @@ export default function SettingsPage() {
     }
   }
 
+  // NEW: Manually sync phone numbers from Meta
+  const syncPhoneNumbersFromMeta = async () => {
+    try {
+      setIsLoading(true)
+      setError("")
+      
+      console.log('🔄 Syncing phone numbers from Meta API...')
+      
+      const token = authService.getToken()
+      const response = await fetch(`${API_URL}/settings/phone-numbers/sync`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      console.log('📱 Sync Response Status:', response.status)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ Sync Success:', {
+          newPhones: data.newPhones,
+          existingPhones: data.existingPhones,
+          total: data.phoneNumbers?.length || 0
+        })
+        
+        alert(`✅ Sync complete! Found ${data.newPhones} new phone number(s).`)
+        setPhoneNumbers(data.phoneNumbers || [])
+        setError("")
+      } else {
+        const errorData = await response.json()
+        console.error('❌ Sync Failed:', errorData)
+        
+        let displayError = errorData.message
+        if (errorData.code === 190) {
+          displayError = "⚠️ Access token expired.\n\nPlease reconnect WhatsApp via Facebook Business Login to refresh the token."
+        } else if (errorData.hint) {
+          displayError = `${errorData.message}\n\n${errorData.hint}`
+        }
+        
+        setError(displayError)
+        alert('Sync failed: ' + displayError)
+      }
+    } catch (error: any) {
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      console.error('❌ Error syncing phone numbers:', errorMsg)
+      setError(`Failed to sync: ${errorMsg}`)
+      alert('Sync failed: ' + errorMsg)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleConnectWhatsAppFBLogin = () => {
     try {
       console.log('🎯 Initiating Facebook Business Login for WhatsApp...')
@@ -1040,11 +1094,17 @@ export default function SettingsPage() {
                   <Phone className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-600 mb-1">No WhatsApp numbers connected</p>
                   <p className="text-sm text-gray-500 mb-4">Connect your WhatsApp Business Account securely via Meta</p>
-                  <Button className="bg-green-600 hover:bg-green-700" onClick={handleConnectWhatsAppFBLogin}>
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Connect WhatsApp
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
+                  <div className="flex gap-3 justify-center">
+                    <Button className="bg-green-600 hover:bg-green-700" onClick={handleConnectWhatsAppFBLogin}>
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Connect WhatsApp
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                    <Button variant="outline" onClick={syncPhoneNumbersFromMeta} disabled={isLoading}>
+                      <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                      Sync from Meta
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
