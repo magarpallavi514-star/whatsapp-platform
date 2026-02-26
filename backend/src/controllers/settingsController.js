@@ -3,6 +3,7 @@ import PhoneNumber from '../models/PhoneNumber.js';
 import Account from '../models/Account.js';
 import ApiKey from '../models/ApiKey.js';
 import crypto from 'crypto';
+import mongoose from 'mongoose';
 import { broadcastPhoneStatusChange } from '../services/socketService.js';
 
 /**
@@ -240,7 +241,6 @@ export const updatePhoneNumber = async (req, res) => {
     const { displayName, displayPhone, accessToken, isActive } = req.body;
     
     // ✅ CRITICAL: Validate ObjectId before querying
-    const mongoose = require('mongoose');
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
@@ -310,7 +310,6 @@ export const deletePhoneNumber = async (req, res) => {
     const { id } = req.params;
     
     // ✅ CRITICAL: Validate ObjectId before querying
-    const mongoose = require('mongoose');
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
@@ -368,7 +367,6 @@ export const testPhoneNumber = async (req, res) => {
     console.log('🧪 Testing phone number:', { id, accountId });
     
     // ✅ CRITICAL: Validate ObjectId before querying
-    const mongoose = require('mongoose');
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
