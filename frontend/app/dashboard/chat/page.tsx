@@ -1516,6 +1516,13 @@ export default function ChatPage() {
                           : "7.5px 7.5px 7.5px 0px"
                       }}
                     >
+                      {/* Show sender name for received messages */}
+                      {message.direction === "inbound" && (
+                        <p className="text-xs font-semibold text-[#00a884] mb-1">
+                          {message.senderName || 'Unknown'}
+                        </p>
+                      )}
+                      
                       {renderMessageContent(message)}
                       <div
                         className={`flex items-center gap-1 mt-1 text-[11px] ${

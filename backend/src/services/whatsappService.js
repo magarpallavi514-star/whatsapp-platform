@@ -82,6 +82,66 @@ class WhatsAppService {
    * CRITICAL: All messages must have a conversationId for real-time sync
    * ⚠️ IDEMPOTENT: Uses upsert to prevent E11000 duplicate key errors in broadcast loops
    */
+  /**
+   * Auto-create or update contact when message is sent/received
+   * Ensures every message has associated contact
+   */
+  async getOrCreateContact(accountId, phone, contactName = null) {
+    try {
+      // Format phone as international (remove +)
+      const formattedPhone = phone.replace(/[^0-9]/g, '');
+      
+      // Try to find existing contact
+      let contact = await Contact.findOne({
+        accountId,
+        whatsappNumber: formattedPhone
+      });
+      
+      if (!contact) {
+        // Create new contact
+        contact = await Contact.create({
+          accountId,
+          name: contactName || formattedPhone,  // Use provided name or fallback to phone
+          phone: formattedPhone,
+          whatsappNumber: formattedPhone,
+          type: 'customer',
+          isOptedIn: true,
+          optInDate: new Date(),
+          lastMessageAt: new Date()
+        });
+        
+        console.log('✅ Created new contact:', {
+          accountId,
+          phone: formattedPhone,
+          name: contact.name
+        });
+      } else {
+        // Update existing contact's last message time
+        contact.lastMessageAt = new Date();
+        contact.messageCount = (contact.messageCount || 0) + 1;
+        
+        // Update name if provided and different
+        if (contactName && contactName !== 'Unknown' && contactName !== formattedPhone) {
+          contact.name = contactName;
+        }
+        
+        await contact.save();
+        
+        console.log('✅ Updated contact:', {
+          accountId,
+          phone: formattedPhone,
+          name: contact.name,
+          messageCount: contact.messageCount
+        });
+      }
+      
+      return contact;
+    } catch (error) {
+      console.error('❌ Error in getOrCreateContact:', error.message);
+      throw error;
+    }
+  }
+
   async getOrCreateConversation(accountId, phoneNumberId, recipientPhone, workspaceId = null) {
     try {
       const conversationId = `${accountId}_${phoneNumberId}_${recipientPhone}`;
@@ -168,6 +228,9 @@ class WhatsAppService {
       
       // ✅ CRITICAL FIX: Use helper function for conversation management
       const conversation = await this.getOrCreateConversation(accountId, phoneNumberId, cleanPhone);
+      
+      // ✅ AUTO-CREATE CONTACT: Every sent message creates/updates contact
+      await this.getOrCreateContact(accountId, cleanPhone, null);
       
       // Create message record (queued state) - NOW WITH CONVERSATION ID
       message = new Message({

@@ -590,20 +590,66 @@ export const handleWebhook = async (req, res) => {
                     deliveredAt: new Date(parseInt(message.timestamp) * 1000)
                   };
                   
+                  // ✅ AUTO-CREATE CONTACT: Every received message creates/updates contact
+                  const senderName = senderProfile?.profile?.name || null;
+                  const senderPhone = message.from;
+                  const formattedPhone = senderPhone.replace(/[^0-9]/g, '');
+                  
+                  try {
+                    let contact = await Contact.findOne({
+                      accountId: targetAccountId,
+                      whatsappNumber: formattedPhone
+                    });
+                    
+                    if (!contact) {
+                      contact = await Contact.create({
+                        accountId: targetAccountId,
+                        name: senderName || formattedPhone,
+                        phone: formattedPhone,
+                        whatsappNumber: formattedPhone,
+                        type: 'customer',
+                        isOptedIn: true,
+                        optInDate: new Date(),
+                        lastMessageAt: new Date()
+                      });
+                      console.log('✅ Created contact from received message:', {
+                        accountId: targetAccountId,
+                        phone: formattedPhone,
+                        name: contact.name
+                      });
+                    } else {
+                      contact.lastMessageAt = new Date();
+                      contact.messageCount = (contact.messageCount || 0) + 1;
+                      if (senderName && senderName !== formattedPhone) {
+                        contact.name = senderName;
+                      }
+                      await contact.save();
+                      console.log('✅ Updated contact from received message:', {
+                        accountId: targetAccountId,
+                        phone: formattedPhone,
+                        name: contact.name
+                      });
+                    }
+                  } catch (contactError) {
+                    console.error('⚠️  Error auto-creating contact:', contactError.message);
+                    // Don't fail message save if contact creation fails
+                  }
+                  
                   const savedMessage = await Message.create(inboxMessage);
                   console.log('✅ Saved incoming message to database:', savedMessage._id);
                   
                   // 📡 Broadcast received message via Socket.io for real-time updates
                   if (io) {
-                    // Get contact name if available
+                    // Get contact name if available - use whatsappNumber field
+                    const formattedSenderPhone = message.from.replace(/[^0-9]/g, '');
                     const contact = await Contact.findOne({
-                      accountId,
-                      phone: message.from
+                      accountId: targetAccountId,
+                      whatsappNumber: formattedSenderPhone
                     });
                     const contactName = contact?.name || null;
                     
                     // Broadcast the new received message
-                    broadcastReceivedMessage(io, savedMessage, accountId, contactName);
+                    broadcastReceivedMessage(io, savedMessage, targetAccountId, contactName);
                     console.log('📥 Broadcasted received message via Socket.io:', {
                       messageId: savedMessage._id,
                       from: message.from,
