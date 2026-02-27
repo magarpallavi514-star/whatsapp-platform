@@ -7,6 +7,7 @@ import Contact from '../models/Contact.js';
 import Conversation from '../models/Conversation.js';
 import KeywordRule from '../models/KeywordRule.js';
 import WorkflowSession from '../models/WorkflowSession.js';
+import { broadcastMessageStatus } from './socketService.js';
 
 const GRAPH_API_URL = 'https://graph.facebook.com/v21.0';
 
@@ -626,7 +627,7 @@ class WhatsAppService {
    * @param {number} timestamp 
    * @param {object} errorInfo 
    */
-  async handleStatusUpdate(waMessageId, status, timestamp, errorInfo = {}) {
+  async handleStatusUpdate(waMessageId, status, timestamp, errorInfo = {}, io = null) {
     try {
       console.log('📊 Status update:', waMessageId, status);
       
@@ -677,6 +678,15 @@ class WhatsAppService {
 
       await message.save();
       console.log('✅ Status updated in database');
+      
+      // 🔴 BROADCAST STATUS UPDATE VIA SOCKET.IO
+      // This notifies all connected clients about the status change
+      if (io && message.conversationId) {
+        broadcastMessageStatus(io, message.conversationId, message._id, status);
+        console.log('📡 Status broadcast sent for message:', message._id);
+      } else {
+        console.log('⚠️  Socket.io not available or conversationId missing - status broadcast skipped');
+      }
       
     } catch (error) {
       console.error('❌ Error updating status:', error.message);

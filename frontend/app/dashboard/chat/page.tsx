@@ -866,6 +866,31 @@ export default function ChatPage() {
         shouldScrollRef.current = true;
       }
     };
+
+    // 🔴 Handler for message status updates (delivered, read, failed)
+    const handleMessageStatusUpdate = (data: any) => {
+      const { messageId, status, timestamp } = data;
+      
+      console.log('%c📊 MESSAGE STATUS UPDATE', 'color: #ffd700; font-weight: bold', {
+        messageId,
+        status,
+        timestamp
+      });
+      
+      // Update message status in state
+      setMessages(prev =>
+        prev.map(msg =>
+          msg._id === messageId
+            ? { 
+                ...msg, 
+                status,
+                deliveredAt: status === 'delivered' ? new Date(timestamp) : msg.deliveredAt,
+                readAt: status === 'read' ? new Date(timestamp) : msg.readAt
+              }
+            : msg
+        )
+      );
+    };
     
     // Remove old listeners to prevent duplicates
     socket.off('new_message', handleNewMessage);
@@ -874,6 +899,7 @@ export default function ChatPage() {
     socket.off('typing_indicator', handleTypingIndicator);
     socket.off('message.sent', handleMessageSent);
     socket.off('message.received', handleMessageReceived);
+    socket.off('message_status', handleMessageStatusUpdate);  // 🔴 ADD STATUS UPDATE LISTENER
     
     // Attach listeners
     socket.on('new_message', handleNewMessage);
@@ -882,6 +908,7 @@ export default function ChatPage() {
     socket.on('typing_indicator', handleTypingIndicator);
     socket.on('message.sent', handleMessageSent);
     socket.on('message.received', handleMessageReceived);
+    socket.on('message_status', handleMessageStatusUpdate);  // 🔴 ADD STATUS UPDATE LISTENER
     
     console.log('%c🎧 Socket listeners attached for conversation updates', 'color: #00d4ff; font-weight: bold');
     
@@ -893,6 +920,7 @@ export default function ChatPage() {
       socket.off('typing_indicator', handleTypingIndicator);
       socket.off('message.sent', handleMessageSent);
       socket.off('message.received', handleMessageReceived);
+      socket.off('message_status', handleMessageStatusUpdate);  // 🔴 ADD STATUS UPDATE LISTENER
       console.log('%c🎧 Socket listeners removed', 'color: #ff6b6b');
     };
   }, [selectedContact?.id]);

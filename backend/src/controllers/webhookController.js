@@ -208,12 +208,13 @@ export const handleWebhook = async (req, res) => {
                 
                 console.log('===============================================');
                 
-                // Update message status in database
+                // Update message status in database and broadcast via socket.io
                 await whatsappService.handleStatusUpdate(
                   statusUpdate.id,
                   statusUpdate.status,
                   statusUpdate.timestamp,
-                  statusUpdate.errors?.[0] || {}
+                  statusUpdate.errors?.[0] || {},
+                  io  // 🔴 PASS SOCKET.IO INSTANCE FOR BROADCAST
                 );
                 
                 console.log(`✅ Status updated in database: ${statusUpdate.status}`);
