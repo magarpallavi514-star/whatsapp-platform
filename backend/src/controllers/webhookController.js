@@ -886,6 +886,22 @@ export const handleWebhook = async (req, res) => {
                   // 🚀 NEW: Fetch phone numbers from Meta API
                   console.log('\n🚀 NOW FETCHING PHONE NUMBERS FROM META API...');
                   const accessToken = saved.metaSync?.oauthAccessToken;
+                  
+                  // ✅ CRITICAL: Verify token exists before attempting phone fetch
+                  if (!accessToken) {
+                    console.error('❌ CRITICAL: No OAuth access token found in metaSync!');
+                    console.error('   This means OAuth did NOT save the token correctly');
+                    console.error('   Check oauthController line 186 - token should be saved there');
+                    console.error('   metaSync state:', {
+                      status: saved.metaSync?.status,
+                      hasOauthAccessToken: !!saved.metaSync?.oauthAccessToken,
+                      oauthTimestamp: saved.metaSync?.oauth_timestamp,
+                      accountId: saved.metaSync?.accountId
+                    });
+                  } else {
+                    console.log('✅ Token found! Length:', accessToken.length, 'chars');
+                  }
+                  
                   const phonesFetched = await fetchAndCreatePhoneNumbers(
                     saved.wabaId,
                     saved.accountId,
