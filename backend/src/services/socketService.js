@@ -387,3 +387,86 @@ export const broadcastPhoneStatusChange = (io, accountId, phoneNumber) => {
     });
   }
 };
+
+/**
+ * Broadcast sent message to all clients in real-time
+ * Called when a message is successfully sent via Meta API
+ */
+export const broadcastSentMessage = (io, message, accountId) => {
+  if (!io) return;
+  
+  try {
+    console.log('📤 Broadcasting sent message:', {
+      accountId,
+      messageId: message._id,
+      recipientPhone: message.recipientPhone,
+      status: message.status
+    });
+    
+    const payload = {
+      _id: message._id,
+      conversationId: message.conversationId,
+      recipientPhone: message.recipientPhone,
+      messageType: message.messageType,
+      content: message.content,
+      status: message.status,
+      direction: 'outbound',
+      waMessageId: message.waMessageId,
+      sentAt: message.sentAt,
+      createdAt: message.createdAt,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Broadcast to all clients in this account
+    io.to(`user:${accountId}`).emit('message.sent', payload);
+    console.log('✅ Sent message broadcast complete');
+  } catch (error) {
+    console.error('❌ Error broadcasting sent message:', {
+      error: error.message,
+      accountId,
+      messageId: message._id
+    });
+  }
+};
+
+/**
+ * Broadcast received message to all clients in real-time
+ * Called when a message is received via webhook
+ */
+export const broadcastReceivedMessage = (io, message, accountId, contactName = null) => {
+  if (!io) return;
+  
+  try {
+    console.log('📥 Broadcasting received message:', {
+      accountId,
+      messageId: message._id,
+      senderPhone: message.senderPhone,
+      contactName
+    });
+    
+    const payload = {
+      _id: message._id,
+      conversationId: message.conversationId,
+      senderPhone: message.senderPhone,
+      senderName: contactName || 'Unknown',
+      messageType: message.messageType,
+      content: message.content,
+      status: message.status,
+      direction: 'inbound',
+      waMessageId: message.waMessageId,
+      receivedAt: message.receivedAt,
+      createdAt: message.createdAt,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Broadcast to all clients in this account
+    io.to(`user:${accountId}`).emit('message.received', payload);
+    console.log('✅ Received message broadcast complete');
+  } catch (error) {
+    console.error('❌ Error broadcasting received message:', {
+      error: error.message,
+      accountId,
+      messageId: message._id
+    });
+  }
+};

@@ -1,7 +1,7 @@
 import whatsappService from '../services/whatsappService.js';
 import Message from '../models/Message.js';
 import { uploadMediaToS3 } from '../services/s3Service.js';
-import { broadcastNewMessage, broadcastConversationUpdate, broadcastMessageStatus } from '../services/socketService.js';
+import { broadcastNewMessage, broadcastConversationUpdate, broadcastMessageStatus, broadcastSentMessage } from '../services/socketService.js';
 
 /**
  * Message Controller
@@ -84,6 +84,11 @@ export const sendTextMessage = async (req, res) => {
       message,
       { campaign: campaign || 'manual' }
     );
+    
+    // 📡 Broadcast sent message in realtime
+    if (result.message && io) {
+      broadcastSentMessage(io, result.message, accountId);
+    }
     
     res.json({
       success: true,

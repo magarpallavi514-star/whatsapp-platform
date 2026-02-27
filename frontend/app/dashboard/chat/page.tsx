@@ -804,17 +804,84 @@ export default function ChatPage() {
       }
     };
     
+    // Handler for sent messages (realtime)
+    const handleMessageSent = (data: any) => {
+      console.log('%c📤 MESSAGE SENT (realtime)', 'color: #00d4ff; font-weight: bold', {
+        messageId: data._id,
+        recipientPhone: data.recipientPhone,
+        conversationId: data.conversationId,
+        status: data.status
+      });
+      
+      // Update messages list
+      if (data.conversationId === selectedContact?.id) {
+        setMessages(prev => {
+          if (prev.some(m => m._id === data._id)) {
+            // Update existing message with new status
+            return prev.map(m => m._id === data._id ? { ...m, status: data.status } : m);
+          }
+          return [...prev, {
+            _id: data._id,
+            conversationId: data.conversationId,
+            recipientPhone: data.recipientPhone,
+            messageType: data.messageType,
+            content: data.content,
+            status: data.status,
+            direction: 'outbound',
+            createdAt: data.createdAt,
+            sentAt: data.sentAt
+          }];
+        });
+        shouldScrollRef.current = true;
+      }
+    };
+    
+    // Handler for received messages (realtime)
+    const handleMessageReceived = (data: any) => {
+      console.log('%c📥 MESSAGE RECEIVED (realtime)', 'color: #25d366; font-weight: bold', {
+        messageId: data._id,
+        senderPhone: data.senderPhone,
+        senderName: data.senderName,
+        conversationId: data.conversationId,
+        status: data.status
+      });
+      
+      // Update messages list
+      if (data.conversationId === selectedContact?.id) {
+        setMessages(prev => {
+          if (prev.some(m => m._id === data._id)) return prev;
+          return [...prev, {
+            _id: data._id,
+            conversationId: data.conversationId,
+            senderPhone: data.senderPhone,
+            senderName: data.senderName,
+            messageType: data.messageType,
+            content: data.content,
+            status: data.status,
+            direction: 'inbound',
+            createdAt: data.createdAt,
+            receivedAt: data.receivedAt
+          }];
+        });
+        shouldScrollRef.current = true;
+      }
+    };
+    
     // Remove old listeners to prevent duplicates
     socket.off('new_message', handleNewMessage);
     socket.off('conversation_update', handleConversationUpdate);
     socket.off('contact_active', handleContactActive);
     socket.off('typing_indicator', handleTypingIndicator);
+    socket.off('message.sent', handleMessageSent);
+    socket.off('message.received', handleMessageReceived);
     
     // Attach listeners
     socket.on('new_message', handleNewMessage);
     socket.on('conversation_update', handleConversationUpdate);
     socket.on('contact_active', handleContactActive);
     socket.on('typing_indicator', handleTypingIndicator);
+    socket.on('message.sent', handleMessageSent);
+    socket.on('message.received', handleMessageReceived);
     
     console.log('%c🎧 Socket listeners attached for conversation updates', 'color: #00d4ff; font-weight: bold');
     
@@ -824,6 +891,8 @@ export default function ChatPage() {
       socket.off('conversation_update', handleConversationUpdate);
       socket.off('contact_active', handleContactActive);
       socket.off('typing_indicator', handleTypingIndicator);
+      socket.off('message.sent', handleMessageSent);
+      socket.off('message.received', handleMessageReceived);
       console.log('%c🎧 Socket listeners removed', 'color: #ff6b6b');
     };
   }, [selectedContact?.id]);

@@ -6,7 +6,7 @@ import Contact from '../models/Contact.js';
 import PhoneNumber from '../models/PhoneNumber.js';
 import Account from '../models/Account.js';
 import { downloadAndUploadMedia, getMediaTypeFromMime } from '../services/s3Service.js';
-import { broadcastNewMessage, broadcastConversationUpdate } from '../services/socketService.js';
+import { broadcastNewMessage, broadcastConversationUpdate, broadcastReceivedMessage } from '../services/socketService.js';
 
 /**
  * Webhook Controller for WhatsApp Cloud API
@@ -592,6 +592,24 @@ export const handleWebhook = async (req, res) => {
                   
                   const savedMessage = await Message.create(inboxMessage);
                   console.log('✅ Saved incoming message to database:', savedMessage._id);
+                  
+                  // 📡 Broadcast received message via Socket.io for real-time updates
+                  if (io) {
+                    // Get contact name if available
+                    const contact = await Contact.findOne({
+                      accountId,
+                      phone: message.from
+                    });
+                    const contactName = contact?.name || null;
+                    
+                    // Broadcast the new received message
+                    broadcastReceivedMessage(io, savedMessage, accountId, contactName);
+                    console.log('📥 Broadcasted received message via Socket.io:', {
+                      messageId: savedMessage._id,
+                      from: message.from,
+                      contactName: contactName || 'Unknown'
+                    });
+                  }
                   
                   // Broadcast new message via Socket.io for real-time updates
                   if (io) {
