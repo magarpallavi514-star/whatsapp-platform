@@ -710,7 +710,7 @@ export const handleWebhook = async (req, res) => {
                 // Extended window to 2 hours to account for Meta delays
                 const recentOAuthAccounts = await Account.find({
                   'metaSync.accountId': { $exists: true, $ne: null },
-                  'metaSync.status': { $in: ['oauth_completed_awaiting_webhook', 'fully_synced'] },
+                  'metaSync.status': { $in: ['oauth_pending', 'oauth_completed_awaiting_webhook', 'fully_synced'] },
                   'metaSync.oauth_timestamp': { $gte: new Date(Date.now() - 120 * 60 * 1000) }  // 2 hour window
                 }).select('accountId metaSync.accountId metaSync.status type role');
                 
