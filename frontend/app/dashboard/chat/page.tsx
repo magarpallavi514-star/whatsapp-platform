@@ -111,30 +111,44 @@ export default function ChatPage() {
         return
       }
       
+      console.log('📞 Fetching conversations for phone:', idToUse);
       const response = await fetch(`${API_URL}/conversations?phoneNumberId=${idToUse}`, {
         headers: getHeaders(),
       })
       if (response.ok) {
         const data = await response.json()
+        console.log('📭 Got conversations from backend:', data.conversations?.length || 0);
         
         // Fetch saved contacts to sync names
+        console.log('👥 Fetching contacts to match names...');
         const contactsResponse = await fetch(`${API_URL}/contacts`, {
           headers: getHeaders(),
         })
         const contactsData = contactsResponse.ok ? await contactsResponse.json() : { contacts: [] }
         const contactsMap = new Map((contactsData.contacts || []).map((c: any) => [c.whatsappNumber || c.phone, c.name]))
+        console.log('📊 Contacts map created with', contactsMap.size, 'entries');
         
         // Transform API response to match frontend interface
         const transformed = (data.conversations || []).map((conv: any) => {
           // First try to get name from saved contacts by phone number
           const savedContactName = contactsMap.get(conv.userPhone)
           
+          const finalName = savedContactName || conv.userName || conv.userProfileName || 'Unknown';
+          
+          if (savedContactName) {
+            console.log(`✅ ${conv.userPhone}: Using saved name "${savedContactName}"`);
+          } else if (conv.userName) {
+            console.log(`⚠️  ${conv.userPhone}: Using conversation name "${conv.userName}"`);
+          } else {
+            console.log(`❌ ${conv.userPhone}: No name found, showing "Unknown"`);
+          }
+          
           return {
             id: conv.conversationId || conv._id,
             phone: conv.userPhone,
             phoneNumberId: conv.phoneNumberId,
             // PRIORITY: Saved contact name > Conversation name > Default
-            name: savedContactName || conv.userName || conv.userProfileName || 'Unknown',
+            name: finalName,
             lastMessage: conv.lastMessagePreview,
             lastMessageTime: conv.lastMessageAt,
             unreadCount: conv.unreadCount || 0,
@@ -153,6 +167,8 @@ export default function ChatPage() {
           return true
         })
         
+        console.log('📊 Final conversation list:', deduplicated.length, 'conversations');
+        
         // Smart update: merge backend data with local state
         setConversations(prev => {
           // Always sort by latest message time
@@ -168,9 +184,11 @@ export default function ChatPage() {
             new Date(c.lastMessageTime || 0).getTime() === new Date(prev[i].lastMessageTime || 0).getTime() &&
             (c.unreadCount || 0) === (prev[i].unreadCount || 0)
           )) {
+            console.log('✅ No changes detected - skipping re-render');
             return prev
           }
           
+          console.log('🔄 Updating conversation list');
           return merged
         })
       } else {
@@ -183,11 +201,19 @@ export default function ChatPage() {
 
   // Fetch messages for selected contact
   const fetchMessages = useCallback(async (conversationId: string) => {
-    if (!conversationId || isFetchingRef.current) return
+    if (!conversationId || isFetchingRef.current) {
+      console.log('⏭️  Skipping message fetch:', {
+        hasConversationId: !!conversationId,
+        isFetching: isFetchingRef.current
+      });
+      return;
+    }
     
     isFetchingRef.current = true
     setIsLoading(true)
     try {
+      console.log('📨 Loading messages for conversation:', conversationId);
+      
       // Load ALL messages (no hours limit) - backend loads up to 500 by default
       const response = await fetch(
         `${API_URL}/conversations/${encodeURIComponent(conversationId)}/messages?limit=500`,
@@ -195,43 +221,53 @@ export default function ChatPage() {
           headers: getHeaders(),
         }
       )
-      if (response.ok) {
-        const data = await response.json()
-        const fetchedMessages = data.messages || []
-        console.log('📨 Fetched', fetchedMessages.length, 'messages (all history)')
-        if (fetchedMessages.length > 0) {
-          console.log('🕐 First message:', new Date(fetchedMessages[0].createdAt).toLocaleString())
-          console.log('🕐 Last message:', new Date(fetchedMessages[fetchedMessages.length - 1].createdAt).toLocaleString())
+      
+      if (!response.ok) {
+        console.error('❌ Failed to fetch messages:', response.status, response.statusText);
+        setIsLoading(false);
+        isFetchingRef.current = false;
+        return;
+      }
+      
+      const data = await response.json()
+      const fetchedMessages = data.messages || []
+      console.log('📨 Fetched', fetchedMessages.length, 'messages (all history)')
+      if (fetchedMessages.length > 0) {
+        console.log('🕐 First message:', new Date(fetchedMessages[0].createdAt).toLocaleString())
+        console.log('🕐 Last message:', new Date(fetchedMessages[fetchedMessages.length - 1].createdAt).toLocaleString())
+      } else {
+        console.log('⚠️  No messages found for this conversation');
+      }
+        
+      // Smart merge: preserve any messages we created locally (with correct timestamps)
+      setMessages(prev => {
+        // If this is initial load (no previous messages), just use fetched
+        if (prev.length === 0) {
+          console.log('✅ Initial load - showing', fetchedMessages.length, 'messages');
+          return fetchedMessages
         }
         
-        // Smart merge: preserve any messages we created locally (with correct timestamps)
-        setMessages(prev => {
-          // If this is initial load (no previous messages), just use fetched
-          if (prev.length === 0) {
-            return fetchedMessages
+        // Create map of existing messages to preserve their data
+        const existingMap = new Map(prev.map(msg => [msg._id, msg]))
+        
+        // Merge: use existing message data if available, otherwise use fetched
+        const merged = fetchedMessages.map((fetchedMsg: Message) => {
+          const existing = existingMap.get(fetchedMsg._id)
+          if (existing) {
+            // Keep the existing message (preserves our frontend timestamp)
+            return existing
           }
-          
-          // Create map of existing messages to preserve their data
-          const existingMap = new Map(prev.map(msg => [msg._id, msg]))
-          
-          // Merge: use existing message data if available, otherwise use fetched
-          return fetchedMessages.map((fetchedMsg: Message) => {
-            const existing = existingMap.get(fetchedMsg._id)
-            if (existing) {
-              // Keep the existing message (preserves our frontend timestamp)
-              return existing
-            }
-            // New message from backend
-            return fetchedMsg
-          })
+          // New message from backend
+          return fetchedMsg
         })
         
-        shouldScrollRef.current = true // Enable scroll for new chat load
-        // Mark conversation as read
-        markAsRead(conversationId)
-      } else {
-        console.error("Failed to fetch messages:", response.status)
-      }
+        console.log('✅ Merged', merged.length, 'total messages');
+        return merged;
+      })
+      
+      shouldScrollRef.current = true // Enable scroll for new chat load
+      // Mark conversation as read
+      markAsRead(conversationId)
     } catch (error) {
       console.error("Error fetching messages:", error)
     } finally {
@@ -303,15 +339,26 @@ export default function ChatPage() {
 
   // Send message
   const sendMessage = useCallback(async () => {
-    if (!newMessage.trim() || !selectedContact || isSending) return
+    console.log('🎯 Send button clicked:', {
+      hasMessage: !!newMessage.trim(),
+      hasContact: !!selectedContact,
+      isSending
+    });
+    
+    if (!newMessage.trim() || !selectedContact || isSending) {
+      console.log('⏭️  Skipping send - invalid state');
+      return
+    }
 
     // Validate required data
     if (!selectedContact.phoneNumberId) {
+      console.error('❌ Missing phoneNumberId:', selectedContact);
       alert('⚠️ Phone number ID not found. Try refreshing the conversation list.');
       return
     }
     
     if (!selectedContact.phone) {
+      console.error('❌ Missing phone:', selectedContact);
       alert('⚠️ Recipient phone number not found.');
       return
     }
@@ -324,7 +371,7 @@ export default function ChatPage() {
       message: newMessage.trim(),
     }
     
-    console.log('📤 Sending message with payload:', payload)
+    console.log('📤 SENDING MESSAGE:', payload);
     
     try {
       const response = await fetch(`${API_URL}/messages/send`, {
@@ -333,13 +380,15 @@ export default function ChatPage() {
         body: JSON.stringify(payload),
       })
 
+      console.log('📡 Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ Message sent:', data)
+        console.log('✅ MESSAGE SENT SUCCESSFULLY:', data)
         
         // Add the sent message to the local state immediately (optimistic update)
         const currentTime = new Date().toISOString()
-        console.log('📅 Creating message with timestamp:', currentTime, '→', new Date(currentTime).toLocaleTimeString())
+        console.log('📅 Message timestamp:', currentTime)
         
         const newMsg: Message = {
           _id: data.data?.messageId || Date.now().toString(),
@@ -351,6 +400,8 @@ export default function ChatPage() {
         }
         
         setMessages(prev => [...prev, newMsg])
+        console.log('✅ Message added to local state');
+        
         setNewMessage("")
         shouldScrollRef.current = true // Enable scroll when sending
         
@@ -362,6 +413,33 @@ export default function ChatPage() {
                   ...conv, 
                   lastMessage: newMessage.trim().substring(0, 50), 
                   lastMessageTime: new Date().toISOString() 
+                }
+              : conv
+          )
+          // Sort: move the updated conversation to position 0
+          return updated.sort((a, b) => {
+            if (a.id === selectedContact.id) return -1
+            if (b.id === selectedContact.id) return 1
+            return new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime()
+          })
+        })
+      } else {
+        const error = await response.json()
+        console.error('❌ SEND FAILED:', {
+          status: response.status,
+          error,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+        const errorMsg = error.message || error.error || "Unknown error"
+        alert(`Failed to send: ${errorMsg} (${response.status})`)
+      }
+    } catch (error) {
+      console.error("❌ SEND ERROR:", error)
+      alert("Failed to send message. Check console for details.")
+    } finally {
+      setIsSending(false)
+    }
+  }, [newMessage, selectedContact, isSending, API_URL])
                 }
               : conv
           )
@@ -639,33 +717,62 @@ export default function ChatPage() {
     
     // Handler for conversation updates
     const handleConversationUpdate = (data: any) => {
-      const { conversation } = data;
-      console.log('📭 Conversation updated:', conversation);
+      // ✅ CRITICAL FIX: Data comes enriched from backend (not wrapped in {conversation: ...})
+      const conversation = data.conversation || data;
+      
+      console.log('📭 REALTIME CONVERSATION UPDATE:', {
+        phone: conversation.userPhone,
+        name: conversation.userName,
+        lastMsg: conversation.lastMessagePreview?.substring(0, 30),
+        unreadCount: conversation.unreadCount
+      });
       
       setConversations(prev => {
-        // Check if conversation exists in list
-        const exists = prev.some(c => c.id === conversation.conversationId);
+        // Check if conversation exists in list by ID or phone
+        const existingIndex = prev.findIndex(c => 
+          c.id === conversation._id || 
+          c.id === conversation.conversationId || 
+          c.phone === conversation.userPhone
+        );
         
-        let updated = prev.map(c => c.id === conversation.conversationId ? {
-          ...c,
-          lastMessage: conversation.lastMessagePreview,
-          lastMessageTime: conversation.lastMessageAt,
-          unreadCount: conversation.unreadCount || 0
-        } : c);
+        let updated = [...prev];
         
-        // If conversation doesn't exist, add it (new conversation from incoming message)
-        if (!exists) {
-          console.log('✨ Adding new conversation to list');
-          updated = [{
-            id: conversation.conversationId,
+        if (existingIndex >= 0) {
+          // ✅ UPDATE EXISTING: Preserve all data and merge socket update
+          // If new name is "Unknown" but we have a saved name, keep the saved one
+          const finalName = (conversation.userName && conversation.userName !== 'Unknown') 
+            ? conversation.userName 
+            : conversation.userProfileName || updated[existingIndex].name || 'Unknown';
+          
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            id: conversation._id || conversation.conversationId || updated[existingIndex].id,
+            name: finalName,
+            phone: conversation.userPhone || updated[existingIndex].phone,
+            phoneNumberId: conversation.phoneNumberId || updated[existingIndex].phoneNumberId,
+            lastMessage: conversation.lastMessagePreview || updated[existingIndex].lastMessage,
+            lastMessageTime: conversation.lastMessageAt || updated[existingIndex].lastMessageTime,
+            unreadCount: conversation.unreadCount ?? updated[existingIndex].unreadCount ?? 0,
+            profilePic: conversation.userProfilePic || updated[existingIndex].profilePic
+          };
+          console.log('✅ Updated:', updated[existingIndex].name);
+        } else {
+          // ✅ ADD NEW: First time seeing this conversation
+          const finalName = (conversation.userName && conversation.userName !== 'Unknown')
+            ? conversation.userName
+            : conversation.userProfileName || 'Unknown';
+          
+          console.log('✨ NEW conversation added:', finalName);
+          updated.unshift({
+            id: conversation._id || conversation.conversationId,
             phone: conversation.userPhone,
             phoneNumberId: conversation.phoneNumberId,
-            name: conversation.userName || 'Unknown',
-            lastMessage: conversation.lastMessagePreview,
+            name: finalName,
+            lastMessage: conversation.lastMessagePreview || '(New message)',
             lastMessageTime: conversation.lastMessageAt,
             unreadCount: conversation.unreadCount || 1,
             profilePic: conversation.userProfilePic
-          }, ...updated];
+          });
         }
         
         // Always sort by most recent first

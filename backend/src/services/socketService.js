@@ -223,6 +223,7 @@ export const broadcastNewMessage = (io, conversationId, message) => {
 
 /**
  * ✅ CRITICAL FIX: Broadcast conversation update with error handling
+ * NOW INCLUDES: Contact name, phone number, and all display data
  */
 export const broadcastConversationUpdate = (io, accountId, conversation) => {
   // ✅ CRITICAL: Validate io instance exists
@@ -232,25 +233,56 @@ export const broadcastConversationUpdate = (io, accountId, conversation) => {
   }
   
   try {
-    const payload = {
-      conversation,
+    // ✅ CRITICAL: Enrich conversation data for UI rendering
+    const enrichedConversation = {
+      _id: conversation._id,
+      conversationId: conversation.conversationId,
+      userPhone: conversation.userPhone,
+      phoneNumberId: conversation.phoneNumberId,
+      accountId: conversation.accountId,
+      workspaceId: conversation.workspaceId,
+      
+      // ✅ DISPLAY DATA FOR UI (Contact names, message preview, etc)
+      userName: conversation.userName || 'Unknown',
+      userProfileName: conversation.userProfileName || 'Unknown',
+      userProfilePic: conversation.userProfilePic || null,
+      
+      // ✅ MESSAGE PREVIEW & METADATA
+      lastMessagePreview: conversation.lastMessagePreview || '(No messages)',
+      lastMessageType: conversation.lastMessageType || 'text',
+      lastMessageAt: conversation.lastMessageAt,
+      
+      // ✅ CONVERSATION STATE
+      unreadCount: conversation.unreadCount || 0,
+      status: conversation.status || 'open',
+      startedAt: conversation.startedAt,
+      
+      // ✅ TIMESTAMPS
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
       timestamp: new Date().toISOString(),
     };
     
-    console.log('📡 Broadcasting conversation update:', {
-      room: `user:${accountId}`,
-      conversationId: conversation._id
+    const room = `user:${accountId}`;
+    console.log('📡 BROADCASTING CONVERSATION UPDATE (REALTIME):', {
+      room: room,
+      conversationId: conversation._id,
+      userPhone: conversation.userPhone,
+      userName: conversation.userName || 'Unknown',
+      lastMessagePreview: conversation.lastMessagePreview?.substring(0, 30),
+      unreadCount: conversation.unreadCount,
+      timestamp: new Date().toISOString()
     });
     
     // ✅ Emit with acknowledgment callback
-    io.to(`user:${accountId}`).emit('conversation_update', payload, (err) => {
+    io.to(room).emit('conversation_update', enrichedConversation, (err) => {
       if (err) {
         console.error('❌ Broadcast conversation_update failed:', {
-          room: `user:${accountId}`,
+          room: room,
           error: err.message
         });
       } else {
-        console.log('✅ Broadcast conversation_update successful');
+        console.log('✅ Broadcast conversation_update successful to', room);
       }
     });
   } catch (error) {
