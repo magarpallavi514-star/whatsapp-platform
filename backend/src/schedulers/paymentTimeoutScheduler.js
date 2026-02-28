@@ -13,19 +13,12 @@ export const startPaymentTimeoutScheduler = () => {
   try {
     // Schedule job to run every 15 minutes (at 0, 15, 30, 45 minute marks)
     scheduledJob = cron.schedule('*/15 * * * *', async () => {
-      console.log('📅 [SCHEDULER] Running payment timeout check...');
       try {
-        const result = await checkPaymentTimeouts();
-        console.log('📅 [SCHEDULER] Payment timeout check completed:', {
-          processed: result.processed,
-          errors: result.errors?.length || 0
-        });
+        await checkPaymentTimeouts();
       } catch (error) {
-        console.error('📅 [SCHEDULER] Error running payment timeout check:', error.message);
+        console.error('❌ Payment timeout check error:', error.message);
       }
     });
-
-    console.log('✅ Payment timeout scheduler started (every 15 minutes)');
     return scheduledJob;
   } catch (error) {
     console.error('❌ Failed to start payment timeout scheduler:', error.message);

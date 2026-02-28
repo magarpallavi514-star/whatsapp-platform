@@ -161,8 +161,6 @@ export const createChatbot = async (req, res) => {
       });
     }
     
-    console.log('📥 Creating chatbot with data:', { name, replyType, keywords });
-    
     // Create rule
     const rule = await KeywordRule.create({
       accountId,
@@ -176,14 +174,12 @@ export const createChatbot = async (req, res) => {
       isActive: true
     });
     
-    console.log('✅ Created chatbot:', rule.name, 'ID:', rule._id);
-    
     res.status(201).json({
       message: 'Chatbot created successfully',
       bot: rule
     });
   } catch (error) {
-    console.error('❌ Create chatbot error:', error);
+    console.error('Error creating chatbot:', error);
     res.status(500).json({ 
       error: 'Failed to create chatbot',
       message: error.message 

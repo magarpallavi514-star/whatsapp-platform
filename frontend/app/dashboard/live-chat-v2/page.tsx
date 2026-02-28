@@ -120,7 +120,6 @@ export default function LiveChatV2() {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Fetched phone numbers:', data);
         setPhoneNumbers(data.phoneNumbers || data || []);
         
         // Auto-select first active phone
@@ -128,20 +127,18 @@ export default function LiveChatV2() {
         const activePhone = phones.find((p: PhoneNumber) => p.isActive);
         if (activePhone) {
           setSelectedPhoneId(activePhone.phoneNumberId);
-          console.log('📱 Auto-selected phone:', activePhone.phoneNumberId);
         }
       } else {
-        console.error('❌ Failed to fetch phones:', response.status, response.statusText);
+        console.error('Failed to fetch phones:', response.status);
       }
     } catch (error) {
-      console.error('❌ Error fetching phone numbers:', error);
+      console.error('Error fetching phone numbers:', error);
     }
   }, []);
 
   // 🔴 FETCH CONVERSATIONS WITH PHONE ID
   const fetchConversations = useCallback(async () => {
     if (!selectedPhoneId) {
-      console.warn('⚠️ No phone selected');
       return;
     }
     
@@ -152,14 +149,10 @@ export default function LiveChatV2() {
       const headers = getHeaders();
       headers['x-phone-number-id'] = selectedPhoneId;
       
-      console.log('🔍 Fetching conversations for phone:', selectedPhoneId);
-      
       const response = await fetch(url.toString(), { headers });
       
       if (!response.ok) {
-        console.error('❌ API Error:', response.status, response.statusText);
-        const errorData = await response.json();
-        console.error('Error details:', errorData);
+        console.error('API Error:', response.status, response.statusText);
         setConversations([]);
         return;
       }
@@ -167,10 +160,8 @@ export default function LiveChatV2() {
       const data = await response.json();
       
       if (data.success && data.conversations) {
-        console.log('✅ Fetched conversations:', data.conversations.length);
         setConversations(data.conversations);
       } else {
-        console.warn('⚠️ No conversations found or error:', data);
         setConversations([]);
       }
     } catch (error) {
@@ -349,7 +340,9 @@ export default function LiveChatV2() {
     
     setSocket(newSocket);
     
-    return () => newSocket.disconnect();
+    return () => {
+      newSocket.disconnect();
+    };
   }, []);
 
   // 🔴 FETCH CONVERSATIONS WHEN PHONE CHANGES

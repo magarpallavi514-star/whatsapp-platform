@@ -3,7 +3,8 @@ import mongoose from 'mongoose';
 const broadcastSchema = new mongoose.Schema(
   {
     accountId: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Account',
       required: true,
       index: true
     },

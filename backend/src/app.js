@@ -9,6 +9,7 @@ import { authenticate } from './middlewares/auth.js';
 import { requireJWT } from './middlewares/jwtAuth.js';
 import requireSubscription from './middlewares/requireSubscription.js';
 import { subdomainDetectionMiddleware } from './middlewares/subdomainDetection.js';
+import { validateWebhookSignature } from './middlewares/webhookSignatureValidator.js';
 
 // Import routes
 import webhookRoutes from './routes/webhookRoutes.js';
@@ -39,6 +40,7 @@ import demoRoutes from './routes/demoRoutes.js';
 import oauthRoutes from './routes/oauthRoutes.js';
 import crmRoutes from './routes/crmRoutes.js';
 import discountRoutes from './routes/discountRoutes.js';
+import externalApiRoutes from './routes/externalApiRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -93,6 +95,14 @@ app.use(cors({
 // Increase limit to 100MB for media uploads
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+
+// Capture raw body for webhook signature validation (AFTER json parsing)
+app.use((req, res, next) => {
+  if (req.is('application/json')) {
+    req.rawBody = JSON.stringify(req.body);
+  }
+  next();
+});
 
 // Subdomain detection middleware (RUNS FIRST - extracts workspace context from URL)
 app.use(subdomainDetectionMiddleware);
@@ -183,14 +193,44 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// Mount webhook routes (NO AUTH - verified by token)
-app.use('/api/webhooks', webhookRoutes);
+// Mount webhook routes (NO AUTH - verified by token + HMAC signature validation)
+app.use('/api/webhooks', validateWebhookSignature, webhookRoutes);
+
+// ============================================
+// AUTH STRATEGY FOR ALL ROUTES (STEP 5 COMPLETE):
+// ============================================
+// 1. /api/webhooks/* 
+//    - X-Hub-Signature-256 validation (HMAC from Meta)
+//    - No user auth needed
+//    - For incoming webhooks from WhatsApp
+//
+// 2. /api/auth/* & /api/demo/*
+//    - NO AUTH (public endpoints)
+//    - Login, logout, demo booking
+//
+// 3. /api/external/* (Integration API - API Key only)
+//    - Requires: wpi_live_<key> in Authorization header OR X-API-Key header
+//    - For third-party integrations and external clients
+//    - Uses requireApiKey middleware
+//    - NEVER use JWT for external APIs
+//
+// 4. /api/* (Dashboard routes - JWT only)
+//    - Requires: Bearer token in Authorization header
+//    - For dashboard users, admin, superadmin
+//    - Authenticated users only
+//    - Uses requireJWT middleware
+//
+// RULE: Each route type uses ONE auth method. No mixing!
+// ============================================
 
 // Mount auth routes (NO AUTH - public login/logout)
 app.use('/api/auth', authRoutes);
 
 // Mount demo routes (PUBLIC - anyone can book a demo)
 app.use('/api/demo', demoRoutes);
+
+// Mount external API routes (API KEY AUTH only - for third-party integrations)
+app.use('/api/external', externalApiRoutes);
 
 // Mount settings routes (JWT AUTH only - users need to configure phones even without subscription)
 app.use('/api/settings', requireJWT, settingsRoutes);
@@ -247,6 +287,16 @@ app.use('/api/jobs', requireJWT, jobRoutes);
 
 // Mount integration routes (JWT AUTH for OAuth integrations, INTEGRATION TOKEN AUTH for third-party apps)
 app.use('/api/integrations', requireJWT, oauthRoutes);
+
+// Mount external API routes - THIRD-PARTY INTEGRATIONS (API KEY AUTH ONLY)
+// Routes at /api/external/* are for external applications using API keys
+app.use('/api/external/conversations', integrationsRoutes);
+app.use('/api/external/messages', integrationsRoutes);
+app.use('/api/external/templates', integrationsRoutes);
+app.use('/api/external/contacts', integrationsRoutes);
+app.use('/api/external/broadcasts', integrationsRoutes);
+
+// Legacy integration routes (kept for backwards compatibility, same as /api/external/*)
 app.use('/api/integrations', integrationsRoutes);
 
 // Leads management (with JWT and subscription)

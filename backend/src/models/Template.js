@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 
 const templateSchema = new mongoose.Schema({
-  // Multi-tenant isolation - Use String accountId
+  // Multi-tenant isolation - Reference Account._id (ObjectId)
   accountId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Account',
     required: true,
     index: true
   },
