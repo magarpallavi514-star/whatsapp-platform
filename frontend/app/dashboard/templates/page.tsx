@@ -68,14 +68,9 @@ export default function TemplatesPage() {
     try {
       setIsLoading(true)
       const token = authService.getToken()
-      console.log("Token available:", !!token, "Token:", token ? token.substring(0, 20) + "..." : "none")
-      console.log("Auth status:", authService.isAuthenticated())
-      console.log("API URL:", API_URL)
       const headers = getHeaders()
-      console.log("Headers being sent:", headers)
       
       if (!token) {
-        console.error("No token found - user not authenticated")
         setIsLoading(false)
         return
       }
@@ -85,10 +80,6 @@ export default function TemplatesPage() {
       })
       if (response.ok) {
         const data = await response.json()
-        console.log("Templates response:", data)
-        console.log("Type of data:", typeof data)
-        console.log("Is array?", Array.isArray(data))
-        console.log("Has templates property?", 'templates' in data)
         
         // Handle both array and object responses
         let templatesArray = []
@@ -98,7 +89,6 @@ export default function TemplatesPage() {
           templatesArray = data.templates
         }
         
-        console.log("Setting templates:", templatesArray.length, "items")
         setTemplates(templatesArray)
         setStats(data.stats || { approved: 0, pending: 0, rejected: 0, draft: 0, total: 0 })
       } else {

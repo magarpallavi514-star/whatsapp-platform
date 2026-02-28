@@ -92,6 +92,11 @@ const conversationSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Compound indexes for efficient queries
+conversationSchema.index({ accountId: 1, phoneNumberId: 1 });
+conversationSchema.index({ accountId: 1, lastMessageAt: -1 });
+conversationSchema.index({ accountId: 1, status: 1 });
+
 // Note: conversationId already has index: true and unique: true in schema
 
 // Static method to get conversations with preview

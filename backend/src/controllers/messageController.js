@@ -108,6 +108,7 @@ export const sendTextMessage = async (req, res) => {
     });
     res.status(500).json({
       success: false,
+      code: 'MESSAGE_SEND_ERROR',
       message: error.message || 'Failed to send message',
       error: error.message,
       errorType: error.name
@@ -158,7 +159,8 @@ export const sendTemplateMessage = async (req, res) => {
     console.error('❌ Send template message error:', error);
     res.status(500).json({
       success: false,
-      message: error.message
+      code: 'TEMPLATE_MESSAGE_ERROR',
+      message: error.message || 'Failed to send template message'
     });
   }
 };
@@ -198,6 +200,7 @@ export const getMessages = async (req, res) => {
     console.error('❌ Get messages error:', error);
     res.status(500).json({
       success: false,
+      code: 'MESSAGES_FETCH_ERROR',
       message: error.message
     });
   }
@@ -228,6 +231,7 @@ export const getMessage = async (req, res) => {
     console.error('❌ Get message error:', error);
     res.status(500).json({
       success: false,
+      code: 'MESSAGE_FETCH_ERROR',
       message: error.message
     });
   }

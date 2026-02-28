@@ -42,6 +42,7 @@ export const routeAccess = {
   
   // Chat/Live Chat - Allow USER role for clients
   '/dashboard/chat': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
+  '/dashboard/live-chat-v2': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER],
   
   // Campaigns - Allow USER role for clients
   '/dashboard/campaigns': [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.USER],
@@ -103,6 +104,12 @@ export const getSidebarItems = (role: UserRole) => {
       href: '/dashboard/messages',
       icon: 'MessageSquare',
       roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT]
+    },
+    {
+      label: 'Live Chat V2 (New)',
+      href: '/dashboard/live-chat-v2',
+      icon: 'MessageSquare',
+      roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MANAGER, UserRole.AGENT, UserRole.USER]
     },
     {
       label: 'Contacts',

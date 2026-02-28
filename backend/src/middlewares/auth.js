@@ -1,8 +1,12 @@
 import Account from '../models/Account.js';
 
 /**
- * API Key Authentication Middleware
- * Validates API key and injects accountId into request
+ * API Key Authentication Middleware (External Integrations)
+ * ✅ AUTH TYPE: API Key (wpk_live_xxx)
+ * ❌ NOT for: Dashboard, JWT tokens, internal requests
+ * 
+ * Used by: /api/external/* routes for third-party integrations
+ * Validates API key format and looks up account by key
  */
 
 export const authenticate = async (req, res, next) => {

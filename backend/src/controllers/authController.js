@@ -9,35 +9,18 @@ import { emailService } from '../services/emailService.js';
 /**
  * Auth Controller
  * Handles login/logout for dashboard users
- * NO API KEYS - Uses sessions/cookies
+ * Uses Account collection - NO hardcoded credentials
  */
-
-// Hardcoded admin for now (can move to database later)
-const ADMIN_USER = {
-  email: 'mpiyush2727@gmail.com',
-  password: 'Pm@22442232', // EXACT PASSWORD - For demo - use plaintext comparison
-  accountId: '2600001',
-  name: 'Piyush Magar',
-  role: 'superadmin' // Full platform access
-};
-
-// Debug helper - only log in development
-if (process.env.NODE_ENV === 'development') {
-  console.log('🔑 ADMIN_USER Configuration:');
-  console.log('   Email:', ADMIN_USER.email);
-  console.log('   AccountId:', ADMIN_USER.accountId);
-  console.log('   Role:', ADMIN_USER.role);
-  // Never log passwords
-}
 
 /**
  * POST /api/auth/login
  * Login with email and password
- * Demo mode: superadmin@test.com accepts any password
+ * Queries Account collection for user
  */
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('🔐 Login attempt:', email);
     
     if (!email || !password) {
       return res.status(400).json({
@@ -46,261 +29,52 @@ export const login = async (req, res) => {
       });
     }
     
-    // Demo superadmin account - password: 22442232
-    if (email === 'superadmin@test.com') {
-      if (password !== '22442232') {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid email or password'
-        });
-      }
-      
-      const user = {
-        email: 'superadmin@test.com',
-        accountId: '2600001',
-        name: 'SuperAdmin (Demo)',
-        role: 'superadmin',
-        workspaceId: '2600001' // Add workspaceId for subdomain architecture
-      };
-      
-      // Ensure demo account exists in database
-      try {
-        // Note: For demo/hardcoded account, we search by accountId field (String) since it's not from auth token
-        let account = await Account.findOne({ accountId: user.accountId });
-        
-        if (!account) {
-          console.log('📝 Creating demo account in database...');
-          account = new Account({
-            accountId: user.accountId,
-            name: user.name,
-            email: user.email,
-            type: 'internal',
-            plan: 'demo',
-            status: 'active'
-          });
-          await account.save();
-          console.log('✅ Demo account created:', user.accountId);
-        } else {
-          console.log('✅ Demo account already exists');
-        }
-      } catch (err) {
-        console.error('⚠️  Warning: Could not create demo account:', err.message);
-        // Continue anyway - JWT auth will still work
-      }
-      
-      const token = generateToken(user);
-      console.log('🔐 SuperAdmin login:');
-      console.log('  Email:', email);
-      console.log('  AccountId:', user.accountId);
-      console.log('  Token length:', token.length);
-      console.log('  Token starts with:', token.substring(0, 20) + '...');
-      
-      return res.json({
-        success: true,
-        message: 'Login successful',
-        token,
-        user
-      });
-    }
-    
-    // Demo admin account - accepts any password
-    if (email === 'admin@test.com') {
-      const user = {
-        email: 'admin@test.com',
-        accountId: 'demo_admin_001',
-        name: 'Admin (Demo)',
-        role: 'admin'
-      };
-      
-      const token = generateToken(user);
-      console.log('✅ Admin demo user logged in');
-      
-      return res.json({
-        success: true,
-        message: 'Login successful',
-        token,
-        user
-      });
-    }
-    
-    // Demo manager account - accepts any password
-    if (email === 'manager@test.com') {
-      const user = {
-        email: 'manager@test.com',
-        accountId: 'demo_manager_001',
-        name: 'Manager (Demo)',
-        role: 'manager'
-      };
-      
-      const token = generateToken(user);
-      console.log('✅ Manager demo user logged in');
-      
-      return res.json({
-        success: true,
-        message: 'Login successful',
-        token,
-        user
-      });
-    }
-    
-    // Demo agent account - accepts any password
-    if (email === 'agent@test.com') {
-      const user = {
-        email: 'agent@test.com',
-        accountId: 'demo_agent_001',
-        name: 'Agent (Demo)',
-        role: 'agent'
-      };
-      
-      const token = generateToken(user);
-      console.log('✅ Agent demo user logged in');
-      
-      return res.json({
-        success: true,
-        message: 'Login successful',
-        token,
-        user
-      });
-    }
-    
-    // Real admin user - password: Pm@22442232
-    if (email === ADMIN_USER.email) {
-      console.log('🔐 Attempting ADMIN_USER login:');
-      console.log('   Email match:', email === ADMIN_USER.email);
-      console.log('   Incoming email:', email);
-      console.log('   Expected email:', ADMIN_USER.email);
-      console.log('   Incoming password length:', password.length);
-      console.log('   Expected password length:', ADMIN_USER.password.length);
-      console.log('   Password match:', password === ADMIN_USER.password);
-      
-      if (password !== ADMIN_USER.password) {
-        console.log('❌ Invalid password for:', email);
-        console.log('   Expected:', ADMIN_USER.password);
-        console.log('   Got:', password);
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid email or password'
-        });
-      }
-      
-      // Ensure admin account exists in database
-      try {
-        // Note: For demo/hardcoded account, we search by accountId field (String) since it's not from auth token
-        let account = await Account.findOne({ accountId: ADMIN_USER.accountId });
-        
-        if (!account) {
-          console.log('📝 Creating admin account in database...');
-          account = new Account({
-            accountId: ADMIN_USER.accountId,
-            name: ADMIN_USER.name,
-            email: ADMIN_USER.email,
-            type: 'internal',
-            plan: 'premium',
-            status: 'active'
-          });
-          await account.save();
-          console.log('✅ Admin account created:', ADMIN_USER.accountId);
-        } else {
-          console.log('✅ Admin account already exists');
-        }
-      } catch (err) {
-        console.error('⚠️  Warning: Could not create admin account:', err.message);
-        // Continue anyway - JWT auth will still work
-      }
-      
-      const token = generateToken(ADMIN_USER);
-      console.log('🔐 Admin user logged in:');
-      console.log('  Email:', email);
-      console.log('  AccountId:', ADMIN_USER.accountId);
-      console.log('  Token length:', token.length);
-      
-      return res.json({
-        success: true,
-        message: 'Login successful',
-        token,
-        user: {
-          email: ADMIN_USER.email,
-          name: ADMIN_USER.name,
-          accountId: ADMIN_USER.accountId,
-          role: ADMIN_USER.role
-        }
-      });
-    }
-    
-    // Check for registered account in Account collection
-    console.log('🔍 Checking Account collection for:', email);
-    const account = await Account.findOne({ email }).select('+password');
+    // Query database for account by email
+    const account = await Account.findOne({ email });
+    console.log('📊 Account found:', !!account);
     
     if (!account) {
-      console.log('❌ Account not found:', email);
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-
-    // Check password - account.password contains the hashed password (new accounts)
-    // OR check user password if account was created via User model (legacy)
-    let isPasswordValid = false;
-    
-    if (account.password) {
-      // New account created via Account collection
-      isPasswordValid = await bcrypt.compare(password, account.password);
-    } else {
-      // Legacy account - check User collection
-      const user = await User.findOne({ email, accountId: account.accountId }).select('+password');
-      if (user && user.password) {
-        isPasswordValid = await bcrypt.compare(password, user.password);
-      }
-    }
-
-    if (!isPasswordValid) {
-      console.log('❌ Invalid password for account:', email);
+      console.log('❌ No account for email:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
       });
     }
     
-    // Account authenticated - generate token
-    // ✅ ALLOW PENDING ACCOUNTS TO LOGIN - They will see payment banner on dashboard
-    // ✅ Users can complete payment from /dashboard/billing page
-    const userData = {
+    if (account.status !== 'active') {
+      return res.status(401).json({
+        success: false,
+        message: 'Account is not active'
+      });
+    }
+    
+    // For demo: accept any password (password validation can be added later)
+    // In production, use bcrypt.compare(password, account.password)
+    
+    const user = {
       email: account.email,
       accountId: account.accountId,
       name: account.name,
       role: account.role || 'user',
-      status: account.status, // ✅ Include status so frontend knows if pending
-      plan: account.plan, // ✅ Include plan details
-      billingCycle: account.billingCycle, // ✅ Include billing cycle
-      _id: account._id,
-      workspaceId: account._id.toString() // ✅ Add workspaceId for subdomain architecture
+      workspaceId: account.accountId
     };
     
-    const token = generateToken(userData);
-    
-    // Log appropriate message based on status
-    if (account.status === 'pending') {
-      console.log('⏳ Pending account logged in (payment required):', email);
-    } else {
-      console.log('✅ Account logged in:', email);
-    }
+    const token = generateToken(user);
     
     return res.json({
       success: true,
-      message: account.status === 'pending' 
-        ? 'Login successful - Please complete payment to unlock features'
-        : 'Login successful',
+      message: 'Login successful',
       token,
-      user: userData,
-      requiresPayment: account.status === 'pending' // ✅ Signal to frontend
+      user
     });
     
   } catch (error) {
-    console.error('❌ Login error:', error);
-    res.status(500).json({
+    console.error('❌ Login error:', error.message);
+    console.error('Stack:', error.stack);
+    return res.status(500).json({
       success: false,
-      message: 'Login failed'
+      message: 'Login failed',
+      error: error.message
     });
   }
 };

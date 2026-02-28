@@ -31,6 +31,7 @@ import { API_URL } from "@/lib/config/api"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 
+// Landing page - WhatsApp Platform
 export default function LandingPage() {
   const router = useRouter()
   const [pricingPlans, setPricingPlans] = useState<any[]>([])

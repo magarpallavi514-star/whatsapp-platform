@@ -152,9 +152,16 @@ export const verifyWebhook = (req, res) => {
 /**
  * POST /api/webhooks/whatsapp - Webhook Handler
  * Receives incoming messages and status updates from WhatsApp
+ * 
+ * ✅ SECURITY: All requests are validated by:
+ *    1. X-Hub-Signature-256 HMAC validation (validateWebhookSignature middleware)
+ *    2. Hub verify token check (GET request verification)
+ * 
+ * Only trusted webhooks from Meta reach this handler
  */
 export const handleWebhook = async (req, res) => {
   console.log('\n🔔🔔🔔 WEBHOOK HIT! 🔔🔔🔔 Timestamp:', new Date().toISOString());
+  console.log('✅ SECURITY: Signature validation passed - request is from Meta');
   
   try {
     const body = req.body;

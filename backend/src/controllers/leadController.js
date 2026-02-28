@@ -10,7 +10,7 @@ import leadService from '../services/leadService.js';
  */
 export const getLeads = async (req, res) => {
   try {
-    const accountId = req.account.accountId; // String: "eno_2600003"
+    const accountId = req.account._id; // ObjectId (single source of truth)
     
     // Get filters from query params
     const filters = {
@@ -38,6 +38,7 @@ export const getLeads = async (req, res) => {
     console.error('❌ Get leads error:', error.message);
     res.status(500).json({
       success: false,
+      code: 'LEADS_FETCH_ERROR',
       message: 'Failed to fetch leads',
       error: error.message
     });
@@ -49,7 +50,7 @@ export const getLeads = async (req, res) => {
  */
 export const getLead = async (req, res) => {
   try {
-    const accountId = req.account.accountId; // String: "eno_2600003"
+    const accountId = req.account._id; // ObjectId (single source of truth)
     const { id } = req.params;
 
     const lead = await Lead.findOne({
@@ -75,6 +76,7 @@ export const getLead = async (req, res) => {
     console.error('❌ Get lead error:', error.message);
     res.status(500).json({
       success: false,
+      code: 'LEAD_FETCH_ERROR',
       message: 'Failed to fetch lead',
       error: error.message
     });
@@ -86,7 +88,7 @@ export const getLead = async (req, res) => {
  */
 export const createLead = async (req, res) => {
   try {
-    const accountId = req.account.accountId; // String: "eno_2600003"
+    const accountId = req.account._id; // ObjectId (single source of truth)
     const { conversationId, contactId, phoneNumberId, intent, name, email, phone, company } = req.body;
 
     if (!conversationId || !contactId || !phoneNumberId) {
@@ -142,6 +144,7 @@ export const createLead = async (req, res) => {
     console.error('❌ Create lead error:', error.message);
     res.status(500).json({
       success: false,
+      code: 'LEAD_CREATE_ERROR',
       message: 'Failed to create lead',
       error: error.message
     });
@@ -153,7 +156,7 @@ export const createLead = async (req, res) => {
  */
 export const updateLead = async (req, res) => {
   try {
-    const accountId = req.account.accountId; // String: "eno_2600003"
+    const accountId = req.account._id; // ObjectId (single source of truth)
     const { id } = req.params;
     const { status, notes, tags, assignedTo, nextFollowUp } = req.body;
 
@@ -204,6 +207,7 @@ export const updateLead = async (req, res) => {
     console.error('❌ Update lead error:', error.message);
     res.status(500).json({
       success: false,
+      code: 'LEAD_UPDATE_ERROR',
       message: 'Failed to update lead',
       error: error.message
     });
@@ -215,7 +219,7 @@ export const updateLead = async (req, res) => {
  */
 export const deleteLead = async (req, res) => {
   try {
-    const accountId = req.account.accountId; // String: "eno_2600003"
+    const accountId = req.account._id; // ObjectId (single source of truth)
     const { id } = req.params;
 
     const result = await Lead.deleteOne({
@@ -238,6 +242,7 @@ export const deleteLead = async (req, res) => {
     console.error('❌ Delete lead error:', error.message);
     res.status(500).json({
       success: false,
+      code: 'LEAD_DELETE_ERROR',
       message: 'Failed to delete lead',
       error: error.message
     });
@@ -249,7 +254,7 @@ export const deleteLead = async (req, res) => {
  */
 export const autoCaptureLead = async (req, res) => {
   try {
-    const accountId = req.account.accountId; // String: "eno_2600003"
+    const accountId = req.account._id; // ObjectId (single source of truth)
     const { conversationId } = req.params;
 
     const lead = await leadService.captureLeadFromConversation(accountId, conversationId);
@@ -271,6 +276,7 @@ export const autoCaptureLead = async (req, res) => {
     console.error('❌ Auto-capture lead error:', error.message);
     res.status(500).json({
       success: false,
+      code: 'LEAD_CAPTURE_ERROR',
       message: 'Failed to capture lead',
       error: error.message
     });
@@ -282,7 +288,7 @@ export const autoCaptureLead = async (req, res) => {
  */
 export const getLeadStats = async (req, res) => {
   try {
-    const accountId = req.account.accountId; // String: "eno_2600003"
+    const accountId = req.account._id; // ObjectId (single source of truth)
 
     const stats = await leadService.getLeadStats(accountId);
 
@@ -294,6 +300,7 @@ export const getLeadStats = async (req, res) => {
     console.error('❌ Get lead stats error:', error.message);
     res.status(500).json({
       success: false,
+      code: 'LEAD_STATS_ERROR',
       message: 'Failed to fetch statistics',
       error: error.message
     });
@@ -305,7 +312,7 @@ export const getLeadStats = async (req, res) => {
  */
 export const markStaleLeads = async (req, res) => {
   try {
-    const accountId = req.account.accountId; // String: "eno_2600003"
+    const accountId = req.account._id; // ObjectId (single source of truth)
 
     const count = await leadService.markStaleLeads(accountId);
 
@@ -318,6 +325,7 @@ export const markStaleLeads = async (req, res) => {
     console.error('❌ Mark stale leads error:', error.message);
     res.status(500).json({
       success: false,
+      code: 'LEAD_STALE_ERROR',
       message: 'Failed to mark stale leads',
       error: error.message
     });
@@ -329,7 +337,7 @@ export const markStaleLeads = async (req, res) => {
  */
 export const exportLeads = async (req, res) => {
   try {
-    const accountId = req.account.accountId; // String: "eno_2600003"
+    const accountId = req.account._id; // ObjectId (single source of truth)
     const { status, intent } = req.query;
 
     const query = { accountId };
@@ -365,6 +373,7 @@ export const exportLeads = async (req, res) => {
     console.error('❌ Export leads error:', error.message);
     res.status(500).json({
       success: false,
+      code: 'LEAD_EXPORT_ERROR',
       message: 'Failed to export leads',
       error: error.message
     });

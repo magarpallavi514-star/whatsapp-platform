@@ -3,8 +3,12 @@ import { JWT_SECRET } from '../config/jwt.js';
 import Account from '../models/Account.js';
 
 /**
- * JWT Authentication Middleware
- * For dashboard users - stateless auth with tokens
+ * JWT Authentication Middleware (Dashboard & Internal)
+ * ✅ AUTH TYPE: JWT Bearer token (from login)
+ * ❌ NOT for: API Keys, external integrations, webhooks
+ * 
+ * Used by: /api/* routes for dashboard users, admin, superadmin
+ * Verifies token signature and looks up account from JWT payload
  */
 
 export const requireJWT = async (req, res, next) => {

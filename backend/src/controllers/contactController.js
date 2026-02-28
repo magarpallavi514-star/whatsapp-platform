@@ -10,7 +10,7 @@ import Contact from '../models/Contact.js';
  */
 export const getContacts = async (req, res) => {
   try {
-    const accountId = req.account.accountId; // Use String for database queries
+    const accountId = req.account._id; // Use ObjectId for database queries (single source of truth)
     const { type, isOptedIn, limit = 100, skip = 0 } = req.query;
     
     const query = { accountId };
@@ -40,6 +40,7 @@ export const getContacts = async (req, res) => {
     console.error('❌ Get contacts error:', error);
     res.status(500).json({
       success: false,
+      code: 'CONTACT_FETCH_ERROR',
       message: error.message
     });
   }
@@ -50,7 +51,7 @@ export const getContacts = async (req, res) => {
  */
 export const createContact = async (req, res) => {
   try {
-    const accountId = req.account.accountId; // Use String for database queries
+    const accountId = req.account._id; // Use ObjectId for database queries (single source of truth)
     const { name, phone, whatsappNumber, email, type, tags, metadata } = req.body;
     
     if (!name || !whatsappNumber) {
@@ -85,12 +86,14 @@ export const createContact = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
+        code: 'DUPLICATE_CONTACT',
         message: 'Contact with this WhatsApp number already exists'
       });
     }
     
     res.status(500).json({
       success: false,
+      code: 'CONTACT_CREATE_ERROR',
       message: error.message
     });
   }
@@ -132,6 +135,7 @@ export const updateContact = async (req, res) => {
     console.error('❌ Update contact error:', error);
     res.status(500).json({
       success: false,
+      code: 'CONTACT_UPDATE_ERROR',
       message: error.message
     });
   }
@@ -162,6 +166,7 @@ export const deleteContact = async (req, res) => {
     console.error('❌ Delete contact error:', error);
     res.status(500).json({
       success: false,
+      code: 'CONTACT_DELETE_ERROR',
       message: error.message
     });
   }
@@ -172,7 +177,7 @@ export const deleteContact = async (req, res) => {
  */
 export const importContacts = async (req, res) => {
   try {
-    const accountId = req.account.accountId; // Use String for DB queries
+    const accountId = req.account._id; // Use ObjectId for DB queries (single source of truth)
     const { contacts } = req.body;
     
     if (!Array.isArray(contacts) || contacts.length === 0) {
@@ -220,6 +225,7 @@ export const importContacts = async (req, res) => {
     console.error('❌ Import contacts error:', error);
     res.status(500).json({
       success: false,
+      code: 'CONTACT_IMPORT_ERROR',
       message: error.message
     });
   }

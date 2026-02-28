@@ -102,6 +102,10 @@ const messageSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Note: accountId, conversationId, and waMessageId already have index: true in schema
+// Compound indexes for efficient queries
+messageSchema.index({ accountId: 1, conversationId: 1 });
+messageSchema.index({ accountId: 1, phoneNumberId: 1 });
+messageSchema.index({ accountId: 1, createdAt: -1 });
+messageSchema.index({ conversationId: 1, createdAt: -1 });
 
 export default mongoose.model('Message', messageSchema);
