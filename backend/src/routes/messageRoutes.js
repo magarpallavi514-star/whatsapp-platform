@@ -2,6 +2,9 @@ import express from 'express';
 import multer from 'multer';
 import messageController from '../controllers/messageController.js';
 import { resolvePhoneNumber } from '../middlewares/phoneNumberHelper.js';
+import { messageLimiter } from '../middlewares/rateLimiter.js';
+import validators from '../middlewares/validators.js';
+import handleMulterError from '../middlewares/multerErrorHandler.js';
 
 const router = express.Router();
 
@@ -21,9 +24,9 @@ const upload = multer({
  */
 
 // Send messages (phoneNumberId is optional - will auto-detect from account)
-router.post('/send', resolvePhoneNumber, messageController.sendTextMessage);
-router.post('/send-template', resolvePhoneNumber, messageController.sendTemplateMessage);
-router.post('/send-media', upload.single('file'), resolvePhoneNumber, messageController.sendMediaMessage);
+router.post('/send', messageLimiter, validators.validateSendMessage, resolvePhoneNumber, messageController.sendTextMessage);
+router.post('/send-template', messageLimiter, validators.validateSendTemplateMessage, resolvePhoneNumber, messageController.sendTemplateMessage);
+router.post('/send-media', messageLimiter, upload.single('file'), handleMulterError, resolvePhoneNumber, messageController.sendMediaMessage);
 
 // Get messages
 router.get('/', messageController.getMessages);

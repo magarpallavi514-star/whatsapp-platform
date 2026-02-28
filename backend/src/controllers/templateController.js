@@ -500,10 +500,30 @@ export const syncTemplates = async (req, res) => {
       isActive: true 
     }).select('+accessToken');
     
-    if (!phoneConfig || !phoneConfig.wabaId) {
+    if (!phoneConfig) {
       return res.status(400).json({
         success: false,
-        message: 'WhatsApp Business Account not configured. Please add your phone number first.'
+        message: 'No active WhatsApp phone number found. Please configure your WhatsApp account first.',
+        error: 'NO_ACTIVE_PHONE',
+        nextStep: 'Go to Settings → WhatsApp Integration to add your phone number'
+      });
+    }
+
+    if (!phoneConfig.wabaId) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp Business Account ID not found. Your phone number may not be properly configured.',
+        error: 'MISSING_WABA_ID',
+        nextStep: 'Try disconnecting and reconnecting your WhatsApp account in Settings'
+      });
+    }
+
+    if (!phoneConfig.accessToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Access token expired. Please reconnect your WhatsApp account.',
+        error: 'MISSING_ACCESS_TOKEN',
+        nextStep: 'Go to Settings → WhatsApp Integration → Reconnect'
       });
     }
 
@@ -511,20 +531,40 @@ export const syncTemplates = async (req, res) => {
     const accessToken = phoneConfig.accessToken;
 
     // Fetch templates from WhatsApp API
-    const response = await axios.get(
-      `${GRAPH_API_URL}/${wabaId}/message_templates`,
-      {
-        headers: { 'Authorization': `Bearer ${accessToken}` },
-        params: { limit: 100 }
+    let response;
+    try {
+      response = await axios.get(
+        `${GRAPH_API_URL}/${wabaId}/message_templates`,
+        {
+          headers: { 'Authorization': `Bearer ${accessToken}` },
+          params: { limit: 100 }
+        }
+      );
+    } catch (apiError) {
+      if (apiError.response?.status === 401) {
+        return res.status(401).json({
+          success: false,
+          message: 'WhatsApp access token has expired. Please reconnect your account.',
+          error: 'TOKEN_EXPIRED',
+          nextStep: 'Go to Settings → WhatsApp Integration → Reconnect'
+        });
+      } else if (apiError.response?.status === 403) {
+        return res.status(403).json({
+          success: false,
+          message: 'Permission denied. Your WhatsApp account may not have template management permissions.',
+          error: 'INSUFFICIENT_PERMISSIONS',
+          nextStep: 'Verify your WhatsApp account has the correct permissions'
+        });
       }
-    );
+      throw apiError;
+    }
 
     const metaTemplates = response.data.data || [];
     
     if (metaTemplates.length === 0) {
       return res.json({
         success: true,
-        message: 'No templates found in WhatsApp Manager',
+        message: 'No templates found in your WhatsApp Manager. Create templates from your WhatsApp Business Account Dashboard and sync again.',
         synced: 0,
         created: 0,
         updated: 0
@@ -624,9 +664,30 @@ export const syncTemplates = async (req, res) => {
     
   } catch (error) {
     console.error('❌ Sync templates error:', error);
+    
+    if (error.response?.status === 401) {
+      return res.status(401).json({
+        success: false,
+        message: 'WhatsApp access token has expired. Please reconnect your account.',
+        error: 'TOKEN_EXPIRED',
+        nextStep: 'Go to Settings → WhatsApp Integration → Reconnect'
+      });
+    }
+    
+    if (error.response?.status === 429) {
+      return res.status(429).json({
+        success: false,
+        message: 'Too many requests. Please try again in a few moments.',
+        error: 'RATE_LIMITED'
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      message: error.response?.data?.error?.message || error.message
+      message: 'Failed to sync templates from WhatsApp. Please check your connection and try again.',
+      error: 'SYNC_FAILED',
+      details: error.response?.data?.error?.message || error.message,
+      nextStep: 'Try reconnecting your WhatsApp account or contact support if the issue persists'
     });
   }
 };
