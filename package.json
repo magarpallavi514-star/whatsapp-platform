@@ -5,5 +5,10 @@
   "workspaces": [
     "backend",
     "frontend"
-  ]
+  ],
+  "scripts": {
+    "start": "cd backend && npm start",
+    "build": "cd backend && npm install && cd ../frontend && npm install --legacy-peer-deps",
+    "dev": "npm run dev -w backend & npm run dev -w frontend"
+  }
 }

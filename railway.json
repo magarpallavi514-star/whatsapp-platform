@@ -1,0 +1,11 @@
+{
+  "build": {
+    "builder": "nixpacks",
+    "buildCommand": "cd backend && npm install && cd ../frontend && npm install --legacy-peer-deps"
+  },
+  "deploy": {
+    "startCommand": "cd backend && npm start",
+    "restartPolicyType": "always",
+    "restartPolicyMaxRetries": 3
+  }
+}
