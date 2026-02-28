@@ -19,7 +19,9 @@ export const createBroadcast = async (req, res) => {
       if (!activePhone) {
         return res.status(400).json({
           success: false,
-          error: '🚨 WhatsApp Business Account not connected!\n\nPlease connect your WhatsApp account in Settings first:\n1. Go to Dashboard > Settings\n2. Click "Add Phone Number"\n3. Enter your Phone Number ID, WABA ID, and Access Token\n4. Click "Add" to complete setup'
+          message: 'No WhatsApp phone number configured. Please add your phone number before creating broadcasts.',
+          error: 'NO_PHONE_CONFIGURED',
+          nextStep: 'Go to Settings → WhatsApp Integration → Add Phone Number'
         });
       }
 
@@ -39,9 +41,31 @@ export const createBroadcast = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating broadcast:', error);
+    
+    let message = 'Failed to create broadcast.';
+    let errorCode = 'CREATE_BROADCAST_ERROR';
+    let nextStep = 'Please try again or contact support.';
+    
+    if (error.message?.includes('phone') || error.message?.includes('Phone')) {
+      message = 'Phone number not configured. Please add your WhatsApp phone number first.';
+      errorCode = 'PHONE_NOT_CONFIGURED';
+      nextStep = 'Go to Settings → WhatsApp Integration to add your phone number.';
+    } else if (error.message?.includes('contact') || error.message?.includes('recipient')) {
+      message = 'Invalid contacts in broadcast. Please check the recipient list.';
+      errorCode = 'INVALID_CONTACTS';
+      nextStep = 'Verify all phone numbers are valid and properly formatted.';
+    } else if (error.message?.includes('template')) {
+      message = 'Invalid template selected. Please choose an approved template.';
+      errorCode = 'INVALID_TEMPLATE';
+      nextStep = 'Select a different template or create a new one.';
+    }
+    
     res.status(400).json({
       success: false,
-      error: error.message
+      message: message,
+      error: errorCode,
+      details: error.message,
+      nextStep
     });
   }
 };
@@ -67,7 +91,9 @@ export const getBroadcasts = async (req, res) => {
     console.error('Error getting broadcasts:', error);
     res.status(400).json({
       success: false,
-      error: error.message
+      message: 'Failed to fetch broadcasts. Please try again.',
+      error: 'GET_BROADCASTS_ERROR',
+      details: error.message
     });
   }
 };
@@ -85,7 +111,8 @@ export const getBroadcastById = async (req, res) => {
     if (!broadcastId) {
       return res.status(400).json({
         success: false,
-        error: 'Broadcast ID is required'
+        message: 'Broadcast ID is required.',
+        error: 'MISSING_BROADCAST_ID'
       });
     }
     
@@ -94,7 +121,8 @@ export const getBroadcastById = async (req, res) => {
     if (!broadcast) {
       return res.status(404).json({
         success: false,
-        error: 'Broadcast not found'
+        message: 'Broadcast not found. It may have been deleted.',
+        error: 'BROADCAST_NOT_FOUND'
       });
     }
 
@@ -106,7 +134,9 @@ export const getBroadcastById = async (req, res) => {
     console.error('Error getting broadcast:', error);
     res.status(400).json({
       success: false,
-      error: error.message
+      message: 'Failed to fetch broadcast details. Please try again.',
+      error: 'GET_BROADCAST_ERROR',
+      details: error.message
     });
   }
 };
@@ -149,7 +179,19 @@ export const startBroadcast = async (req, res) => {
     if (!broadcast) {
       return res.status(404).json({
         success: false,
-        error: 'Broadcast not found'
+        message: 'Broadcast not found. It may have been deleted.',
+        error: 'BROADCAST_NOT_FOUND'
+      });
+    }
+
+    // Validate broadcast status
+    if (broadcast.status !== 'draft' && broadcast.status !== 'paused') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot start broadcast in ${broadcast.status} status. Only draft or paused broadcasts can be started.`,
+        error: 'INVALID_BROADCAST_STATUS',
+        currentStatus: broadcast.status,
+        allowedStatuses: ['draft', 'paused']
       });
     }
 
@@ -159,7 +201,9 @@ export const startBroadcast = async (req, res) => {
     if (!phoneNumberId) {
       return res.status(400).json({
         success: false,
-        error: 'Phone number not configured for this broadcast'
+        message: 'Phone number not configured for this broadcast. Add a phone number in Settings first.',
+        error: 'MISSING_PHONE_NUMBER',
+        nextStep: 'Go to Settings → WhatsApp Integration to add your phone number.'
       });
     }
 
@@ -175,14 +219,36 @@ export const startBroadcast = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Broadcast started',
+      message: 'Broadcast started successfully. Messages will be sent to all recipients.',
       data: updatedBroadcast
     });
   } catch (error) {
     console.error('Error starting broadcast:', error);
+    
+    let message = 'Failed to start broadcast.';
+    let errorCode = 'START_BROADCAST_ERROR';
+    let nextStep = 'Please try again.';
+    
+    if (error.message?.includes('permission') || error.message?.includes('Permission')) {
+      message = 'Permission denied. You may not have access to this broadcast.';
+      errorCode = 'PERMISSION_DENIED';
+      nextStep = 'Verify your account has permission to manage broadcasts.';
+    } else if (error.message?.includes('contact') || error.message?.includes('recipient')) {
+      message = 'Invalid recipient list. Some phone numbers may be invalid or blocked.';
+      errorCode = 'INVALID_RECIPIENTS';
+      nextStep = 'Check your contact list and remove invalid numbers.';
+    } else if (error.message?.includes('rate')) {
+      message = 'Too many broadcasts running. Please wait before starting another.';
+      errorCode = 'RATE_LIMITED';
+      nextStep = 'Wait a moment and try again.';
+    }
+    
     res.status(400).json({
       success: false,
-      error: error.message
+      message: message,
+      error: errorCode,
+      details: error.message,
+      nextStep
     });
   }
 };

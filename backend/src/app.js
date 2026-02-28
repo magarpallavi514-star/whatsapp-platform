@@ -11,6 +11,9 @@ import requireSubscription from './middlewares/requireSubscription.js';
 import { subdomainDetectionMiddleware } from './middlewares/subdomainDetection.js';
 import { validateWebhookSignature } from './middlewares/webhookSignatureValidator.js';
 
+// Import Sentry for error tracking
+import { initSentry, sentryErrorHandler } from './config/sentry.js';
+
 // Import routes
 import webhookRoutes from './routes/webhookRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
@@ -47,6 +50,9 @@ dotenv.config();
 
 // Initialize Express app
 const app = express();
+
+// Initialize Sentry error tracking
+initSentry(app);
 
 // Middleware
 const allowedOrigins = [
@@ -313,11 +319,16 @@ app.use((req, res) => {
   });
 });
 
+// Sentry error handler (should be before other error handlers)
+app.use(sentryErrorHandler);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
+    success: false,
+    message: err.message || 'Internal server error',
+    error: err.code || 'INTERNAL_SERVER_ERROR',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });

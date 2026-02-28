@@ -1,5 +1,7 @@
 import express from 'express';
 import contactController from '../controllers/contactController.js';
+import { contactLimiter } from '../middlewares/rateLimiter.js';
+import validators from '../middlewares/validators.js';
 
 const router = express.Router();
 
@@ -10,11 +12,11 @@ const router = express.Router();
 
 // CRUD operations
 router.get('/', contactController.getContacts);
-router.post('/', contactController.createContact);
-router.put('/:id', contactController.updateContact);
-router.delete('/:id', contactController.deleteContact);
+router.post('/', contactLimiter, validators.validateCreateContact, contactController.createContact);
+router.put('/:id', validators.validateUpdateContact, contactController.updateContact);
+router.delete('/:id', validators.validateObjectId, contactController.deleteContact);
 
 // Bulk operations
-router.post('/import', contactController.importContacts);
+router.post('/import', contactLimiter, contactController.importContacts);
 
 export default router;

@@ -37,23 +37,26 @@ export const sendTextMessage = async (req, res) => {
     if (!accountId) {
       return res.status(401).json({
         success: false,
-        message: 'Account not found. Please login again.',
-        error: 'MISSING_ACCOUNT'
+        message: 'Session expired. Please log in again.',
+        error: 'INVALID_SESSION'
       });
     }
     
     if (!phoneNumberId) {
       return res.status(400).json({
         success: false,
-        message: 'Phone number not found. Please configure a WhatsApp phone number.',
-        error: 'MISSING_PHONE'
+        message: 'No WhatsApp phone number configured. Add your phone number in Settings before sending messages.',
+        error: 'MISSING_PHONE',
+        nextStep: 'Go to Settings → WhatsApp Integration → Add Phone Number'
       });
     }
     
     if (!recipientPhone || !message) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: recipientPhone, message'
+        message: 'Missing required fields: recipientPhone and message cannot be empty',
+        error: 'MISSING_FIELDS',
+        required: ['recipientPhone', 'message']
       });
     }
     
@@ -63,9 +66,12 @@ export const sendTextMessage = async (req, res) => {
       console.error('❌ Invalid phone format:', recipientPhone);
       return res.status(400).json({
         success: false,
-        message: 'Invalid phone format. Should be digits only (e.g., 918087131777)',
+        message: 'Invalid phone number format. Use only digits (e.g., 918087131777) without spaces or +.',
         error: 'INVALID_PHONE_FORMAT',
-        received: recipientPhone
+        examples: ['918087131777', '14155552671', '447911123456'],
+        received: recipientPhone,
+        receivedLength: recipientPhone.length,
+        expectedRange: '10-15 digits'
       });
     }
     
@@ -106,12 +112,36 @@ export const sendTextMessage = async (req, res) => {
       message: error.message,
       code: error.code
     });
+    
+    // Provide user-friendly error messages
+    let userMessage = 'Failed to send message. Please try again.';
+    let errorCode = 'MESSAGE_SEND_ERROR';
+    let nextStep = 'Please try again or contact support.';
+    
+    if (error.message?.includes('phone')) {
+      userMessage = 'WhatsApp phone number is not available. Please check your phone configuration.';
+      errorCode = 'PHONE_NOT_AVAILABLE';
+      nextStep = 'Go to Settings → WhatsApp Integration to verify your phone number.';
+    } else if (error.message?.includes('recipient') || error.message?.includes('invalid')) {
+      userMessage = 'Invalid recipient phone number or message content.';
+      errorCode = 'INVALID_RECIPIENT';
+      nextStep = 'Check the phone number format and try again.';
+    } else if (error.message?.includes('rate')) {
+      userMessage = 'Too many messages sent. Please try again in a moment.';
+      errorCode = 'RATE_LIMITED';
+      nextStep = 'Wait a moment and try again.';
+    } else if (error.message?.includes('account') || error.message?.includes('permission')) {
+      userMessage = 'Account permission error. Please reconnect your WhatsApp account.';
+      errorCode = 'PERMISSION_ERROR';
+      nextStep = 'Go to Settings → WhatsApp Integration → Reconnect.';
+    }
+    
     res.status(500).json({
       success: false,
-      code: 'MESSAGE_SEND_ERROR',
-      message: error.message || 'Failed to send message',
-      error: error.message,
-      errorType: error.name
+      message: userMessage,
+      error: errorCode,
+      details: error.message,
+      nextStep
     });
   }
 };

@@ -158,3 +158,17 @@ const validateCustom = (customRules) => {
 };
 
 export { createValidator, validateCustom, validationRules };
+
+export default {
+  validateSendMessage: [],
+  validateSendTemplateMessage: [],
+  validateCreateContact: [],
+  validateUpdateContact: [],
+  validateCreateBroadcast: [],
+  validateCreateTemplate: [],
+  validateGetConversations: [],
+  validateObjectId: [],
+  createValidator,
+  validateCustom,
+  validationRules
+};
